@@ -499,39 +499,75 @@ export type TrackPosition = {
 };
 
 /**
- * Si la carga ya salió del puerto de origen.
+ * Días que se sigue consultando después de la ETA cuando nada confirmó la llegada.
  *
- * Manda el estado de la operación cuando lo dice explícitamente; si no, la
- * fecha de zarpe. Vive acá y se exporta porque no es solo cosa de la etapa: el
- * modelo lo necesita para no contar como avance el viaje que el buque está
- * haciendo con otra carga.
+ * Es el **tope de seguridad**, no el criterio: cuando funciona el nivel 2 (el
+ * AIS ve al buque llegado), esto no se activa nunca. Su único trabajo es cortar
+ * el gasto cuando la señal de llegada no aparece, que es señal de que algo se
+ * rompió. Por eso es corto.
+ *
+ * No sale de una medición: no hay con qué medirlo. Al 21-09-2026 había **una
+ * sola** operación con arribo real registrado en toda la base (A00042, llegó a
+ * +1 día de lo prometido). Cuando haya historia de arribos, este número se
+ * puede calibrar en serio.
  */
-export const DIAS_ANTES_ZARPE = 2;
+export const GRACIA_POST_ETA_DIAS = 2;
+
+export type OperacionVentana = {
+  etd: string | null;
+  eta: string | null;
+  estado_operacion: string | null;
+  arribo_confirmado?: boolean | null;
+};
 
 /**
- * Si este embarque ya entra en la ventana de seguimiento.
+ * Si este embarque todavía justifica gastar un crédito.
  *
- * Antes del zarpe, el buque asignado está haciendo **otro** viaje: viene hacia
- * Chile a buscar la carga. Su AIS describe ese viaje, no este. El A00052
- * —San Antonio → Leixões, zarpe el 25 de septiembre— disparó un aviso de
- * "destino distinto al comprometido" porque el buque declaraba Posorja: cierto
- * del barco, falso del embarque. Y peor que el correo: se anotaron Buenaventura
- * y Posorja como recaladas del embarque, o sea puertos que la carga nunca
- * tocó, porque todavía estaba en tierra.
+ * La ventana abre con el zarpe y cierra por **tres niveles**, en orden de
+ * confiabilidad. Manda el primero que se cumpla:
  *
- * La pantalla ya lo resolvía con `yaZarpo()`; el chequeo diario no miraba el
- * ETD y por eso escribía y avisaba igual.
+ *   1. Alguien lo dijo: la operación se cerró o se marcó el arribo.
+ *   2. Se vio: el AIS muestra al buque llegado al POD (`llegoAlPod`).
+ *   3. Se agotó el plazo: pasaron `GRACIA_POST_ETA_DIAS` desde la ETA.
  *
- * Se abre dos días antes y no el día exacto porque el zarpe se corre: con la
- * ventana pegada al ETD, un adelanto de un día deja la carga sin seguir
- * justo cuando empieza a moverse.
+ * El orden importa porque los niveles valen cosas distintas. El 3 es el más
+ * débil: la ETA es la promesa que la naviera hizo semanas antes, y se mueve
+ * mucho. En diez días de observación los buques corrieron su propia ETA
+ * declarada entre 0,8 y 17,2 días —MSC SERENA la revisó 8 veces—, así que
+ * cortar en la promesa deja de seguir justo al que se atrasó. El CMA CGM CARL
+ * ANTOINE iba a +1,3 días de la suya cuando entraba al Elba.
+ *
+ * Por eso el 3 es un freno de emergencia y no el criterio: si el 2 funciona,
+ * nunca se llega a él.
+ *
+ * **Antes del zarpe no se consulta.** El buque asignado está haciendo otro
+ * viaje —viene hacia Chile a buscar la carga— así que su AIS describe ese viaje
+ * y no este. El A00052 (San Antonio → Leixões, zarpe el 25-09) disparó un aviso
+ * de "destino distinto al comprometido" porque el buque declaraba Posorja:
+ * cierto del barco, falso del embarque. Peor que el correo: se anotaron
+ * Buenaventura y Posorja como recaladas de una carga que seguía en tierra.
+ *
+ * Hubo una anticipación de dos días antes del ETD, por si el zarpe se adelanta.
+ * Se quitó el 21-09-2026: costaba dos créditos por cada viaje que empezaba para
+ * cubrir un adelanto que, cuando ocurre, solo atrasa un día el inicio del
+ * seguimiento.
  */
 export function enVentanaDeSeguimiento(
-  op: { etd: string | null; estado_operacion: string | null },
+  op: OperacionVentana,
   now = new Date(),
-  diasAntes = DIAS_ANTES_ZARPE,
+  opts: { llegoAlPod?: boolean; graciaDias?: number } = {},
 ): boolean {
-  if (yaZarpo(op as NavitrackOperacion, now)) return true;
+  /* ── Nivel 1: alguien lo dijo ─────────────────────────────────────────── */
+
+  // Se pregunta por `esFinal` y no por una lista de estados escrita acá: si
+  // mañana se agrega un estado terminal al vocabulario, esta ventana lo respeta
+  // sola. Una lista propia lo dejaría afuera en silencio.
+  const codigo = normalizarEstado(op.estado_operacion);
+  if (codigo && ESTADO_META[codigo].esFinal) return false;
+  if (op.arribo_confirmado) return false;
+
+  /* ── Apertura: el zarpe ───────────────────────────────────────────────── */
+
   const etd = parseOpDate(op.etd);
   if (!etd) return false; // Sin fecha de zarpe no hay ventana que abrir.
 
@@ -539,16 +575,74 @@ export function enVentanaDeSeguimiento(
    * La ventana abre al **empezar** el día, no a la hora del ETD.
    *
    * `etd` es columna `date` y `parseOpDate` la sitúa a mediodía para que no se
-   * corra de día por zona horaria. Restarle dos días tal cual dejaba la ventana
-   * abriendo a las 12:00, y el cron corre a las 06:00: el día que tocaba entrar,
-   * el embarque todavía quedaba fuera y recién entraba al día siguiente.
+   * corra de día por zona horaria. Comparar contra esa hora dejaba la ventana
+   * abriendo a las 12:00, y el cron corre a las 07:00: el día que tocaba entrar,
+   * el embarque quedaba fuera y recién entraba al día siguiente.
    */
   const apertura = new Date(etd);
-  apertura.setDate(apertura.getDate() - diasAntes);
   apertura.setHours(0, 0, 0, 0);
-  return now.getTime() >= apertura.getTime();
+  if (now.getTime() < apertura.getTime()) return false;
+
+  /* ── Nivel 2: se vio llegar ───────────────────────────────────────────── */
+
+  if (opts.llegoAlPod) return false;
+
+  /* ── Nivel 3: se agotó el plazo ───────────────────────────────────────── */
+
+  const eta = parseOpDate(op.eta);
+  /*
+   * Sin ETA no hay nivel 3: no existe fecha desde la cual contar el plazo.
+   *
+   * Queda dependiendo de que alguien cierre la operación o de que el AIS vea la
+   * llegada. Es un hueco real y se deja a propósito: dejar de seguir un
+   * embarque que zarpó de verdad, solo porque nadie cargó su ETA, es peor que
+   * el crédito que cuesta. Quien lo llame debe **nombrar** estos embarques en
+   * su reporte, para que el hueco se vea en vez de costar en silencio.
+   *
+   * Al 21-09-2026 no había ninguno en esta situación.
+   */
+  if (!eta) return true;
+
+  const tope = new Date(eta);
+  tope.setDate(tope.getDate() + (opts.graciaDias ?? GRACIA_POST_ETA_DIAS));
+  tope.setHours(23, 59, 59, 999);
+  return now.getTime() <= tope.getTime();
 }
 
+/**
+ * Si el AIS muestra que el buque ya llegó al puerto de destino del embarque.
+ *
+ * Es el nivel 2 del cierre de ventana y sale de la lectura que ya se pagó: no
+ * cuesta un crédito extra. Dos evidencias, cualquiera basta:
+ *
+ *   - Está quieto (amarrado o fondeado) y el puerto que declara es el POD.
+ *   - El POD ya figura como su último puerto: llegó y hasta volvió a salir.
+ *
+ * La comparación de nombres la hace `mismoPuerto`, que resuelve "HAMBURGO"
+ * contra "Hamburg Germany" y, si los textos no calzan, cae a la distancia entre
+ * coordenadas. Sin POD cargado no se puede afirmar nada, y se responde que no:
+ * el que decide preferirá pagar de más antes que dejar de seguir a ciegas.
+ */
+export function llegoAlPod(
+  lectura: { destino?: string | null; nav_status?: string | null; lastPort?: string | null } | null,
+  pod: string | null | undefined,
+): boolean {
+  if (!lectura || !pod) return false;
+
+  if (mismoPuerto(lectura.lastPort, pod)) return true;
+
+  const quieto = /moor|anchor|berth/i.test(String(lectura.nav_status ?? ""));
+  return quieto && mismoPuerto(lectura.destino, pod);
+}
+
+/**
+ * Si la carga ya salió del puerto de origen.
+ *
+ * Manda el estado de la operación cuando lo dice explícitamente; si no, la
+ * fecha de zarpe. Vive acá y se exporta porque no es solo cosa de la etapa: el
+ * modelo lo necesita para no contar como avance el viaje que el buque está
+ * haciendo con otra carga.
+ */
 export function yaZarpo(op: NavitrackOperacion, now = new Date()): boolean {
   const codigo = normalizarEstado(op.estado_operacion);
   const meta = codigo ? ESTADO_META[codigo] : null;

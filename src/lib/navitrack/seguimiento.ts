@@ -23,6 +23,7 @@
  */
 
 import { mismoPuerto } from "@/components/navitrack/navitrack-model";
+import { normalizarEstado, ESTADO_META } from "@/lib/operaciones/estados";
 
 type Cliente = {
   from: (tabla: string) => any;
@@ -79,7 +80,7 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
     supabase.from("navitrack_tramos").select("operacion_id, orden, nave, pod, eta").order("orden"),
     supabase
       .from("operaciones")
-      .select("id, ref_asli, contenedor, nave, arribo_confirmado")
+      .select("id, ref_asli, contenedor, nave, estado_operacion, arribo_confirmado")
       .is("deleted_at", null),
     supabase.from("naves").select("id, nombre, imo, mmsi, tracking_activo").eq("activo", true),
     /*
@@ -130,12 +131,31 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
     return (recaladoEn.get(t.operacion_id) ?? []).some((p) => mismoPuerto(p, pod));
   };
 
+  /*
+   * Una operación terminada no retiene la nave.
+   *
+   * Esto miraba solo `arribo_confirmado`, que casi nadie marca: al 21-09-2026
+   * había una fila cargada en toda la base. MSC SERENA arrastraba cuatro
+   * operaciones en OPERACION_CERRADA desde julio, y como ninguna tenía el
+   * arribo marcado contaban como carga viva: la nave quedaba retenida y el
+   * traspaso al buque que sí lleva la caja no ocurría nunca.
+   *
+   * `enVentanaDeSeguimiento` ya pregunta por `esFinal`; acá faltaba, y que dos
+   * funciones del mismo módulo usaran criterios distintos era el error.
+   */
+  const terminada = (o: { estado_operacion: string | null; arribo_confirmado: boolean | null }) => {
+    if (o.arribo_confirmado) return true;
+    const codigo = normalizarEstado(o.estado_operacion);
+    return Boolean(codigo && ESTADO_META[codigo].esFinal);
+  };
+
   const ops = new Map(
     ((opsRes.data ?? []) as {
       id: string;
       ref_asli: string | null;
       contenedor: string | null;
       nave: string | null;
+      estado_operacion: string | null;
       arribo_confirmado: boolean | null;
     }[]).map((o) => [o.id, o]),
   );
@@ -168,7 +188,7 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
 
   for (const [opId, lista] of porOperacion) {
     const op = ops.get(opId);
-    if (!op || op.arribo_confirmado) continue;
+    if (!op || terminada(op)) continue;
 
     const ordenados = [...lista].sort((a, b) => a.orden - b.orden);
     const indice = ordenados.findIndex((t) => !tramoCerrado(t));
@@ -197,7 +217,7 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
   // Una nave que además lleva otra carga viva no se apaga, aunque haya
   // entregado esta: el traspaso es por carga, no un castigo a la nave.
   for (const [id, op] of ops) {
-    if (op.arribo_confirmado) continue;
+    if (terminada(op)) continue;
     if (porOperacion.has(id)) continue;
     const k = claveNave(op.nave);
     if (k) conCargaViva.add(k);

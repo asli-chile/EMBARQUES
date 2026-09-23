@@ -654,12 +654,34 @@ por minuto) y `astro.config.mjs` declara `maxDuration: 60` en el adaptador. Al
 sumar naves a la lista blanca, recordar que el costo en tiempo ya no crece en
 serie, pero el de créditos sí: una consulta por nave y por día.
 
-Se consulta **solo a las naves que llevan carga dentro de la ventana de
-seguimiento** (`enVentanaDeSeguimiento`, dos días antes del zarpe), no a todas
-las que tienen `tracking_activo`. La ventana existía pero se aplicaba después de
-pagar: una nave con zarpe a ocho días gastaba ocho créditos para descartar ocho
-respuestas. Con una nave, 150 créditos alcanzan para meses; con veinte, para una
-semana.
+Se consulta **solo a las naves que llevan carga navegando**
+(`enVentanaDeSeguimiento`), no a todas las que tienen `tracking_activo`. La
+ventana abre con el zarpe —pegada al ETD, sin anticipación— y cierra por tres
+niveles, en orden de confiabilidad; manda el primero que se cumpla:
+
+| Nivel | Qué cierra la ventana |
+|-------|----------------------|
+| 1 | Alguien lo dijo: la operación pasó a un estado final o se marcó `arribo_confirmado` |
+| 2 | Se vio: el AIS muestra al buque llegado al POD (`llegoAlPod`, sale de la lectura ya pagada) |
+| 3 | Se agotó el plazo: pasaron `GRACIA_POST_ETA_DIAS` (2) desde la ETA |
+
+Un buque con varias operaciones se sigue hasta que **todas** cierren: MSC
+BRUNELLA descarga en Génova, Fos-sur-Mer y Leixões en el mismo viaje.
+
+De un viaje con transbordo se sigue **solo la nave del tramo vigente**, no todas
+las de la cadena. Sumarlas todas pagaba dos buques por la misma caja: en A00051,
+MSC SERENA —que la entregó en Rodman y siguió a Thames con otra carga— y MSC
+BOSTON, que la recibió.
+
+El nivel 3 es un freno de emergencia, no el criterio. La ETA es la promesa que
+la naviera hizo semanas antes y se mueve mucho: en diez días de observación los
+buques corrieron su **propia** ETA declarada entre 0,8 y 17,2 días. Cortar en la
+promesa deja de seguir justo al que se atrasó —el CMA CGM CARL ANTOINE iba a
++1,3 días de la suya entrando al Elba—. Si el nivel 2 funciona, al 3 no se llega.
+
+Los dos días no salen de una medición: al 21-09-2026 había **una sola**
+operación con arribo real registrado en toda la base. Cuando haya historial de
+arribos, el número se puede calibrar en serio.
 
 Si el buque declara un destino distinto al POD, avisa por correo a
 `NAVITRACK_ALERTAS_EMAIL` a través de la Edge Function `send-email`.

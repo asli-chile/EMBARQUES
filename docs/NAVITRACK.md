@@ -384,18 +384,72 @@ todavía es previsión.
 ### El chequeo diario
 
 `src/pages/api/navitrack/chequeo-diario.ts` corre una vez al día por cron de
-Vercel (`0 12 * * *`, 08:00 en Chile). Es el uso más barato del proveedor:
-**una** llamada a `get-vessel-location` por nave, o sea 1 crédito por nave y por
-día.
+Vercel (`0 10 * * *`, **07:00 en Chile** en horario de verano; en invierno,
+06:00). Es el uso más barato del proveedor: **una** llamada a
+`get-vessel-location` por nave, o sea 1 crédito por nave y por día.
 
-No por cada nave con `tracking_activo`, sino por las que **llevan carga dentro
-de la ventana de seguimiento** —`enVentanaDeSeguimiento`, que abre dos días
-antes del zarpe—. La regla existía pero se aplicaba después de pagar: se
-consultaba al buque y recién entonces se descartaban sus embarques por no haber
-zarpado. Una nave con zarpe a ocho días gastaba ocho créditos para tirar ocho
-respuestas. Y no era solo gasto de más: antes del zarpe el buque hace otro
-viaje, así que esa posición mide un embarque ajeno y `resolvePosition` la ignora
-—se pagaba por un dato que después no se puede mostrar—.
+No por cada nave con `tracking_activo`, sino por las que **llevan carga
+navegando**. Lo decide `enVentanaDeSeguimiento`, y la ventana tiene una apertura
+y tres cierres.
+
+**Abre con el zarpe**, pegada al ETD. Antes abría dos días antes, por si el
+zarpe se adelantaba; se quitó el 21-09-2026 porque costaba dos créditos en cada
+viaje que empezaba para cubrir un adelanto que, cuando ocurre, solo atrasa un
+día el inicio del seguimiento. Antes del zarpe el buque hace otro viaje: esa
+posición mide un embarque ajeno y `resolvePosition` la ignora, así que se pagaba
+por un dato que después no se puede mostrar.
+
+**Cierra por tres niveles**, en orden de confiabilidad. Manda el primero que se
+cumpla:
+
+| Nivel | Quién lo afirma | Cómo |
+|-------|-----------------|------|
+| 1 | Una persona | La operación pasó a un estado final (`esFinal`) o se marcó `arribo_confirmado` |
+| 2 | El AIS | `llegoAlPod()`: el buque está quieto en el POD, o el POD ya figura como su `lastPort` |
+| 3 | El calendario | Pasaron `GRACIA_POST_ETA_DIAS` (2) desde la ETA prometida |
+
+El nivel 2 sale de la lectura que **ya se pagó**: no cuesta un crédito extra. La
+comparación de nombres la hace `mismoPuerto()`, que resuelve "HAMBURGO" contra
+"Hamburg Germany" y, si los textos no calzan, cae a la distancia entre
+coordenadas. Está verificado contra los seis POD en uso (Hamburgo, Génova,
+Leixões, Fos-sur-Mer, Seattle, San Antonio).
+
+Una nave con varias operaciones se sigue hasta que **todas** cierren. No es un
+detalle: MSC BRUNELLA descarga en Génova, Fos-sur-Mer y Leixões en un mismo
+viaje, y soltar la nave en el primer POD dejaría dos embarques a ciegas.
+
+**De un transbordo se sigue solo el tramo vigente.** Antes se sumaban todas las
+naves de la cadena más `operaciones.nave`, así que A00051 pagaba dos buques por
+la misma caja: MSC SERENA, que la entregó en Rodman el 18-09-2026 y siguió a
+Thames con otra carga, y MSC BOSTON, que la recibió. `sincronizarSeguimiento`
+apagaba a la que entregó y la ventana la volvía a encender en la misma corrida.
+Cuál es el tramo vigente lo deciden las dos con el mismo criterio —venció su ETA,
+o consta la recalada en su POD—; si difirieran, una apagaría la nave que la otra
+paga.
+
+Esa misma función tampoco soltaba la nave cuando la operación estaba cerrada:
+miraba solo `arribo_confirmado`, que casi nadie marca. MSC SERENA arrastraba
+cuatro operaciones en `OPERACION_CERRADA` desde julio y quedaba retenida por
+ellas. Ahora usa `esFinal`, igual que la ventana.
+
+**El nivel 3 es un freno de emergencia, no el criterio.** La ETA es la promesa
+que la naviera hizo semanas antes de zarpar, y se mueve mucho: en diez días de
+observación los buques corrieron su *propia* ETA declarada entre 0,8 y 17,2 días
+—MSC SERENA la revisó ocho veces—. Cortar en la promesa deja de seguir justo al
+buque que se atrasó, que es cuando más falta hace: el CMA CGM CARL ANTOINE iba a
++1,3 días de la suya cuando entraba al Elba. Si el nivel 2 funciona, al 3 no se
+llega nunca; cuando se llega, es señal de que la señal de llegada no apareció.
+
+Los dos días no salen de una medición, porque no hay con qué medir: al
+21-09-2026 existía **una sola** operación con arribo real registrado en toda la
+base (A00042, llegó a +1 día de lo prometido). Cuando haya historial de arribos,
+el número se puede calibrar en serio — ver `docs/IDEAS-PENDIENTES.md`.
+
+**Sin ETA no hay nivel 3.** Ese embarque queda dependiendo de que alguien lo
+cierre o de que el AIS vea la llegada. Es un hueco deliberado: dejar de seguir
+una carga que zarpó de verdad, solo porque nadie cargó su ETA, es peor que el
+crédito que cuesta. El chequeo los nombra en el reporte (`enVentanaSinEta`) para
+que el hueco se vea en vez de costar en silencio.
 
 Las naves saltadas se nombran en el reporte ("Todavía sin zarpar") y quedan en
 `navitrack_corridas.detalle`: una nave que desaparece del correo sin explicación

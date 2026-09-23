@@ -12,6 +12,14 @@ type NaveRastreo = {
   imo: string | null;
   mmsi: string | null;
   siguiendo: boolean;
+  /**
+   * Si se consultará en la próxima corrida.
+   *
+   * `siguiendo` es la marca que alguien dejó puesta; esto es lo que de verdad
+   * gasta. Una nave marcada puede no consultarse porque su carga no zarpó o
+   * porque ya llegó.
+   */
+  enVentana: boolean;
   ops: number;
   etd: string | null;
   proximaEta: string | null;
@@ -19,7 +27,7 @@ type NaveRastreo = {
   ultimaLectura: string | null;
 };
 
-type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "sin_fecha";
+type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "atrasado" | "sin_fecha";
 
 /** Lo que costaría una actualización manual. Se pide antes de ofrecerla. */
 type Presupuesto = {
@@ -76,6 +84,8 @@ type Estado = {
   /** Hora local del chequeo automático; la manda el servidor, no se inventa. */
   revisionDiaria: string;
   naves: NaveRastreo[];
+  /** Cuántas naves se consultarán en la próxima corrida: el gasto diario real. */
+  rastreandoAhora: number;
 };
 
 /**
@@ -99,6 +109,11 @@ const ETAPA: Record<EtapaRastreo, { texto: string; clase: string; icono: string 
     texto: "Transbordo",
     clase: "border-amber-400/45 bg-amber-400/12 text-dash-fg",
     icono: "lucide:arrow-left-right",
+  },
+  atrasado: {
+    texto: "Atrasado",
+    clase: "border-[color-mix(in_srgb,var(--estado-atencion)_45%,transparent)] bg-[color-mix(in_srgb,var(--estado-atencion)_14%,transparent)] text-dash-fg",
+    icono: "lucide:clock-alert",
   },
   arribado: {
     texto: "Arribado",
@@ -271,7 +286,16 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
     [apiPrefix, cargar, tr],
   );
 
-  const siguiendo = estado?.naves.filter((n) => n.siguiendo).length ?? 0;
+  /*
+   * Dos números distintos que se parecen.
+   *
+   * `marcadas` son las naves con el seguimiento encendido; `rastreando` las que
+   * de verdad se van a consultar mañana. La tarjeta muestra la segunda porque es
+   * la que predice el gasto: mostrar la primera hacía que el panel prometiera
+   * siete consultas diarias cuando se hacían seis.
+   */
+  const marcadas = estado?.naves.filter((n) => n.siguiendo).length ?? 0;
+  const rastreando = estado?.rastreandoAhora ?? 0;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/55 p-3 backdrop-blur-sm sm:p-6">
@@ -305,7 +329,10 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
           {[
             { l: tr.rastreoCreditosHoy, v: `${estado?.creditos.hoy ?? 0} / ${estado?.topeDia ?? 0}` },
             { l: tr.rastreoCreditosTotal, v: String(estado?.creditos.total ?? 0) },
-            { l: tr.rastreoNavesSeguidas, v: String(siguiendo) },
+            {
+              l: tr.rastreoNavesSeguidas,
+              v: marcadas === rastreando ? String(rastreando) : `${rastreando} / ${marcadas}`,
+            },
             { l: tr.rastreoRevision, v: estado?.revisionDiaria ?? "07:00" },
             { l: tr.rastreoSaldo, v: estado?.saldo == null ? "—" : String(estado.saldo) },
           ].map((k) => (
@@ -387,6 +414,16 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
                             <Icon icon={etapa.icono} width={11} height={11} aria-hidden />
                             {etapa.texto}
                           </span>
+                          {n.siguiendo && !n.enVentana && (
+                            /*
+                             * Marcada pero sin consultar. Se dice en la fila porque
+                             * si no, el botón "Siguiendo" promete algo que no ocurre.
+                             */
+                            <span className="inline-flex items-center gap-1 rounded-md border border-dash-border bg-dash-control/40 px-1.5 py-0.5 text-[10.5px] font-bold text-dash-muted">
+                              <Icon icon="lucide:pause" width={11} height={11} aria-hidden />
+                              {tr.rastreoNoSeConsulta}
+                            </span>
+                          )}
                           <span className="text-[10.5px] text-dash-muted tabular-nums">
                             {tr.rastreoZarpe} {fechaCorta(n.etd)} · {tr.rastreoLlegada}{" "}
                             {fechaCorta(n.proximaEta)}

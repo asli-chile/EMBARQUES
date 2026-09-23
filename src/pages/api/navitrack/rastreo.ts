@@ -13,7 +13,9 @@ import type { APIRoute } from "astro";
 import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/auth/rateLimit";
+import { llegoAlPod } from "@/components/navitrack/navitrack-model";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
+import { calcularVentana, claveAis, naveEnVentana } from "@/lib/navitrack/ventana";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 const TTL_MIN = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_TTL_MIN, 360);
@@ -92,17 +94,31 @@ export const prerender = false;
  * zarpa, va navegando o ya llegó?—. Un transbordo confirmado pisa a las fechas
  * porque cambia el viaje entero.
  */
-type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "sin_fecha";
+type EtapaRastreo = "origen" | "transito" | "transbordo" | "arribado" | "atrasado" | "sin_fecha";
 
 function etapaDe(
   op: { etd: string | null; eta: string | null; arribo_confirmado: boolean | null },
   tieneTransbordo: boolean,
   hoy: string,
+  llego: boolean,
 ): EtapaRastreo {
   if (tieneTransbordo) return "transbordo";
-  if (op.arribo_confirmado) return "arribado";
-  if (op.eta && op.eta < hoy) return "arribado";
+  /*
+   * Llegar se afirma con un hecho, no con una fecha prometida.
+   *
+   * Antes bastaba `eta < hoy` para mostrar "Arribado". Eso da por llegado a
+   * cualquier buque que se atrase: el CMA CGM CARL ANTOINE aparecía arribado el
+   * 21-09-2026 mientras entraba al Elba con el AIS declarando Hamburgo para esa
+   * tarde. Y como el chequeo diario sí lo seguía pagando —con razón—, la
+   * pantalla contradecía al cron.
+   *
+   * Ahora lo afirman las dos fuentes que saben: alguien que lo marcó, o el AIS
+   * que lo vio en el POD. Si la ETA venció y ninguna lo dice, el buque no está
+   * arribado: está **atrasado**, que además es la noticia.
+   */
+  if (op.arribo_confirmado || llego) return "arribado";
   if (op.etd && op.etd > hoy) return "origen";
+  if (op.eta && op.eta < hoy) return "atrasado";
   if (op.etd) return "transito";
   return "sin_fecha";
 }
@@ -114,10 +130,10 @@ export const GET: APIRoute = async ({ cookies }) => {
 
   const desde = new Date(Date.now() - VENTANA_DIAS * 86_400_000).toISOString().slice(0, 10);
 
-  const [opsRes, navesRes, transRes, lecturasRes, gasto, saldo] = await Promise.all([
+  const [opsRes, navesRes, transRes, lecturasRes, gasto, ventana, saldo] = await Promise.all([
     supabase
       .from("operaciones")
-      .select("id, nave, etd, eta, arribo_confirmado")
+      .select("id, nave, pod, etd, eta, arribo_confirmado")
       .is("deleted_at", null)
       .not("nave", "is", null)
       .gte("eta", desde)
@@ -132,6 +148,8 @@ export const GET: APIRoute = async ({ cookies }) => {
       .order("consultado_at", { ascending: false })
       .limit(500),
     creditos(supabase),
+    // Misma cuenta que hace el chequeo diario: la pantalla no la reimplementa.
+    calcularVentana(supabase),
     // Saldo real del proveedor. Es gratis y evita mostrar un número inventado.
     consultarSaldo(textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY")),
   ]);
@@ -146,6 +164,7 @@ export const GET: APIRoute = async ({ cookies }) => {
   type OpFila = {
     id: string;
     nave: string | null;
+    pod: string | null;
     etd: string | null;
     eta: string | null;
     arribo_confirmado: boolean | null;
@@ -173,7 +192,12 @@ export const GET: APIRoute = async ({ cookies }) => {
     if (o.eta && (!a.proximaEta || o.eta < a.proximaEta)) {
       a.proximaEta = o.eta;
       a.etd = o.etd;
-      a.etapa = etapaDe(o, conTransbordo.has(o.id), hoy);
+      a.etapa = etapaDe(
+        o,
+        conTransbordo.has(o.id),
+        hoy,
+        llegoAlPod(ventana.ultimaPorNave.get(claveAis(o.nave)) ?? null, o.pod),
+      );
     }
     vigentes.set(k, a);
   }
@@ -195,6 +219,14 @@ export const GET: APIRoute = async ({ cookies }) => {
         imo: n.imo,
         mmsi: n.mmsi,
         siguiendo: Boolean(n.tracking_activo),
+        /*
+         * Si se consultará en la próxima corrida.
+         *
+         * `siguiendo` es una marca que alguien dejó puesta; esto es lo que de
+         * verdad va a gastar. Una nave puede estar marcada y no consultarse
+         * porque su carga no zarpó o porque ya llegó.
+         */
+        enVentana: Boolean(n.tracking_activo) && naveEnVentana(n.nombre, ventana),
         ops: v?.ops ?? 0,
         etd: v?.etd ?? null,
         proximaEta: v?.proximaEta ?? null,
@@ -217,6 +249,8 @@ export const GET: APIRoute = async ({ cookies }) => {
     /** Hora local de la revisión automática, para que el panel no la invente. */
     revisionDiaria: textoDeEntorno(import.meta.env.NAVITRACK_CHEQUEO_HORA, "NAVITRACK_CHEQUEO_HORA") ?? "07:00",
     naves,
+    /** Cuántas se consultarán en la próxima corrida: el gasto diario real. */
+    rastreandoAhora: naves.filter((n) => n.enVentana).length,
   });
 };
 
