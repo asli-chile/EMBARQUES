@@ -161,3 +161,26 @@ va destacado en rojo).
 **Si el logo invitado es oscuro**, conviene usar "Feria en claro": sobre fondo
 crema un logo oscuro se lee, y sobre foto o panel azul se pierde. La otra
 opcion es subir una version blanca del logo.
+
+## Tamano de la vista previa
+
+La pieza se muestra al tamano que entre en el hueco disponible: se mide la
+columna con un ResizeObserver y se calcula la escala contra el ancho y contra
+el alto, quedandose con la menor. Antes era una escala fija y en pantallas
+grandes la pieza quedaba chica con media columna vacia.
+
+En pantallas angostas solo se mira el ancho: ahi la columna crece con su
+contenido, asi que leer el alto se realimentaria.
+
+El panel de herramientas tiene ancho maximo. Sin el, en una pantalla de 1920
+los campos de una linea se estiraban a 1300 px y eran incomodos de leer.
+
+## Probar en local
+
+El servidor de desarrollo puede quedarse con la cache de dependencias de Vite
+desactualizada y entonces **React no hidrata**: la pagina se ve pero nada
+responde, y en consola aparece "Failed to fetch dynamically imported module".
+
+Se arregla arrancando con `npx astro dev --force`, que fuerza a Vite a
+reoptimizar. Si el puerto sigue tomado por una instancia anterior, matarla
+primero: el servidor viejo se queda con el 4321 y el nuevo no llega a levantar.

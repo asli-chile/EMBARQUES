@@ -21,7 +21,6 @@ import "@/styles/marketing-fuentes.css";
 import "@/styles/marketing-pieza.css";
 
 const BUCKET_BASE = `${import.meta.env.PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/marketing-banco`;
-const ESCALA_PREVIA = 0.38;
 
 const input =
   "dash-control w-full px-3 py-2 border border-dash-border rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
@@ -235,8 +234,37 @@ export function CreadorPublicidadContent() {
   const archivoFoto = useRef<HTMLInputElement>(null);
   const archivoLogo = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const colPrevia = useRef<HTMLDivElement>(null);
+  const [escala, setEscala] = useState(0.38);
   const plantilla = getPlantilla(pieza.plantilla);
   const usaFoto = plantilla.campos.includes("foto");
+
+  /* ---- la vista previa se ajusta al hueco disponible ----
+     Con una escala fija la pieza quedaba chica en pantallas grandes y dejaba
+     media columna vacia. Se mide la columna y se calcula cuanto entra; en
+     pantallas angostas solo se mira el ancho, porque ahi la columna crece con
+     su contenido y leer el alto se realimentaria. */
+  useEffect(() => {
+    const el = colPrevia.current;
+    if (!el) return;
+
+    const medir = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width < 80) return;
+      const anchoUtil = width - 48; // padding lateral
+      const anchoPantalla = window.matchMedia("(min-width: 1024px)").matches;
+      const altoUtil = height - 116; // botones de descarga y separacion
+      const s = anchoPantalla
+        ? Math.min(anchoUtil / 1080, altoUtil / 1350)
+        : anchoUtil / 1080;
+      setEscala(Math.max(0.22, Math.min(0.8, s)));
+    };
+
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   /* ---- banco de imágenes ---- */
   useEffect(() => {
@@ -398,12 +426,15 @@ export function CreadorPublicidadContent() {
         role="main"
       >
         {/* ---------------- Vista previa (fija) ---------------- */}
-        <div className="flex shrink-0 flex-col items-center justify-center gap-4 p-5 lg:h-full">
+        <div
+          ref={colPrevia}
+          className="flex min-w-0 shrink-0 flex-col items-center justify-center gap-4 overflow-hidden p-6 lg:h-full lg:w-[42%] lg:max-w-[820px]"
+        >
           <div
             className="overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-2xl"
-            style={{ width: 1080 * ESCALA_PREVIA, height: 1350 * ESCALA_PREVIA }}
+            style={{ width: 1080 * escala, height: 1350 * escala }}
           >
-            <PiezaCanvas ref={canvasRef} pieza={pieza} escala={ESCALA_PREVIA} />
+            <PiezaCanvas ref={canvasRef} pieza={pieza} escala={escala} />
           </div>
 
           <div className="flex w-full flex-wrap justify-center gap-3">
@@ -435,7 +466,10 @@ export function CreadorPublicidadContent() {
         </div>
 
         {/* ---------------- Herramientas (lo único que scrollea) ---------------- */}
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto border-dash-border p-5 lg:border-l">
+        {/* El contenido va con ancho maximo: estirado a 1300 px los campos de una
+            linea se vuelven incomodos de leer y de completar. */}
+        <div className="min-h-0 flex-1 overflow-y-auto border-dash-border p-5 lg:border-l">
+          <div className="mx-auto w-full max-w-[860px] space-y-5">
           <header>
             <h1 className="flex items-center gap-2.5 text-xl font-bold text-dash-fg">
               <Icon icon="mdi:image-edit-outline" className="h-6 w-6 text-dash-neon" />
@@ -1070,6 +1104,7 @@ export function CreadorPublicidadContent() {
               </p>
             </div>
           )}
+          </div>
         </div>
       </main>
     </div>
