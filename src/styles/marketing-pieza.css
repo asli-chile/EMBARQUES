@@ -107,24 +107,19 @@
   );
 }
 
-/* ---------- Esquina bandera (arriba izquierda) ---------- */
+/* ---------- Media flecha (arriba izquierda) ----------
+   Es el trazo de la "A" del logo: una banda diagonal con un escalon abajo.
+   Los vertices salen de medir las piezas reales del feed, convertidos a la
+   escala de 1080 px. No es una bandera con muesca: el corte de abajo sigue
+   la misma diagonal que el borde superior. */
 .pieza .flag {
   position: absolute;
   top: 0;
   left: 0;
-  width: 365px;
-  height: 215px;
+  width: 360px;
+  height: 190px;
   background: #fff;
-  clip-path: polygon(0 0, 100% 0, 56% 56%, 30% 27%, 0 72%);
-}
-.pieza .flag-corner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 148px;
-  height: 112px;
-  background: var(--navy);
-  clip-path: polygon(0 0, 100% 0, 0 100%);
+  clip-path: polygon(0 0, 356px 0, 94px 182px, 94px 107px, 0 124px);
 }
 
 /* ---------- Cuña roja (abajo derecha) ---------- */

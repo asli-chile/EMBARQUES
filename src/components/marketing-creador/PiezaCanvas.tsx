@@ -46,7 +46,6 @@ function Esquinas() {
   return (
     <>
       <div className="flag" />
-      <div className="flag-corner" />
       <div className="wedge" />
       <div className="wedge-line" />
     </>
