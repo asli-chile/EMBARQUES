@@ -3,29 +3,16 @@
  *
  * Todas comparten la identidad de ASLI (media flecha, logo, cintas rojas, pie).
  * Lo que cambia es la composición: dónde va la foto, dónde el panel y qué
- * campos de texto tienen sentido.
+ * elementos de contenido aparecen.
  *
- * Para agregar una plantilla basta con sumarla acá: `campos` arma el
- * formulario y `maqueta` arma el lienzo. PiezaCanvas no necesita cambios
- * salvo que haga falta un fondo que todavía no exista.
+ * Agregar una plantilla es agregar un objeto a PLANTILLAS: `campos` arma el
+ * formulario y `maqueta` arma el lienzo. PiezaCanvas solo hay que tocarlo si
+ * hace falta un tipo de fondo o un elemento que todavía no existe.
  */
 
-export type PlantillaId =
-  | "hero"
-  | "panel-inferior"
-  | "panel-superior"
-  | "split-diagonal"
-  | "oferta"
-  | "poster"
-  | "banda-lista"
-  | "glosario"
-  | "pasos"
-  | "dato"
-  | "comparativa"
-  | "minimal-navy"
-  | "minimal-claro"
-  | "noticia"
-  | "cita";
+/** No es una unión cerrada a propósito: con 50 plantillas la lista sería
+ *  imposible de mantener sincronizada. getPlantilla valida contra el catálogo. */
+export type PlantillaId = string;
 
 export type CampoId =
   | "foto"
@@ -34,26 +21,48 @@ export type CampoId =
   | "lm"
   | "l2"
   | "ribbon"
+  | "ribbon2"
   | "support"
   | "chips"
   | "lista"
+  | "checklist"
   | "pasos"
   | "dato"
+  | "dona"
+  | "metricas"
+  | "barras"
+  | "tarjetas"
+  | "hitos"
+  | "tabla"
   | "cita"
   | "columnas";
 
-export type Familia = "comercial" | "informativa" | "minimalista" | "noticias";
+export type Familia = "comercial" | "informativa" | "datos" | "minimalista" | "noticias" | "redes";
 
 export const FAMILIAS: { id: Familia; nombre: string; descripcion: string }[] = [
-  { id: "comercial", nombre: "Comercial", descripcion: "Captación y venta: foto fuerte y llamado a la acción." },
-  { id: "informativa", nombre: "Informativa", descripcion: "Explicar algo: listas, pasos, cifras y comparaciones." },
-  { id: "minimalista", nombre: "Minimalista", descripcion: "Sin foto. Solo tipografía, para mensajes de marca." },
-  { id: "noticias", nombre: "Noticias", descripcion: "Novedades, hitos y testimonios." },
+  { id: "comercial", nombre: "Comercial", descripcion: "Captación y venta" },
+  { id: "informativa", nombre: "Informativa", descripcion: "Explicar y enumerar" },
+  { id: "datos", nombre: "Datos y gráficos", descripcion: "Cifras, barras y tablas" },
+  { id: "minimalista", nombre: "Minimalista", descripcion: "Mucho aire, poco texto" },
+  { id: "noticias", nombre: "Noticias", descripcion: "Novedades, hitos y testimonios" },
+  { id: "redes", nombre: "Redes y educativo", descripcion: "Serie, carrusel y preguntas" },
 ];
 
 /** Cómo se arma el lienzo. Medidas en px reales de la pieza (1080×1350). */
 export type Maqueta = {
-  fondo: "foto" | "foto-arriba" | "foto-abajo" | "foto-banda" | "split" | "poster" | "solido" | "claro";
+  fondo:
+    | "foto"
+    | "foto-arriba"
+    | "foto-abajo"
+    | "foto-banda"
+    | "foto-banda-baja"
+    | "split"
+    | "split-derecha"
+    | "poster"
+    | "medallon"
+    | "marco"
+    | "solido"
+    | "claro";
   logoTop: number;
   logoAncho: number;
   /** Sin esto el logo va centrado. Con esto, anclado a esa izquierda. */
@@ -61,6 +70,7 @@ export type Maqueta = {
   bloqueTop?: number;
   bloqueBottom?: number;
   bloqueIzq?: number;
+  bloqueDer?: number;
   panelTop?: number;
   /** Altura del panel cuando va arriba en vez de abajo. */
   panelArriba?: number;
@@ -89,166 +99,171 @@ export const COLORES_FLECHA = [
   { id: "crema", nombre: "Crema", valor: "#F6EEE8" },
 ] as const;
 
+const BLANCO = "#FFFFFF";
+const AZUL = "#14294F";
+
+/* ------------------------------------------------------------------ */
+/* Maquetas base                                                        */
+/* ------------------------------------------------------------------ */
+/* Las plantillas se arman combinando una de estas con el elemento de
+   contenido que toque. Es lo que permite tener 50 sin 50 maquetas. */
+
+const M = {
+  heroPleno: {
+    fondo: "foto",
+    logoTop: 64,
+    logoAncho: 340,
+    bloqueBottom: 118,
+    velos: ["full", "bottom"],
+  },
+  heroAlto: {
+    fondo: "foto",
+    logoTop: 62,
+    logoAncho: 320,
+    bloqueBottom: 150,
+    velos: ["full", "bottom"],
+  },
+  panelAbajo: {
+    fondo: "foto-arriba",
+    logoTop: 378,
+    logoAncho: 402,
+    bloqueTop: 672,
+    panelTop: 560,
+    velos: ["top"],
+  },
+  panelAbajoAlto: {
+    fondo: "foto-arriba",
+    logoTop: 258,
+    logoAncho: 350,
+    bloqueTop: 470,
+    panelTop: 360,
+    velos: ["top"],
+  },
+  panelArriba: {
+    fondo: "foto-abajo",
+    logoTop: 58,
+    logoAncho: 340,
+    bloqueTop: 250,
+    panelArriba: 706,
+    velos: ["bottom"],
+    soporteAbajo: true,
+  },
+  banda: {
+    fondo: "foto-banda",
+    logoTop: 168,
+    logoAncho: 380,
+    bloqueTop: 462,
+    panelTop: 330,
+    velos: ["top"],
+  },
+  solido: { fondo: "solido", logoTop: 112, logoAncho: 340, bloqueTop: 320 },
+  solidoAlto: { fondo: "solido", logoTop: 100, logoAncho: 330, bloqueTop: 280 },
+  solidoCentro: { fondo: "solido", logoTop: 168, logoAncho: 360, bloqueTop: 500 },
+  claro: { fondo: "claro", logoTop: 112, logoAncho: 340, bloqueTop: 320 },
+  claroCentro: { fondo: "claro", logoTop: 168, logoAncho: 360, bloqueTop: 500 },
+} satisfies Record<string, Maqueta>;
+
+type Args = {
+  id: string;
+  familia: Familia;
+  nombre: string;
+  descripcion: string;
+  campos: CampoId[];
+  l2?: number;
+  maqueta: Maqueta;
+  flecha?: string;
+};
+
+const mk = ({ id, familia, nombre, descripcion, campos, l2 = 110, maqueta, flecha }: Args): Plantilla => ({
+  id,
+  familia,
+  nombre,
+  descripcion,
+  campos,
+  l2TamanoPorDefecto: l2,
+  maqueta,
+  ...(flecha ? { flechaPorDefecto: flecha } : {}),
+});
+
 export const PLANTILLAS: Plantilla[] = [
-  /* ---------------- Comercial ---------------- */
-  {
-    id: "hero",
-    familia: "comercial",
-    nombre: "Hero pleno",
-    descripcion: "Foto a página completa y el texto abajo. Para mensajes con una imagen fuerte.",
-    campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"],
-    l2TamanoPorDefecto: 116,
-    maqueta: { fondo: "foto", logoTop: 64, logoAncho: 340, bloqueBottom: 118, velos: ["full", "bottom"] },
-  },
-  {
-    id: "panel-inferior",
-    familia: "comercial",
-    nombre: "Panel abajo",
-    descripcion: "Foto arriba y panel azul abajo con el texto. La más legible de todas.",
-    campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"],
-    l2TamanoPorDefecto: 132,
-    maqueta: { fondo: "foto-arriba", logoTop: 378, logoAncho: 402, bloqueTop: 672, panelTop: 560, velos: ["top"] },
-  },
-  {
-    id: "panel-superior",
-    familia: "comercial",
-    nombre: "Panel arriba",
-    descripcion: "Titular arriba sobre azul y foto abajo. Admite fila de etiquetas.",
-    campos: ["foto", "eyebrow", "l1", "l2", "chips", "support"],
-    l2TamanoPorDefecto: 104,
-    maqueta: {
-      fondo: "foto-abajo",
-      logoTop: 58,
-      logoAncho: 340,
-      bloqueTop: 250,
-      panelArriba: 706,
-      velos: ["bottom"],
-      soporteAbajo: true,
-    },
-  },
-  {
-    id: "split-diagonal",
-    familia: "comercial",
-    nombre: "Split diagonal",
-    descripcion: "Foto a la izquierda cortada en diagonal y texto a la derecha. Más editorial.",
-    campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "support"],
-    l2TamanoPorDefecto: 76,
-    maqueta: {
-      fondo: "split",
-      logoTop: 92,
-      logoAncho: 262,
-      logoIzq: 528,
-      bloqueTop: 306,
-      bloqueIzq: 510,
-      alinear: "izquierda",
-    },
-  },
-  {
-    id: "oferta",
-    familia: "comercial",
-    nombre: "Oferta / temporada",
-    descripcion: "Un número grande como gancho sobre la foto, con llamado a la acción.",
-    campos: ["foto", "eyebrow", "dato", "l1", "ribbon", "support"],
-    l2TamanoPorDefecto: 110,
-    maqueta: { fondo: "foto", logoTop: 62, logoAncho: 330, bloqueBottom: 110, velos: ["full", "bottom"] },
-  },
-  {
-    id: "poster",
-    familia: "comercial",
-    nombre: "Póster sándwich",
-    descripcion: "Franja sólida arriba, foto al medio y franja abajo. Se siente como afiche.",
-    campos: ["foto", "eyebrow", "l1", "l2", "ribbon"],
-    l2TamanoPorDefecto: 98,
-    maqueta: { fondo: "poster", logoTop: 62, logoAncho: 320, bloqueTop: 846 },
-  },
+  /* =============== Comercial =============== */
+  mk({ id: "hero", familia: "comercial", nombre: "Hero pleno", descripcion: "Foto a página completa y el texto abajo.", campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"], l2: 116, maqueta: M.heroPleno }),
+  mk({ id: "panel-inferior", familia: "comercial", nombre: "Panel abajo", descripcion: "Foto arriba y panel azul abajo. La más legible.", campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"], l2: 132, maqueta: M.panelAbajo }),
+  mk({ id: "panel-superior", familia: "comercial", nombre: "Panel arriba", descripcion: "Titular arriba sobre azul y foto abajo.", campos: ["foto", "eyebrow", "l1", "l2", "chips", "support"], l2: 104, maqueta: M.panelArriba }),
+  mk({ id: "split-diagonal", familia: "comercial", nombre: "Split diagonal", descripcion: "Foto a la izquierda en diagonal, texto a la derecha.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "support"], l2: 76, maqueta: { fondo: "split", logoTop: 92, logoAncho: 262, logoIzq: 528, bloqueTop: 306, bloqueIzq: 510, alinear: "izquierda" } }),
+  mk({ id: "split-derecha", familia: "comercial", nombre: "Split invertido", descripcion: "Foto a la derecha en diagonal, texto a la izquierda.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "support"], l2: 76, maqueta: { fondo: "split-derecha", logoTop: 92, logoAncho: 262, logoIzq: 56, bloqueTop: 306, bloqueIzq: 56, bloqueDer: 560, alinear: "izquierda" } }),
+  mk({ id: "oferta", familia: "comercial", nombre: "Oferta / temporada", descripcion: "Una cifra como gancho sobre la foto, con CTA.", campos: ["foto", "eyebrow", "dato", "l1", "ribbon", "support"], maqueta: { ...M.heroPleno, bloqueBottom: 110 } }),
+  mk({ id: "poster", familia: "comercial", nombre: "Póster sándwich", descripcion: "Franja sólida arriba, foto al medio, franja abajo.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon"], l2: 98, maqueta: { fondo: "poster", logoTop: 62, logoAncho: 320, bloqueTop: 846 } }),
+  mk({ id: "hero-chips", familia: "comercial", nombre: "Hero con etiquetas", descripcion: "Foto completa y una fila de etiquetas bajo el titular.", campos: ["foto", "eyebrow", "l1", "l2", "chips", "ribbon"], l2: 104, maqueta: M.heroAlto }),
+  mk({ id: "hero-metricas", familia: "comercial", nombre: "Hero con cifras", descripcion: "Foto completa y tres cifras de confianza.", campos: ["foto", "eyebrow", "l1", "l2", "metricas", "ribbon"], l2: 96, maqueta: M.heroAlto }),
+  mk({ id: "panel-tarjetas", familia: "comercial", nombre: "Panel con tarjetas", descripcion: "Foto arriba y tarjetas de servicio abajo.", campos: ["foto", "eyebrow", "l2", "tarjetas", "ribbon"], l2: 96, maqueta: M.panelAbajoAlto }),
+  mk({ id: "promo-precio", familia: "comercial", nombre: "Precio destacado", descripcion: "El precio o la tarifa como protagonista.", campos: ["foto", "eyebrow", "dato", "l1", "checklist", "ribbon"], maqueta: { ...M.panelAbajoAlto, bloqueTop: 440 } }),
+  mk({ id: "cta-doble", familia: "comercial", nombre: "Doble llamado", descripcion: "Dos cintas de acción, para dar a elegir.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "ribbon2"], l2: 104, maqueta: M.panelAbajo }),
 
-  /* ---------------- Informativa ---------------- */
-  {
-    id: "banda-lista",
-    familia: "informativa",
-    nombre: "Banda + lista",
-    descripcion: "Franja de foto arriba y lista de viñetas. Para enumerar servicios.",
-    campos: ["foto", "eyebrow", "l1", "l2", "lista", "ribbon"],
-    l2TamanoPorDefecto: 112,
-    maqueta: { fondo: "foto-banda", logoTop: 168, logoAncho: 380, bloqueTop: 462, panelTop: 330, velos: ["top"] },
-  },
-  {
-    id: "glosario",
-    familia: "informativa",
-    nombre: "Glosario",
-    descripcion: "Un término grande y su definición debajo. Para la serie educativa.",
-    campos: ["foto", "eyebrow", "l2", "support", "ribbon"],
-    l2TamanoPorDefecto: 118,
-    maqueta: { fondo: "foto-arriba", logoTop: 270, logoAncho: 340, bloqueTop: 560, panelTop: 448, velos: ["top"] },
-  },
-  {
-    id: "pasos",
-    familia: "informativa",
-    nombre: "Paso a paso",
-    descripcion: "Lista numerada sobre fondo azul. Para explicar un proceso.",
-    campos: ["eyebrow", "l1", "l2", "pasos", "ribbon"],
-    l2TamanoPorDefecto: 100,
-    maqueta: { fondo: "solido", logoTop: 118, logoAncho: 350, bloqueTop: 330 },
-  },
-  {
-    id: "dato",
-    familia: "informativa",
-    nombre: "Dato gigante",
-    descripcion: "Una cifra que habla sola, con su etiqueta y una bajada.",
-    campos: ["eyebrow", "dato", "l1", "support"],
-    l2TamanoPorDefecto: 104,
-    maqueta: { fondo: "solido", logoTop: 112, logoAncho: 340, bloqueTop: 320 },
-  },
-  {
-    id: "comparativa",
-    familia: "informativa",
-    nombre: "Comparativa",
-    descripcion: "Dos columnas enfrentadas: antes y después, o una opción contra otra.",
-    campos: ["eyebrow", "l1", "l2", "columnas", "ribbon"],
-    l2TamanoPorDefecto: 92,
-    maqueta: { fondo: "solido", logoTop: 100, logoAncho: 330, bloqueTop: 292 },
-  },
+  /* =============== Informativa =============== */
+  mk({ id: "banda-lista", familia: "informativa", nombre: "Banda + lista", descripcion: "Franja de foto arriba y lista de viñetas.", campos: ["foto", "eyebrow", "l1", "l2", "lista", "ribbon"], l2: 112, maqueta: M.banda }),
+  mk({ id: "glosario", familia: "informativa", nombre: "Glosario", descripcion: "Un término grande y su definición debajo.", campos: ["foto", "eyebrow", "l2", "support", "ribbon"], l2: 118, maqueta: { fondo: "foto-arriba", logoTop: 270, logoAncho: 340, bloqueTop: 560, panelTop: 448, velos: ["top"] } }),
+  mk({ id: "glosario-claro", familia: "informativa", nombre: "Glosario claro", descripcion: "El mismo glosario en tono crema.", campos: ["eyebrow", "l2", "support", "ribbon"], l2: 124, maqueta: { ...M.claro, bloqueTop: 420 }, flecha: AZUL }),
+  mk({ id: "pasos", familia: "informativa", nombre: "Paso a paso", descripcion: "Lista numerada sobre fondo azul.", campos: ["eyebrow", "l1", "l2", "pasos", "ribbon"], l2: 100, maqueta: { ...M.solido, logoTop: 118, logoAncho: 350, bloqueTop: 330 } }),
+  mk({ id: "pasos-foto", familia: "informativa", nombre: "Paso a paso con foto", descripcion: "Los pasos sobre una banda fotográfica.", campos: ["foto", "eyebrow", "l2", "pasos"], l2: 96, maqueta: { ...M.banda, bloqueTop: 440 } }),
+  mk({ id: "checklist", familia: "informativa", nombre: "Checklist", descripcion: "Lista con tildes: qué incluye el servicio.", campos: ["foto", "eyebrow", "l1", "l2", "checklist", "ribbon"], l2: 104, maqueta: { ...M.banda, bloqueTop: 450 } }),
+  mk({ id: "checklist-claro", familia: "informativa", nombre: "Checklist claro", descripcion: "El checklist sin foto, en tono crema.", campos: ["eyebrow", "l1", "l2", "checklist", "ribbon"], l2: 104, maqueta: { ...M.claro, bloqueTop: 340 }, flecha: AZUL }),
+  mk({ id: "comparativa", familia: "informativa", nombre: "Comparativa", descripcion: "Dos columnas enfrentadas.", campos: ["eyebrow", "l1", "l2", "columnas", "ribbon"], l2: 92, maqueta: M.solidoAlto }),
+  mk({ id: "comparativa-claro", familia: "informativa", nombre: "Comparativa clara", descripcion: "La comparativa en tono crema.", campos: ["eyebrow", "l1", "l2", "columnas", "ribbon"], l2: 92, maqueta: { ...M.claro, bloqueTop: 280 }, flecha: AZUL }),
+  mk({ id: "tarjetas-3", familia: "informativa", nombre: "Tres tarjetas", descripcion: "Tres bloques cortos, uno al lado del otro.", campos: ["eyebrow", "l1", "l2", "tarjetas", "ribbon"], l2: 96, maqueta: { ...M.solidoAlto, bloqueTop: 300 } }),
+  mk({ id: "tarjetas-4", familia: "informativa", nombre: "Cuatro tarjetas", descripcion: "Cuadrícula de cuatro bloques cortos.", campos: ["eyebrow", "l2", "tarjetas", "ribbon"], l2: 96, maqueta: { ...M.solidoAlto, bloqueTop: 290 } }),
+  mk({ id: "tarjetas-foto", familia: "informativa", nombre: "Tarjetas con foto", descripcion: "Banda de foto arriba y tarjetas debajo.", campos: ["foto", "eyebrow", "l2", "tarjetas"], l2: 92, maqueta: { ...M.banda, bloqueTop: 430 } }),
+  mk({ id: "tabla", familia: "informativa", nombre: "Tabla simple", descripcion: "Filas de concepto y valor. Para tarifas y plazos.", campos: ["eyebrow", "l1", "l2", "tabla", "ribbon"], l2: 96, maqueta: { ...M.solidoAlto, bloqueTop: 300 } }),
+  mk({ id: "tabla-claro", familia: "informativa", nombre: "Tabla clara", descripcion: "La tabla en tono crema, más de documento.", campos: ["eyebrow", "l1", "l2", "tabla", "ribbon"], l2: 96, maqueta: { ...M.claro, bloqueTop: 300 }, flecha: AZUL }),
+  mk({ id: "faq", familia: "informativa", nombre: "Pregunta y respuesta", descripcion: "Una pregunta grande y su respuesta debajo.", campos: ["foto", "eyebrow", "l2", "support", "ribbon"], l2: 104, maqueta: { ...M.panelAbajo, bloqueTop: 640 } }),
 
-  /* ---------------- Minimalista ---------------- */
-  {
-    id: "minimal-navy",
-    familia: "minimalista",
-    nombre: "Minimal azul",
-    descripcion: "Sin foto: fondo azul y una sola idea en grande.",
-    campos: ["eyebrow", "l1", "l2", "support"],
-    l2TamanoPorDefecto: 134,
-    maqueta: { fondo: "solido", logoTop: 168, logoAncho: 360, bloqueTop: 500 },
-  },
-  {
-    id: "minimal-claro",
-    familia: "minimalista",
-    nombre: "Minimal claro",
-    descripcion: "Sin foto y en tono crema. La única clara de la familia.",
-    campos: ["eyebrow", "l1", "l2", "support"],
-    l2TamanoPorDefecto: 134,
-    maqueta: { fondo: "claro", logoTop: 168, logoAncho: 360, bloqueTop: 500 },
-    flechaPorDefecto: "#14294F",
-  },
+  /* =============== Datos y gráficos =============== */
+  mk({ id: "dato", familia: "datos", nombre: "Dato gigante", descripcion: "Una cifra que habla sola.", campos: ["eyebrow", "dato", "l1", "support"], maqueta: M.solido }),
+  mk({ id: "dato-foto", familia: "datos", nombre: "Dato sobre foto", descripcion: "La cifra gigante sobre una imagen.", campos: ["foto", "eyebrow", "dato", "l1"], maqueta: { ...M.heroPleno, bloqueBottom: 170 } }),
+  mk({ id: "dato-claro", familia: "datos", nombre: "Dato en claro", descripcion: "La cifra en tono crema, más sobria.", campos: ["eyebrow", "dato", "l1", "support"], maqueta: M.claro, flecha: AZUL }),
+  mk({ id: "dona", familia: "datos", nombre: "Porcentaje en dona", descripcion: "Un anillo que muestra el porcentaje.", campos: ["eyebrow", "dona", "l1", "support"], maqueta: { ...M.solido, bloqueTop: 300 } }),
+  mk({ id: "dona-foto", familia: "datos", nombre: "Dona sobre foto", descripcion: "El anillo de porcentaje sobre una imagen.", campos: ["foto", "eyebrow", "dona", "l1"], maqueta: { ...M.heroPleno, bloqueBottom: 200 } }),
+  mk({ id: "barras", familia: "datos", nombre: "Gráfico de barras", descripcion: "Barras horizontales con su valor.", campos: ["eyebrow", "l1", "l2", "barras", "support"], l2: 92, maqueta: { ...M.solidoAlto, bloqueTop: 300 } }),
+  mk({ id: "barras-foto", familia: "datos", nombre: "Barras con foto", descripcion: "Banda de foto arriba y barras debajo.", campos: ["foto", "eyebrow", "l2", "barras"], l2: 92, maqueta: { ...M.banda, bloqueTop: 430 } }),
+  mk({ id: "barras-claro", familia: "datos", nombre: "Barras en claro", descripcion: "Las barras en tono crema.", campos: ["eyebrow", "l1", "l2", "barras", "support"], l2: 92, maqueta: { ...M.claro, bloqueTop: 300 }, flecha: AZUL }),
+  mk({ id: "metricas", familia: "datos", nombre: "Tres cifras", descripcion: "Tres números en fila con su etiqueta.", campos: ["eyebrow", "l1", "l2", "metricas", "support"], l2: 100, maqueta: { ...M.solidoAlto, bloqueTop: 310 } }),
+  mk({ id: "metricas-foto", familia: "datos", nombre: "Cifras sobre foto", descripcion: "Las tres cifras sobre una imagen.", campos: ["foto", "eyebrow", "l2", "metricas"], l2: 100, maqueta: { ...M.heroPleno, bloqueBottom: 140 } }),
+  mk({ id: "hitos", familia: "datos", nombre: "Línea de tiempo", descripcion: "Hitos en orden, con su año o fecha.", campos: ["eyebrow", "l1", "l2", "hitos"], l2: 96, maqueta: { ...M.solidoAlto, bloqueTop: 300 } }),
+  mk({ id: "hitos-foto", familia: "datos", nombre: "Línea de tiempo con foto", descripcion: "Los hitos bajo una banda fotográfica.", campos: ["foto", "eyebrow", "l2", "hitos"], l2: 92, maqueta: { ...M.banda, bloqueTop: 440 } }),
 
-  /* ---------------- Noticias ---------------- */
-  {
-    id: "noticia",
-    familia: "noticias",
-    nombre: "Noticia",
-    descripcion: "Etiqueta con la fecha, titular y bajada sobre la foto. Para novedades e hitos.",
-    campos: ["foto", "eyebrow", "l1", "l2", "support"],
-    l2TamanoPorDefecto: 98,
-    maqueta: { fondo: "foto", logoTop: 60, logoAncho: 300, bloqueBottom: 138, velos: ["full", "bottom"] },
-  },
-  {
-    id: "cita",
-    familia: "noticias",
-    nombre: "Cita / testimonio",
-    descripcion: "Una frase entre comillas y su firma. Sin foto.",
-    campos: ["eyebrow", "cita"],
-    l2TamanoPorDefecto: 100,
-    maqueta: { fondo: "solido", logoTop: 110, logoAncho: 330, bloqueTop: 360 },
-  },
+  /* =============== Minimalista =============== */
+  mk({ id: "minimal-navy", familia: "minimalista", nombre: "Minimal azul", descripcion: "Sin foto: fondo azul y una sola idea.", campos: ["eyebrow", "l1", "l2", "support"], l2: 134, maqueta: M.solidoCentro }),
+  mk({ id: "minimal-claro", familia: "minimalista", nombre: "Minimal claro", descripcion: "Sin foto, en tono crema.", campos: ["eyebrow", "l1", "l2", "support"], l2: 134, maqueta: M.claroCentro, flecha: AZUL }),
+  mk({ id: "minimal-foto", familia: "minimalista", nombre: "Minimal con foto", descripcion: "Foto completa y una sola línea de texto.", campos: ["foto", "l2"], l2: 120, maqueta: { fondo: "foto", logoTop: 70, logoAncho: 300, bloqueBottom: 190, velos: ["full", "bottom"] } }),
+  mk({ id: "minimal-banda", familia: "minimalista", nombre: "Minimal con banda", descripcion: "Banda de foto arriba y mucho aire abajo.", campos: ["foto", "eyebrow", "l2", "support"], l2: 116, maqueta: { fondo: "foto-banda", logoTop: 520, logoAncho: 340, bloqueTop: 700, panelTop: 330, velos: ["top"] } }),
+  mk({ id: "minimal-medallon", familia: "minimalista", nombre: "Medallón", descripcion: "La foto en un círculo, centrada.", campos: ["foto", "eyebrow", "l2", "support"], l2: 104, maqueta: { fondo: "medallon", logoTop: 92, logoAncho: 300, bloqueTop: 780 } }),
+  mk({ id: "minimal-marco", familia: "minimalista", nombre: "Foto enmarcada", descripcion: "La foto con un marco crema alrededor.", campos: ["foto", "eyebrow", "l2", "support"], l2: 104, maqueta: { fondo: "marco", logoTop: 92, logoAncho: 300, bloqueTop: 820 }, flecha: AZUL }),
+  mk({ id: "minimal-banda-baja", familia: "minimalista", nombre: "Banda al pie", descripcion: "Texto arriba y una franja de foto al pie.", campos: ["foto", "eyebrow", "l1", "l2", "support"], l2: 116, maqueta: { fondo: "foto-banda-baja", logoTop: 150, logoAncho: 340, bloqueTop: 420 } }),
+  mk({ id: "minimal-tipografico", familia: "minimalista", nombre: "Solo tipografía", descripcion: "Una frase enorme, sin nada más.", campos: ["l2"], l2: 150, maqueta: { ...M.solidoCentro, bloqueTop: 480 } }),
+  mk({ id: "minimal-claim", familia: "minimalista", nombre: "Marca y claim", descripcion: "El logo grande y una línea de cierre.", campos: ["l2", "support"], l2: 92, maqueta: { fondo: "solido", logoTop: 430, logoAncho: 520, bloqueTop: 760 } }),
+  mk({ id: "minimal-claro-foto", familia: "minimalista", nombre: "Claro con foto", descripcion: "Banda de foto sobre fondo crema.", campos: ["foto", "eyebrow", "l2", "support"], l2: 116, maqueta: { fondo: "foto-banda", logoTop: 500, logoAncho: 330, bloqueTop: 690, panelTop: 330, velos: ["top"] }, flecha: BLANCO }),
+
+  /* =============== Noticias =============== */
+  mk({ id: "noticia", familia: "noticias", nombre: "Noticia", descripcion: "Fecha, titular y bajada sobre la foto.", campos: ["foto", "eyebrow", "l1", "l2", "support"], l2: 98, maqueta: { ...M.heroPleno, logoTop: 60, logoAncho: 300, bloqueBottom: 138 } }),
+  mk({ id: "noticia-panel", familia: "noticias", nombre: "Noticia con panel", descripcion: "La noticia sobre panel azul, más legible.", campos: ["foto", "eyebrow", "l1", "l2", "support"], l2: 104, maqueta: M.panelAbajo }),
+  mk({ id: "cita", familia: "noticias", nombre: "Cita / testimonio", descripcion: "Una frase entre comillas y su firma.", campos: ["eyebrow", "cita"], maqueta: { ...M.solido, logoTop: 110, bloqueTop: 360 } }),
+  mk({ id: "cita-foto", familia: "noticias", nombre: "Cita sobre foto", descripcion: "El testimonio sobre una imagen.", campos: ["foto", "eyebrow", "cita"], maqueta: { fondo: "foto", logoTop: 66, logoAncho: 300, bloqueTop: 420, velos: ["full", "bottom"] } }),
+  mk({ id: "cita-claro", familia: "noticias", nombre: "Cita en claro", descripcion: "El testimonio en tono crema.", campos: ["eyebrow", "cita"], maqueta: { ...M.claro, bloqueTop: 360 }, flecha: AZUL }),
+  mk({ id: "hito", familia: "noticias", nombre: "Hito / aniversario", descripcion: "Una cifra de celebración y su mensaje.", campos: ["foto", "eyebrow", "dato", "l1", "support"], maqueta: { ...M.heroPleno, bloqueBottom: 140 } }),
+  mk({ id: "anuncio-fecha", familia: "noticias", nombre: "Anuncio con fecha", descripcion: "Para charlas, ferias y fechas que hay que fijar.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "support"], l2: 104, maqueta: M.panelAbajo }),
+  mk({ id: "bienvenida", familia: "noticias", nombre: "Bienvenida", descripcion: "Para dar la bienvenida a un cliente o al equipo.", campos: ["foto", "eyebrow", "l1", "l2", "support"], l2: 116, maqueta: M.panelAbajo }),
+  mk({ id: "agradecimiento", familia: "noticias", nombre: "Agradecimiento", descripcion: "Cierre de temporada o de año.", campos: ["foto", "eyebrow", "l1", "l2", "support"], l2: 124, maqueta: M.heroPleno }),
+
+  /* =============== Redes y educativo =============== */
+  mk({ id: "sabias-que", familia: "redes", nombre: "¿Sabías qué?", descripcion: "El clásico dato curioso del feed.", campos: ["foto", "eyebrow", "l1", "dato", "l2"], l2: 88, maqueta: { ...M.heroPleno, bloqueBottom: 160 } }),
+  mk({ id: "mito-realidad", familia: "redes", nombre: "Mito y realidad", descripcion: "Dos columnas: lo que se cree y lo que es.", campos: ["eyebrow", "l2", "columnas"], l2: 100, maqueta: { ...M.solidoAlto, bloqueTop: 320 } }),
+  mk({ id: "pregunta", familia: "redes", nombre: "Pregunta abierta", descripcion: "Una pregunta grande para generar respuestas.", campos: ["foto", "eyebrow", "l2", "support"], l2: 116, maqueta: { ...M.heroPleno, bloqueBottom: 170 } }),
+  mk({ id: "tip", familia: "redes", nombre: "Tip / consejo", descripcion: "Un consejo corto y accionable.", campos: ["foto", "eyebrow", "l1", "l2", "support"], l2: 104, maqueta: M.panelAbajo }),
+  mk({ id: "carrusel-portada", familia: "redes", nombre: "Carrusel: portada", descripcion: "Primera lámina, con la promesa del carrusel.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon"], l2: 124, maqueta: M.heroPleno }),
+  mk({ id: "carrusel-interior", familia: "redes", nombre: "Carrusel: interior", descripcion: "Lámina intermedia, sobria y legible.", campos: ["eyebrow", "l2", "support"], l2: 104, maqueta: { ...M.solidoCentro, bloqueTop: 420 } }),
+  mk({ id: "carrusel-lista", familia: "redes", nombre: "Carrusel: lista", descripcion: "Lámina intermedia con viñetas.", campos: ["eyebrow", "l2", "lista"], l2: 100, maqueta: { ...M.solidoAlto, bloqueTop: 330 } }),
+  mk({ id: "carrusel-cierre", familia: "redes", nombre: "Carrusel: cierre", descripcion: "Última lámina, con el llamado a la acción.", campos: ["eyebrow", "l1", "l2", "ribbon", "support"], l2: 116, maqueta: { ...M.solidoCentro, bloqueTop: 440 } }),
+  mk({ id: "serie-numero", familia: "redes", nombre: "Serie numerada", descripcion: "Para entregas de una serie: #1, #2, #3.", campos: ["foto", "eyebrow", "dato", "l2", "support"], l2: 96, maqueta: { ...M.panelAbajoAlto, bloqueTop: 450 } }),
 ];
 
 export function getPlantilla(id: PlantillaId): Plantilla {
@@ -261,24 +276,27 @@ export function usaCampo(plantilla: PlantillaId, campo: CampoId): boolean {
 
 export type Pieza = {
   plantilla: PlantillaId;
-  /** Cinta roja chica de arriba. */
   eyebrow: string;
-  /** Primera línea del titular, tamaño medio. */
   l1: string;
-  /** Línea intermedia chica, opcional (el "de la" de la pieza de cereza). */
   lm: string;
-  /** Línea grande del titular. */
   l2: string;
-  /** Tamaño en px de la línea grande: se ajusta según el largo del texto. */
   l2Tamano: number;
-  /** Cinta roja de llamado a la acción. */
   ribbon: string;
-  /** Bajada en itálica. Admite <b> para destacar. */
+  ribbon2: string;
   support: string;
   chips: string[];
   lista: string[];
   pasos: string[];
-  /** La cifra protagonista y su etiqueta. */
+  /** Cada línea: "Título | texto". */
+  tarjetas: string[];
+  /** Cada línea: "Etiqueta | 70" (0 a 100). */
+  barras: string[];
+  /** Cada línea: "15+ | Años". */
+  metricas: string[];
+  /** Cada línea: "2019 | Abrimos en Curicó". */
+  hitos: string[];
+  /** Cada línea: "Concepto | Valor". */
+  tabla: string[];
   dato: string;
   datoEtiqueta: string;
   cita: string;
@@ -287,15 +305,10 @@ export type Pieza = {
   colA: string[];
   colBTitulo: string;
   colB: string[];
-  /** URL pública de la foto de fondo. */
   foto: string;
-  /** Encuadre vertical, 0 = arriba, 100 = abajo. */
   fotoPosicion: number;
-  /** Encuadre horizontal, 0 = izquierda, 100 = derecha. Solo importa con zoom. */
   fotoPosicionX: number;
-  /** Acercamiento, 100 = sin acercar. */
   fotoZoom: number;
-  /** Color de la media flecha superior. */
   flechaColor: string;
 };
 
@@ -307,6 +320,7 @@ export const PIEZA_INICIAL: Pieza = {
   l2: "De Chile al mundo",
   l2Tamano: 132,
   ribbon: "Booking, estiba y zarpe",
+  ribbon2: "Cotiza hoy",
   support:
     "Gestionamos tu reserva con las principales navieras y controlamos <b>cada hito hasta el zarpe</b>.",
   chips: ["Marítimo", "Terrestre", "Aéreo"],
@@ -316,7 +330,21 @@ export const PIEZA_INICIAL: Pieza = {
     "Seguimiento en línea de cada embarque",
     "Un ejecutivo dedicado de punta a punta",
   ],
-  pasos: ["Nos envías la carga y el destino", "Cotizamos y reservamos con la naviera", "Coordinamos retiro, estiba y documentos", "Te avisamos en cada hito hasta la entrega"],
+  pasos: [
+    "Nos envías la carga y el destino",
+    "Cotizamos y reservamos con la naviera",
+    "Coordinamos retiro, estiba y documentos",
+    "Te avisamos en cada hito hasta la entrega",
+  ],
+  tarjetas: [
+    "Marítimo | Consolidado y contenedor completo",
+    "Terrestre | Nacional e internacional",
+    "Aéreo | Para carga que no puede esperar",
+  ],
+  barras: ["Marítimo | 72", "Terrestre | 46", "Aéreo | 28"],
+  metricas: ["15+ | Años", "150+ | Clientes", "30+ | Países"],
+  hitos: ["2009 | Partimos en Curicó", "2018 | Primera oficina propia", "2026 | Más de 30 destinos"],
+  tabla: ["Tránsito a Asia | 28 días", "Tránsito a Europa | 24 días", "Corte documental | 72 horas"],
   dato: "90%",
   datoEtiqueta: "del comercio mundial se mueve por mar",
   cita: "La confianza que nos entregan es el mejor resultado del año.",
@@ -329,8 +357,15 @@ export const PIEZA_INICIAL: Pieza = {
   fotoPosicion: 50,
   fotoPosicionX: 50,
   fotoZoom: 100,
-  flechaColor: "#FFFFFF",
+  flechaColor: BLANCO,
 };
+
+/** Parte "Título | texto" en sus dos mitades. Sin barra, todo va al primero. */
+export function partir(linea: string): [string, string] {
+  const i = linea.indexOf("|");
+  if (i < 0) return [linea.trim(), ""];
+  return [linea.slice(0, i).trim(), linea.slice(i + 1).trim()];
+}
 
 /** Categorías del banco de imágenes, en el orden en que conviene mostrarlas. */
 export const CATEGORIAS = [

@@ -2,7 +2,7 @@
 
 import { forwardRef } from "react";
 import { withBase } from "@/lib/basePath";
-import { getPlantilla, type Pieza } from "./plantillas";
+import { getPlantilla, partir, type CampoId, type Pieza } from "./plantillas";
 
 /**
  * La pieza tal cual se exporta: 1080x1350 px reales.
@@ -11,9 +11,9 @@ import { getPlantilla, type Pieza } from "./plantillas";
  * así lo que se ve en pantalla y lo que sale en el PNG son el mismo nodo, y no
  * hay forma de que se desincronicen.
  *
- * El lienzo se arma leyendo `maqueta` y `campos` de la plantilla. Los bloques
- * de texto salen siempre en el mismo orden de lectura, y cada plantilla decide
- * cuáles aparecen.
+ * El lienzo se arma leyendo `maqueta` y `campos` de la plantilla. Los elementos
+ * de contenido salen siempre en el mismo orden de lectura, y cada plantilla
+ * decide cuáles aparecen.
  */
 
 const LOGO_CLARO = withBase("/logoblanco.png");
@@ -44,28 +44,34 @@ function Pie() {
   );
 }
 
-function Titular({ pieza }: { pieza: Pieza }) {
-  const { campos } = getPlantilla(pieza.plantilla);
-  const l1 = campos.includes("l1") && pieza.l1;
-  const lm = campos.includes("lm") && pieza.lm;
-  const l2 = campos.includes("l2") && pieza.l2;
-  if (!l1 && !lm && !l2) return null;
+/** Anillo de porcentaje. SVG y no un borde con conic-gradient: el exportador
+ *  serializa SVG sin problemas, y conic-gradient sale con bandas. */
+function Dona({ valor, texto }: { valor: number; texto: string }) {
+  const r = 150;
+  const circ = 2 * Math.PI * r;
+  const avance = Math.max(0, Math.min(100, valor)) / 100;
   return (
-    <h1>
-      {l1 ? <span className="l1">{pieza.l1}</span> : null}
-      {lm ? <span className="lm">{pieza.lm}</span> : null}
-      {l2 ? (
-        <span className="l2" style={{ fontSize: `${pieza.l2Tamano}px` }}>
-          {pieza.l2}
-        </span>
-      ) : null}
-    </h1>
+    <div className="dona-bloque">
+      <svg className="dona" viewBox="0 0 360 360" aria-hidden="true">
+        <circle cx="180" cy="180" r={r} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="38" />
+        <circle
+          cx="180"
+          cy="180"
+          r={r}
+          fill="none"
+          stroke="#C8102E"
+          strokeWidth="38"
+          strokeLinecap="butt"
+          strokeDasharray={`${circ * avance} ${circ}`}
+          transform="rotate(-90 180 180)"
+        />
+        <text x="180" y="180" className="dona-num" textAnchor="middle" dominantBaseline="central">
+          {valor}%
+        </text>
+      </svg>
+      {texto ? <div className="dato-etiqueta">{texto}</div> : null}
+    </div>
   );
-}
-
-function Bajada({ texto }: { texto: string }) {
-  if (!texto.trim()) return null;
-  return <p className="support" dangerouslySetInnerHTML={{ __html: bajadaHtml(texto) }} />;
 }
 
 type Props = {
@@ -79,8 +85,8 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   ref,
 ) {
   const { campos, maqueta } = getPlantilla(pieza.plantilla);
-  const usa = (c: Parameters<typeof campos.includes>[0]) => campos.includes(c);
-  const claro = maqueta.fondo === "claro";
+  const usa = (c: CampoId) => campos.includes(c);
+  const claro = maqueta.fondo === "claro" || maqueta.fondo === "marco";
 
   /* ---------- Foto ---------- */
   // El acercamiento va por transform y no por background-size: así el encuadre
@@ -95,7 +101,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
   const foto = (extra = "") => <div className={`photo ${extra}`.trim()} style={estiloFoto} />;
 
-  let fondo: React.ReactNode = null;
+  let fondo: React.ReactNode;
   switch (maqueta.fondo) {
     case "foto":
       fondo = foto();
@@ -109,11 +115,28 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
     case "foto-banda":
       fondo = foto("band");
       break;
+    case "foto-banda-baja":
+      fondo = (
+        <>
+          <div className="fondo-solido" />
+          <div className="stripes" />
+          {foto("band-baja")}
+        </>
+      );
+      break;
     case "split":
       fondo = (
         <>
           <div className="fondo-solido" />
           {foto("split")}
+        </>
+      );
+      break;
+    case "split-derecha":
+      fondo = (
+        <>
+          <div className="fondo-solido" />
+          {foto("split der")}
         </>
       );
       break;
@@ -123,6 +146,23 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
           {foto()}
           <div className="franja-top" />
           <div className="franja-bottom" />
+        </>
+      );
+      break;
+    case "medallon":
+      fondo = (
+        <>
+          <div className="fondo-solido" />
+          <div className="stripes" />
+          {foto("medallon")}
+        </>
+      );
+      break;
+    case "marco":
+      fondo = (
+        <>
+          <div className="fondo-claro" />
+          {foto("marco")}
         </>
       );
       break;
@@ -167,29 +207,42 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
     );
   }
 
-  /* ---------- Bloque de texto ---------- */
+  /* ---------- Bloque ---------- */
   const estiloBloque: React.CSSProperties = {};
   if (maqueta.bloqueTop !== undefined) estiloBloque.top = `${maqueta.bloqueTop}px`;
   if (maqueta.bloqueBottom !== undefined) estiloBloque.bottom = `${maqueta.bloqueBottom}px`;
   if (maqueta.bloqueIzq !== undefined) estiloBloque.left = `${maqueta.bloqueIzq}px`;
+  if (maqueta.bloqueDer !== undefined) estiloBloque.right = `${maqueta.bloqueDer}px`;
 
-  const chips = pieza.chips.filter(Boolean);
-  const lista = pieza.lista.filter(Boolean);
-  const pasos = pieza.pasos.filter(Boolean);
+  const limpio = (xs: string[]) => xs.filter((x) => x.trim());
+  const pares = (xs: string[]) => limpio(xs).map(partir);
+
+  const chips = limpio(pieza.chips);
+  const lista = limpio(pieza.lista);
+  const pasos = limpio(pieza.pasos);
+  const tarjetas = pares(pieza.tarjetas);
+  const barras = pares(pieza.barras);
+  const metricas = pares(pieza.metricas);
+  const hitos = pares(pieza.hitos);
+  const tabla = pares(pieza.tabla);
 
   /* ---------- Logo ---------- */
-  const estiloLogo: React.CSSProperties = { top: `${maqueta.logoTop}px`, width: `${maqueta.logoAncho}px` };
+  const estiloLogo: React.CSSProperties = {
+    top: `${maqueta.logoTop}px`,
+    width: `${maqueta.logoAncho}px`,
+  };
   if (maqueta.logoIzq !== undefined) {
     estiloLogo.left = `${maqueta.logoIzq}px`;
     estiloLogo.transform = "none";
   }
 
+  const bajada =
+    usa("support") && pieza.support.trim() ? (
+      <p className="support" dangerouslySetInnerHTML={{ __html: bajadaHtml(pieza.support) }} />
+    ) : null;
+
   return (
-    <div
-      ref={ref}
-      className={`pieza${claro ? " claro" : ""}`}
-      style={{ transform: `scale(${escala})` }}
-    >
+    <div ref={ref} className={`pieza${claro ? " claro" : ""}`} style={{ transform: `scale(${escala})` }}>
       {fondo}
       {maqueta.velos?.includes("full") ? <div className="veil-full" /> : null}
       {maqueta.velos?.includes("top") ? <div className="veil-top" /> : null}
@@ -200,12 +253,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       <div className="wedge" />
       <div className="wedge-line" />
 
-      <img
-        className="logo"
-        src={claro ? LOGO_OSCURO : LOGO_CLARO}
-        alt="ASLI"
-        style={estiloLogo}
-      />
+      <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" style={estiloLogo} />
 
       <div className={`block${maqueta.alinear === "izquierda" ? " izq" : ""}`} style={estiloBloque}>
         {usa("eyebrow") && pieza.eyebrow ? <div className="eyebrow">{pieza.eyebrow}</div> : null}
@@ -217,7 +265,21 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
           </div>
         ) : null}
 
-        <Titular pieza={pieza} />
+        {usa("dona") ? (
+          <Dona valor={parseInt(pieza.dato, 10) || 0} texto={pieza.datoEtiqueta} />
+        ) : null}
+
+        {usa("l1") || usa("lm") || usa("l2") ? (
+          <h1>
+            {usa("l1") && pieza.l1 ? <span className="l1">{pieza.l1}</span> : null}
+            {usa("lm") && pieza.lm ? <span className="lm">{pieza.lm}</span> : null}
+            {usa("l2") && pieza.l2 ? (
+              <span className="l2" style={{ fontSize: `${pieza.l2Tamano}px` }}>
+                {pieza.l2}
+              </span>
+            ) : null}
+          </h1>
+        ) : null}
 
         {usa("cita") && pieza.cita ? (
           <>
@@ -226,11 +288,42 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
           </>
         ) : null}
 
-        {usa("chips") && chips.length > 0 ? (
-          <div className="chips">
-            {chips.map((c, i) => (
-              <div className="chip" key={`${c}-${i}`}>
-                {c}
+        {usa("metricas") && metricas.length > 0 ? (
+          <div className="metricas">
+            {metricas.map(([n, et], i) => (
+              <div key={`m-${i}`}>
+                <div className="m-num">{n}</div>
+                <div className="m-et">{et}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {usa("barras") && barras.length > 0 ? (
+          <div className="barras">
+            {barras.map(([et, v], i) => {
+              const n = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+              return (
+                <div className="barra" key={`b-${i}`}>
+                  <div className="b-cab">
+                    <span>{et}</span>
+                    <span className="b-val">{n}%</span>
+                  </div>
+                  <div className="b-riel">
+                    <div className="b-relleno" style={{ width: `${n}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {usa("tarjetas") && tarjetas.length > 0 ? (
+          <div className={`tarjetas${tarjetas.length >= 4 ? " cuatro" : ""}`}>
+            {tarjetas.map(([t, d], i) => (
+              <div className="tarjeta" key={`t-${i}`}>
+                <h3>{t}</h3>
+                {d ? <p>{d}</p> : null}
               </div>
             ))}
           </div>
@@ -239,7 +332,27 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         {usa("lista") && lista.length > 0 ? (
           <ul className="list">
             {lista.map((item, i) => (
-              <li key={`${item}-${i}`}>{item}</li>
+              <li key={`l-${i}`}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
+
+        {usa("checklist") && lista.length > 0 ? (
+          <ul className="checklist">
+            {lista.map((item, i) => (
+              <li key={`c-${i}`}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4 12.5 L9.5 18 L20 6"
+                    fill="none"
+                    stroke="#C8102E"
+                    strokeWidth="3.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <span>{item}</span>
+              </li>
             ))}
           </ul>
         ) : null}
@@ -247,9 +360,31 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         {usa("pasos") && pasos.length > 0 ? (
           <ol className="pasos">
             {pasos.map((item, i) => (
-              <li key={`${item}-${i}`}>{item}</li>
+              <li key={`p-${i}`}>{item}</li>
             ))}
           </ol>
+        ) : null}
+
+        {usa("hitos") && hitos.length > 0 ? (
+          <div className="hitos">
+            {hitos.map(([f, t], i) => (
+              <div className="hito" key={`h-${i}`}>
+                <div className="h-fecha">{f}</div>
+                <div className="h-texto">{t}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {usa("tabla") && tabla.length > 0 ? (
+          <div className="tabla">
+            {tabla.map(([a, b], i) => (
+              <div className="fila" key={`f-${i}`}>
+                <span>{a}</span>
+                <span className="valor">{b}</span>
+              </div>
+            ))}
+          </div>
         ) : null}
 
         {usa("columnas") ? (
@@ -257,32 +392,39 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
             <div>
               <h3>{pieza.colATitulo}</h3>
               <ul>
-                {pieza.colA.filter(Boolean).map((t, i) => (
-                  <li key={`a-${i}`}>{t}</li>
+                {limpio(pieza.colA).map((t, i) => (
+                  <li key={`ca-${i}`}>{t}</li>
                 ))}
               </ul>
             </div>
             <div className="contra">
               <h3>{pieza.colBTitulo}</h3>
               <ul>
-                {pieza.colB.filter(Boolean).map((t, i) => (
-                  <li key={`b-${i}`}>{t}</li>
+                {limpio(pieza.colB).map((t, i) => (
+                  <li key={`cb-${i}`}>{t}</li>
                 ))}
               </ul>
             </div>
           </div>
         ) : null}
 
-        {usa("ribbon") && pieza.ribbon ? <div className="ribbon">{pieza.ribbon}</div> : null}
+        {usa("chips") && chips.length > 0 ? (
+          <div className="chips">
+            {chips.map((c, i) => (
+              <div className="chip" key={`ch-${i}`}>
+                {c}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
-        {usa("support") && !maqueta.soporteAbajo ? <Bajada texto={pieza.support} /> : null}
+        {usa("ribbon") && pieza.ribbon ? <div className="ribbon">{pieza.ribbon}</div> : null}
+        {usa("ribbon2") && pieza.ribbon2 ? <div className="ribbon secundaria">{pieza.ribbon2}</div> : null}
+
+        {maqueta.soporteAbajo ? null : bajada}
       </div>
 
-      {usa("support") && maqueta.soporteAbajo ? (
-        <div className="support-low">
-          <Bajada texto={pieza.support} />
-        </div>
-      ) : null}
+      {maqueta.soporteAbajo && bajada ? <div className="support-low">{bajada}</div> : null}
 
       <Pie />
     </div>

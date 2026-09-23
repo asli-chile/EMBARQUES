@@ -288,7 +288,9 @@ export function CreadorPublicidadContent() {
   );
 
   /** Los campos de varias líneas se editan como texto y se guardan como lista. */
-  const porLineas = (campo: "lista" | "pasos" | "colA" | "colB") => ({
+  const porLineas = (
+    campo: "lista" | "pasos" | "colA" | "colB" | "tarjetas" | "barras" | "metricas" | "hitos" | "tabla",
+  ) => ({
     value: pieza[campo].join("\n"),
     onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => set(campo, e.target.value.split("\n")),
   });
@@ -360,36 +362,30 @@ export function CreadorPublicidadContent() {
             </div>
           ) : null}
 
-          {/* ---- Plantillas, agrupadas por uso ---- */}
+          {/* ---- Plantilla ----
+               Desplegable y no grilla de botones: con 67 opciones los botones
+               se comian la pantalla y obligaban a scrollear para ver el resto
+               de las herramientas. Los optgroup mantienen la agrupacion. */}
           <div className={bloque}>
-            <span className={label}>Plantilla</span>
-            {FAMILIAS.map((fam) => (
-              <div key={fam.id}>
-                <div className="mb-1.5 flex items-baseline gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wide text-dash-neon">
-                    {fam.nombre}
-                  </span>
-                  <span className="truncate text-[11px] text-dash-muted">{fam.descripcion}</span>
-                </div>
-                <div className="mb-3 grid grid-cols-2 gap-2">
+            <label className={label} htmlFor="c-plantilla">
+              Plantilla · {PLANTILLAS.length} disponibles
+            </label>
+            <select
+              id="c-plantilla"
+              className={input}
+              value={pieza.plantilla}
+              onChange={(e) => cambiarPlantilla(e.target.value)}
+            >
+              {FAMILIAS.map((fam) => (
+                <optgroup key={fam.id} label={`${fam.nombre} — ${fam.descripcion}`}>
                   {PLANTILLAS.filter((p) => p.familia === fam.id).map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => cambiarPlantilla(p.id)}
-                      title={p.descripcion}
-                      className={`rounded-lg border px-3 py-2 text-left text-sm font-semibold transition ${
-                        pieza.plantilla === p.id
-                          ? "border-dash-neon bg-dash-neon/10 text-dash-fg"
-                          : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
-                      }`}
-                    >
+                    <option key={p.id} value={p.id}>
                       {p.nombre}
-                    </button>
+                    </option>
                   ))}
-                </div>
-              </div>
-            ))}
+                </optgroup>
+              ))}
+            </select>
             <p className="text-xs text-dash-muted">{plantilla.descripcion}</p>
           </div>
 
@@ -412,7 +408,7 @@ export function CreadorPublicidadContent() {
               </div>
             )}
 
-            {usaCampo(pieza.plantilla, "dato") && (
+            {(usaCampo(pieza.plantilla, "dato") || usaCampo(pieza.plantilla, "dona")) && (
               <div className="grid grid-cols-[110px_1fr] gap-2">
                 <div>
                   <label className={label} htmlFor="c-dato">
@@ -423,7 +419,7 @@ export function CreadorPublicidadContent() {
                     className={input}
                     value={pieza.dato}
                     onChange={(e) => set("dato", e.target.value)}
-                    placeholder="90%"
+                    placeholder={usaCampo(pieza.plantilla, "dona") ? "90" : "90%"}
                   />
                 </div>
                 <div>
@@ -541,10 +537,10 @@ export function CreadorPublicidadContent() {
               </div>
             )}
 
-            {usaCampo(pieza.plantilla, "lista") && (
+            {(usaCampo(pieza.plantilla, "lista") || usaCampo(pieza.plantilla, "checklist")) && (
               <div>
                 <label className={label} htmlFor="c-lista">
-                  Lista (una por línea)
+                  {usaCampo(pieza.plantilla, "checklist") ? "Checklist" : "Lista"} (una por línea)
                 </label>
                 <textarea
                   id="c-lista"
@@ -604,6 +600,71 @@ export function CreadorPublicidadContent() {
               </div>
             )}
 
+            {usaCampo(pieza.plantilla, "tarjetas") && (
+              <div>
+                <label className={label} htmlFor="c-tarjetas">
+                  Tarjetas — una por línea: título | texto
+                </label>
+                <textarea
+                  id="c-tarjetas"
+                  className={`${input} min-h-[110px] resize-y`}
+                  {...porLineas("tarjetas")}
+                />
+              </div>
+            )}
+
+            {usaCampo(pieza.plantilla, "barras") && (
+              <div>
+                <label className={label} htmlFor="c-barras">
+                  Barras — una por línea: etiqueta | número del 0 al 100
+                </label>
+                <textarea
+                  id="c-barras"
+                  className={`${input} min-h-[90px] resize-y`}
+                  {...porLineas("barras")}
+                />
+              </div>
+            )}
+
+            {usaCampo(pieza.plantilla, "metricas") && (
+              <div>
+                <label className={label} htmlFor="c-metricas">
+                  Cifras — una por línea: número | etiqueta
+                </label>
+                <textarea
+                  id="c-metricas"
+                  className={`${input} min-h-[90px] resize-y`}
+                  {...porLineas("metricas")}
+                />
+              </div>
+            )}
+
+            {usaCampo(pieza.plantilla, "hitos") && (
+              <div>
+                <label className={label} htmlFor="c-hitos">
+                  Hitos — uno por línea: fecha | qué pasó
+                </label>
+                <textarea
+                  id="c-hitos"
+                  className={`${input} min-h-[100px] resize-y`}
+                  {...porLineas("hitos")}
+                />
+              </div>
+            )}
+
+            {usaCampo(pieza.plantilla, "tabla") && (
+              <div>
+                <label className={label} htmlFor="c-tabla">
+                  Tabla — una fila por línea: concepto | valor
+                </label>
+                <textarea
+                  id="c-tabla"
+                  className={`${input} min-h-[100px] resize-y`}
+                  {...porLineas("tabla")}
+                />
+              </div>
+            )}
+
             {usaCampo(pieza.plantilla, "ribbon") && (
               <div>
                 <label className={label} htmlFor="c-ribbon">
@@ -614,6 +675,20 @@ export function CreadorPublicidadContent() {
                   className={input}
                   value={pieza.ribbon}
                   onChange={(e) => set("ribbon", e.target.value)}
+                />
+              </div>
+            )}
+
+            {usaCampo(pieza.plantilla, "ribbon2") && (
+              <div>
+                <label className={label} htmlFor="c-ribbon2">
+                  Segunda cinta (contorno)
+                </label>
+                <input
+                  id="c-ribbon2"
+                  className={input}
+                  value={pieza.ribbon2}
+                  onChange={(e) => set("ribbon2", e.target.value)}
                 />
               </div>
             )}

@@ -63,19 +63,39 @@ La carpeta lleva los `.jpg` ya optimizados (lado corto 1300 px, calidad ~78) y u
 duplica. Agregar una foto no necesita desplegar: basta subir el archivo y
 actualizar el JSON.
 
-## Las 15 plantillas
+## Las plantillas
 
-Van agrupadas en cuatro familias, que es como se eligen en la pagina:
+Son 67, agrupadas en seis familias. Se eligen desde un desplegable y no desde
+una grilla de botones: con esta cantidad, los botones se comian la pantalla.
 
-| Familia | Plantillas |
+| Familia | Para que sirve |
 |---|---|
-| Comercial | Hero pleno, Panel abajo, Panel arriba, Split diagonal, Oferta / temporada, Poster sandwich |
-| Informativa | Banda + lista, Glosario, Paso a paso, Dato gigante, Comparativa |
-| Minimalista | Minimal azul, Minimal claro |
-| Noticias | Noticia, Cita / testimonio |
+| Comercial | Captacion y venta: foto fuerte y llamado a la accion |
+| Informativa | Explicar y enumerar: listas, pasos, checklists, tarjetas, tablas |
+| Datos y graficos | Cifras, barras, dona de porcentaje, linea de tiempo |
+| Minimalista | Mucho aire y poco texto, con y sin foto |
+| Noticias | Novedades, hitos, citas y testimonios |
+| Redes y educativo | Series, carruseles, preguntas y datos curiosos |
 
-Las minimalistas y dos de las informativas no usan foto: el fondo es solido y
-la pagina esconde el banco de imagenes cuando no hace falta.
+## Elementos de contenido
+
+Cada plantilla declara cuales usa y el formulario se arma solo. Los que llevan
+dos partes se escriben una por linea con una barra al medio:
+
+| Elemento | Formato |
+|---|---|
+| Lista / checklist | un item por linea |
+| Pasos | un paso por linea, se numeran solos |
+| Tarjetas | `titulo \| texto` |
+| Barras | `etiqueta \| numero del 0 al 100` |
+| Cifras | `numero \| etiqueta` |
+| Hitos | `fecha \| que paso` |
+| Tabla | `concepto \| valor` |
+| Columnas | titulo y puntos por columna |
+| Dato / dona | la cifra y que significa |
+
+La dona se dibuja como SVG y no con `conic-gradient`: el exportador serializa
+SVG sin problemas, y el gradiente conico sale con bandas.
 
 ## Agregar una plantilla
 
