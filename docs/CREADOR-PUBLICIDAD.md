@@ -63,12 +63,42 @@ La carpeta lleva los `.jpg` ya optimizados (lado corto 1300 px, calidad ~78) y u
 duplica. Agregar una foto no necesita desplegar: basta subir el archivo y
 actualizar el JSON.
 
+## Las 15 plantillas
+
+Van agrupadas en cuatro familias, que es como se eligen en la pagina:
+
+| Familia | Plantillas |
+|---|---|
+| Comercial | Hero pleno, Panel abajo, Panel arriba, Split diagonal, Oferta / temporada, Poster sandwich |
+| Informativa | Banda + lista, Glosario, Paso a paso, Dato gigante, Comparativa |
+| Minimalista | Minimal azul, Minimal claro |
+| Noticias | Noticia, Cita / testimonio |
+
+Las minimalistas y dos de las informativas no usan foto: el fondo es solido y
+la pagina esconde el banco de imagenes cuando no hace falta.
+
 ## Agregar una plantilla
 
-1. Sumarla a `PLANTILLAS` en `plantillas.ts`, declarando qué campos de texto usa.
-2. Agregar su rama de maqueta en `PiezaCanvas.tsx`.
+Basta con sumarla a `PLANTILLAS` en `plantillas.ts`. `campos` arma el
+formulario y `maqueta` arma el lienzo, asi que **PiezaCanvas no se toca** salvo
+que haga falta un tipo de fondo que todavia no exista.
 
-El formulario se arma solo a partir de `campos`: no hay que tocarlo.
+`maqueta` esta en px reales de la pieza (1080x1350): donde empieza el bloque de
+texto, donde el panel, de que alto es el logo. Conviene copiar la maqueta de
+una plantilla parecida y correr los numeros, en vez de escribirla desde cero.
+
+## Encuadre de la foto
+
+Tres controles: acercar (100-250%), mover en vertical y mover en horizontal.
+El horizontal se activa solo al acercar, porque sin zoom no hay nada que
+correr. El acercamiento va por `transform: scale()` y no por `background-size`,
+para que el encuadre siga significando lo mismo con y sin zoom.
+
+## Color de la media flecha
+
+Blanco, rojo, azul o crema. Cada plantilla puede declarar cual le calza al
+salir (`flechaPorDefecto`): la minimal clara arranca en azul, porque sobre
+crema la blanca no se ve.
 
 ## Limitación conocida
 
