@@ -320,6 +320,25 @@ export function usaCampo(plantilla: PlantillaId, campo: CampoId): boolean {
   return getPlantilla(plantilla).campos.includes(campo);
 }
 
+/**
+ * Posicion a mano de un elemento, en px del lienzo (1080x1350).
+ *
+ * Mientras un elemento no tenga ajuste se dibuja donde lo pone la plantilla,
+ * apilado en el flujo. Cuando se entra al modo de ajuste se miden todos y se
+ * congelan aca, asi pasar a posicion libre no mueve nada de lugar.
+ */
+export type Ajuste = {
+  x: number;
+  y: number;
+  /** Ancho de la caja. El texto reacomoda solo dentro. */
+  w: number;
+  /** Multiplicador del tamano de letra, para agrandar sin reescribir el texto. */
+  escala?: number;
+};
+
+/** Ajustes por id de elemento: "titular", "support", "foto", etc. */
+export type Ajustes = Record<string, Ajuste>;
+
 export type Pieza = {
   plantilla: PlantillaId;
   eyebrow: string;
@@ -361,6 +380,8 @@ export type Pieza = {
   fotoPosicionX: number;
   fotoZoom: number;
   flechaColor: string;
+  /** Posiciones movidas a mano. Vacio = todo como lo pone la plantilla. */
+  ajustes: Ajustes;
 };
 
 export const PIEZA_INICIAL: Pieza = {
@@ -413,6 +434,7 @@ export const PIEZA_INICIAL: Pieza = {
   fotoPosicionX: 50,
   fotoZoom: 100,
   flechaColor: BLANCO,
+  ajustes: {},
 };
 
 /** Parte "Título | texto" en sus dos mitades. Sin barra, todo va al primero. */

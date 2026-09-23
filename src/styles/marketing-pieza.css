@@ -976,3 +976,111 @@
   font-weight: 900;
   color: #fff;
 }
+
+/* ============================================================
+   Ajuste manual: elementos movibles, manijas y guías
+   ============================================================ */
+
+/* El envoltorio no debe alterar la maqueta mientras el elemento sigue
+   apilado: sin ajuste es transparente y hereda el centrado del bloque. */
+.pieza .elemento {
+  position: relative;
+}
+
+/* Ya movido: sale del flujo y vive en coordenadas del lienzo. */
+.pieza .elemento.suelto {
+  position: absolute;
+  text-align: center;
+}
+.pieza .elemento.suelto.izq {
+  text-align: left;
+}
+/* Al salir del flujo pierde el margen que lo separaba del anterior, que ahí
+   ya no significa nada: la separación ahora la da su coordenada. */
+.pieza .elemento.suelto > h1,
+.pieza .elemento.suelto > .ribbon,
+.pieza .elemento.suelto > .support,
+.pieza .elemento.suelto > .list,
+.pieza .elemento.suelto > .checklist,
+.pieza .elemento.suelto > .pasos,
+.pieza .elemento.suelto > .chips,
+.pieza .elemento.suelto > .metricas,
+.pieza .elemento.suelto > .barras,
+.pieza .elemento.suelto > .tarjetas,
+.pieza .elemento.suelto > .hitos,
+.pieza .elemento.suelto > .tabla,
+.pieza .elemento.suelto > .columnas,
+.pieza .elemento.suelto > .evento {
+  margin-top: 0;
+}
+
+/* ---------- Estado de edición ---------- */
+.pieza .elemento.editable {
+  cursor: move;
+}
+.pieza .elemento.editable::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 2px dashed rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+}
+.pieza.claro .elemento.editable::after {
+  border-color: rgba(20, 41, 79, 0.28);
+}
+.pieza .elemento.editable:hover::after {
+  border-color: rgba(0, 232, 255, 0.7);
+}
+.pieza .elemento.sel::after {
+  border: 2px solid #00e8ff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- Manijas ----------
+   Grandes a propósito: la vista previa está al 40-60%, así que una manija de
+   12 px se vería de 5 y sería imposible de tomar. */
+.pieza .manija {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: #00e8ff;
+  border: 3px solid #04121f;
+  border-radius: 50%;
+  z-index: 5;
+}
+.pieza .manija.lado {
+  right: -19px;
+  top: 50%;
+  margin-top: -13px;
+  cursor: ew-resize;
+}
+.pieza .manija.esquina {
+  right: -19px;
+  bottom: -19px;
+  cursor: nwse-resize;
+}
+
+/* ---------- Guías de alineación ---------- */
+.guia {
+  position: absolute;
+  background: #ff3d7a;
+  pointer-events: none;
+  z-index: 40;
+}
+.guia.x {
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+}
+.guia.y {
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-top: -1px;
+}
+/* La del centro se distingue de las de borde: es la que más se busca. */
+.guia.centro {
+  background: #00e8ff;
+  box-shadow: 0 0 10px rgba(0, 232, 255, 0.8);
+}

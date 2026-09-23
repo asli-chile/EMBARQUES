@@ -1,8 +1,8 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { withBase } from "@/lib/basePath";
-import { getPlantilla, partir, type CampoId, type Pieza } from "./plantillas";
+import { getPlantilla, partir, type Ajustes, type CampoId, type Pieza } from "./plantillas";
 
 /**
  * La pieza tal cual se exporta: 1080x1350 px reales.
@@ -12,8 +12,8 @@ import { getPlantilla, partir, type CampoId, type Pieza } from "./plantillas";
  * hay forma de que se desincronicen.
  *
  * El lienzo se arma leyendo `maqueta` y `campos` de la plantilla. Los elementos
- * de contenido salen siempre en el mismo orden de lectura, y cada plantilla
- * decide cuáles aparecen.
+ * de contenido salen en el mismo orden de lectura siempre, apilados; pero si
+ * uno tiene ajuste manual sale de la pila y se dibuja en su coordenada.
  */
 
 const LOGO_CLARO = withBase("/logoblanco.png");
@@ -74,19 +74,29 @@ function Dona({ valor, texto }: { valor: number; texto: string }) {
   );
 }
 
+export type TipoArrastre = "mover" | "ancho" | "esquina";
+
+export type Editor = {
+  activo: boolean;
+  seleccion: string | null;
+  onTomar: (id: string, tipo: TipoArrastre, e: React.PointerEvent) => void;
+};
+
 type Props = {
   pieza: Pieza;
-  /** 1 = tamaño real. La vista previa usa ~0.38. */
+  /** 1 = tamaño real. La vista previa se ajusta al hueco disponible. */
   escala?: number;
+  editor?: Editor;
 };
 
 export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanvas(
-  { pieza, escala = 1 },
+  { pieza, escala = 1, editor },
   ref,
 ) {
   const { campos, maqueta } = getPlantilla(pieza.plantilla);
   const usa = (c: CampoId) => campos.includes(c);
   const claro = maqueta.fondo === "claro" || maqueta.fondo === "marco";
+  const ajustes: Ajustes = pieza.ajustes ?? {};
 
   /* ---------- Foto ---------- */
   // El acercamiento va por transform y no por background-size: así el encuadre
@@ -101,7 +111,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
   const foto = (extra = "") => <div className={`photo ${extra}`.trim()} style={estiloFoto} />;
 
-  let fondo: React.ReactNode;
+  let fondo: ReactNode;
   switch (maqueta.fondo) {
     case "foto":
       fondo = foto();
@@ -179,7 +189,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   }
 
   /* ---------- Panel ---------- */
-  let panel: React.ReactNode = null;
+  let panel: ReactNode = null;
   if (maqueta.panelTop !== undefined) {
     panel = (
       <>
@@ -241,6 +251,291 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       <p className="support" dangerouslySetInnerHTML={{ __html: bajadaHtml(pieza.support) }} />
     ) : null;
 
+  /* ------------------------------------------------------------------ */
+  /* Contenido                                                           */
+  /* ------------------------------------------------------------------ */
+  /* Se arma como lista con id para poder separarlo en dos: lo que sigue
+     apilado y lo que ya tiene posicion propia. El id es el que usa el ajuste. */
+
+  const contenidos: { id: string; nodo: ReactNode }[] = [];
+  const sumar = (id: string, nodo: ReactNode) => {
+    if (nodo) contenidos.push({ id, nodo });
+  };
+
+  sumar("eyebrow", usa("eyebrow") && pieza.eyebrow ? <div className="eyebrow">{pieza.eyebrow}</div> : null);
+
+  sumar(
+    "dato",
+    usa("dato") && pieza.dato ? (
+      <div className="dato-bloque">
+        <div className="dato">{pieza.dato}</div>
+        {pieza.datoEtiqueta ? <div className="dato-etiqueta">{pieza.datoEtiqueta}</div> : null}
+      </div>
+    ) : null,
+  );
+
+  sumar("dona", usa("dona") ? <Dona valor={parseInt(pieza.dato, 10) || 0} texto={pieza.datoEtiqueta} /> : null);
+
+  sumar(
+    "titular",
+    usa("l1") || usa("lm") || usa("l2") ? (
+      <h1>
+        {usa("l1") && pieza.l1 ? <span className="l1">{pieza.l1}</span> : null}
+        {usa("lm") && pieza.lm ? <span className="lm">{pieza.lm}</span> : null}
+        {usa("l2") && pieza.l2 ? (
+          <span className="l2" style={{ fontSize: `${pieza.l2Tamano}px` }}>
+            {pieza.l2}
+          </span>
+        ) : null}
+      </h1>
+    ) : null,
+  );
+
+  sumar(
+    "cita",
+    usa("cita") && pieza.cita ? (
+      <>
+        <blockquote className="cita">{pieza.cita}</blockquote>
+        {pieza.firma ? <div className="firma">— {pieza.firma}</div> : null}
+      </>
+    ) : null,
+  );
+
+  sumar(
+    "metricas",
+    usa("metricas") && metricas.length > 0 ? (
+      <div className="metricas">
+        {metricas.map(([n, et], i) => (
+          <div key={`m-${i}`}>
+            <div className="m-num">{n}</div>
+            <div className="m-et">{et}</div>
+          </div>
+        ))}
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "barras",
+    usa("barras") && barras.length > 0 ? (
+      <div className="barras">
+        {barras.map(([et, v], i) => {
+          const n = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+          return (
+            <div className="barra" key={`b-${i}`}>
+              <div className="b-cab">
+                <span>{et}</span>
+                <span className="b-val">{n}%</span>
+              </div>
+              <div className="b-riel">
+                <div className="b-relleno" style={{ width: `${n}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "tarjetas",
+    usa("tarjetas") && tarjetas.length > 0 ? (
+      <div className={`tarjetas${tarjetas.length >= 4 ? " cuatro" : ""}`}>
+        {tarjetas.map(([t, d], i) => (
+          <div className="tarjeta" key={`t-${i}`}>
+            <h3>{t}</h3>
+            {d ? <p>{d}</p> : null}
+          </div>
+        ))}
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "lista",
+    usa("lista") && lista.length > 0 ? (
+      <ul className="list">
+        {lista.map((item, i) => (
+          <li key={`l-${i}`}>{item}</li>
+        ))}
+      </ul>
+    ) : null,
+  );
+
+  sumar(
+    "checklist",
+    usa("checklist") && lista.length > 0 ? (
+      <ul className="checklist">
+        {lista.map((item, i) => (
+          <li key={`c-${i}`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M4 12.5 L9.5 18 L20 6"
+                fill="none"
+                stroke="#C8102E"
+                strokeWidth="3.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    ) : null,
+  );
+
+  sumar(
+    "pasos",
+    usa("pasos") && pasos.length > 0 ? (
+      <ol className="pasos">
+        {pasos.map((item, i) => (
+          <li key={`p-${i}`}>{item}</li>
+        ))}
+      </ol>
+    ) : null,
+  );
+
+  sumar(
+    "hitos",
+    usa("hitos") && hitos.length > 0 ? (
+      <div className="hitos">
+        {hitos.map(([f, t], i) => (
+          <div className="hito" key={`h-${i}`}>
+            <div className="h-fecha">{f}</div>
+            <div className="h-texto">{t}</div>
+          </div>
+        ))}
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "tabla",
+    usa("tabla") && tabla.length > 0 ? (
+      <div className="tabla">
+        {tabla.map(([a, b], i) => (
+          <div className="fila" key={`f-${i}`}>
+            <span>{a}</span>
+            <span className="valor">{b}</span>
+          </div>
+        ))}
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "columnas",
+    usa("columnas") ? (
+      <div className="columnas">
+        <div>
+          <h3>{pieza.colATitulo}</h3>
+          <ul>
+            {limpio(pieza.colA).map((t, i) => (
+              <li key={`ca-${i}`}>{t}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="contra">
+          <h3>{pieza.colBTitulo}</h3>
+          <ul>
+            {limpio(pieza.colB).map((t, i) => (
+              <li key={`cb-${i}`}>{t}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "chips",
+    usa("chips") && chips.length > 0 ? (
+      <div className="chips">
+        {chips.map((c, i) => (
+          <div className="chip" key={`ch-${i}`}>
+            {c}
+          </div>
+        ))}
+      </div>
+    ) : null,
+  );
+
+  sumar(
+    "evento",
+    usa("evento") && (pieza.eventoFecha || pieza.eventoLugar || pieza.eventoStand) ? (
+      <div className="evento">
+        {pieza.eventoFecha ? <span>{pieza.eventoFecha}</span> : null}
+        {pieza.eventoLugar ? <span>{pieza.eventoLugar}</span> : null}
+        {pieza.eventoStand ? <span className="destacado">{pieza.eventoStand}</span> : null}
+      </div>
+    ) : null,
+  );
+
+  sumar("ribbon", usa("ribbon") && pieza.ribbon ? <div className="ribbon">{pieza.ribbon}</div> : null);
+  sumar(
+    "ribbon2",
+    usa("ribbon2") && pieza.ribbon2 ? <div className="ribbon secundaria">{pieza.ribbon2}</div> : null,
+  );
+
+  if (!maqueta.soporteAbajo) sumar("support", bajada);
+
+  /* ---------- Envoltorio de cada elemento ---------- */
+  const envolver = ({ id, nodo }: { id: string; nodo: ReactNode }) => {
+    const ajuste = ajustes[id];
+    const editable = editor?.activo ?? false;
+    const seleccionado = editor?.seleccion === id;
+
+    const estilo: React.CSSProperties = ajuste
+      ? {
+          position: "absolute",
+          left: `${ajuste.x}px`,
+          top: `${ajuste.y}px`,
+          width: `${ajuste.w}px`,
+          ...(ajuste.escala && ajuste.escala !== 1
+            ? { transform: `scale(${ajuste.escala})`, transformOrigin: "top left" }
+            : {}),
+        }
+      : {};
+
+    return (
+      <div
+        key={id}
+        data-elemento={id}
+        className={`elemento${ajuste ? " suelto" : ""}${editable ? " editable" : ""}${
+          seleccionado ? " sel" : ""
+        }${maqueta.alinear === "izquierda" ? " izq" : ""}`}
+        style={estilo}
+        onPointerDown={editable ? (e) => editor?.onTomar(id, "mover", e) : undefined}
+      >
+        {nodo}
+        {editable && seleccionado ? (
+          /* La clase editor-ui es la que el exportador descarta: las manijas
+             no pueden salir en el PNG. */
+          <>
+            <span
+              className="editor-ui manija lado"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                editor?.onTomar(id, "ancho", e);
+              }}
+            />
+            <span
+              className="editor-ui manija esquina"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                editor?.onTomar(id, "esquina", e);
+              }}
+            />
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
+  const enFlujo = contenidos.filter((c) => !ajustes[c.id]);
+  const sueltos = contenidos.filter((c) => ajustes[c.id]);
+
   return (
     <div ref={ref} className={`pieza${claro ? " claro" : ""}`} style={{ transform: `scale(${escala})` }}>
       {fondo}
@@ -297,181 +592,12 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       ) : null}
 
       <div className={`block${maqueta.alinear === "izquierda" ? " izq" : ""}`} style={estiloBloque}>
-        {usa("eyebrow") && pieza.eyebrow ? <div className="eyebrow">{pieza.eyebrow}</div> : null}
-
-        {usa("dato") && pieza.dato ? (
-          <div className="dato-bloque">
-            <div className="dato">{pieza.dato}</div>
-            {pieza.datoEtiqueta ? <div className="dato-etiqueta">{pieza.datoEtiqueta}</div> : null}
-          </div>
-        ) : null}
-
-        {usa("dona") ? (
-          <Dona valor={parseInt(pieza.dato, 10) || 0} texto={pieza.datoEtiqueta} />
-        ) : null}
-
-        {usa("l1") || usa("lm") || usa("l2") ? (
-          <h1>
-            {usa("l1") && pieza.l1 ? <span className="l1">{pieza.l1}</span> : null}
-            {usa("lm") && pieza.lm ? <span className="lm">{pieza.lm}</span> : null}
-            {usa("l2") && pieza.l2 ? (
-              <span className="l2" style={{ fontSize: `${pieza.l2Tamano}px` }}>
-                {pieza.l2}
-              </span>
-            ) : null}
-          </h1>
-        ) : null}
-
-        {usa("cita") && pieza.cita ? (
-          <>
-            <blockquote className="cita">{pieza.cita}</blockquote>
-            {pieza.firma ? <div className="firma">— {pieza.firma}</div> : null}
-          </>
-        ) : null}
-
-        {usa("metricas") && metricas.length > 0 ? (
-          <div className="metricas">
-            {metricas.map(([n, et], i) => (
-              <div key={`m-${i}`}>
-                <div className="m-num">{n}</div>
-                <div className="m-et">{et}</div>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {usa("barras") && barras.length > 0 ? (
-          <div className="barras">
-            {barras.map(([et, v], i) => {
-              const n = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
-              return (
-                <div className="barra" key={`b-${i}`}>
-                  <div className="b-cab">
-                    <span>{et}</span>
-                    <span className="b-val">{n}%</span>
-                  </div>
-                  <div className="b-riel">
-                    <div className="b-relleno" style={{ width: `${n}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-
-        {usa("tarjetas") && tarjetas.length > 0 ? (
-          <div className={`tarjetas${tarjetas.length >= 4 ? " cuatro" : ""}`}>
-            {tarjetas.map(([t, d], i) => (
-              <div className="tarjeta" key={`t-${i}`}>
-                <h3>{t}</h3>
-                {d ? <p>{d}</p> : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {usa("lista") && lista.length > 0 ? (
-          <ul className="list">
-            {lista.map((item, i) => (
-              <li key={`l-${i}`}>{item}</li>
-            ))}
-          </ul>
-        ) : null}
-
-        {usa("checklist") && lista.length > 0 ? (
-          <ul className="checklist">
-            {lista.map((item, i) => (
-              <li key={`c-${i}`}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M4 12.5 L9.5 18 L20 6"
-                    fill="none"
-                    stroke="#C8102E"
-                    strokeWidth="3.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
-        {usa("pasos") && pasos.length > 0 ? (
-          <ol className="pasos">
-            {pasos.map((item, i) => (
-              <li key={`p-${i}`}>{item}</li>
-            ))}
-          </ol>
-        ) : null}
-
-        {usa("hitos") && hitos.length > 0 ? (
-          <div className="hitos">
-            {hitos.map(([f, t], i) => (
-              <div className="hito" key={`h-${i}`}>
-                <div className="h-fecha">{f}</div>
-                <div className="h-texto">{t}</div>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {usa("tabla") && tabla.length > 0 ? (
-          <div className="tabla">
-            {tabla.map(([a, b], i) => (
-              <div className="fila" key={`f-${i}`}>
-                <span>{a}</span>
-                <span className="valor">{b}</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {usa("columnas") ? (
-          <div className="columnas">
-            <div>
-              <h3>{pieza.colATitulo}</h3>
-              <ul>
-                {limpio(pieza.colA).map((t, i) => (
-                  <li key={`ca-${i}`}>{t}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="contra">
-              <h3>{pieza.colBTitulo}</h3>
-              <ul>
-                {limpio(pieza.colB).map((t, i) => (
-                  <li key={`cb-${i}`}>{t}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ) : null}
-
-        {usa("chips") && chips.length > 0 ? (
-          <div className="chips">
-            {chips.map((c, i) => (
-              <div className="chip" key={`ch-${i}`}>
-                {c}
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        {usa("evento") && (pieza.eventoFecha || pieza.eventoLugar || pieza.eventoStand) ? (
-          <div className="evento">
-            {pieza.eventoFecha ? <span>{pieza.eventoFecha}</span> : null}
-            {pieza.eventoLugar ? <span>{pieza.eventoLugar}</span> : null}
-            {pieza.eventoStand ? <span className="destacado">{pieza.eventoStand}</span> : null}
-          </div>
-        ) : null}
-
-        {usa("ribbon") && pieza.ribbon ? <div className="ribbon">{pieza.ribbon}</div> : null}
-        {usa("ribbon2") && pieza.ribbon2 ? <div className="ribbon secundaria">{pieza.ribbon2}</div> : null}
-
-        {maqueta.soporteAbajo ? null : bajada}
+        {enFlujo.map(envolver)}
       </div>
+
+      {/* Los ajustados salen del bloque: sus coordenadas son del lienzo, no
+          del bloque, que se mueve segun la plantilla. */}
+      {sueltos.map(envolver)}
 
       {maqueta.soporteAbajo && bajada ? <div className="support-low">{bajada}</div> : null}
 

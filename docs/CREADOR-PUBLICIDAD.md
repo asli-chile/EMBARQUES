@@ -184,3 +184,53 @@ responde, y en consola aparece "Failed to fetch dynamically imported module".
 Se arregla arrancando con `npx astro dev --force`, que fuerza a Vite a
 reoptimizar. Si el puerto sigue tomado por una instancia anterior, matarla
 primero: el servidor viejo se queda con el 4321 y el nuevo no llega a levantar.
+
+## Ajuste manual de posiciones
+
+El botón "Ajustar posiciones" permite mover y redimensionar los elementos de
+contenido. La identidad —media flecha, logo de ASLI y pie con la dirección— no
+se toca: es lo que mantiene a las piezas reconocibles entre sí.
+
+### Por qué se "congela" al entrar
+
+Los textos viven apilados en un flujo vertical: la plantilla dice dónde empieza
+el bloque y el resto cae solo. Para moverlos sueltos hace falta que cada uno
+tenga coordenada propia, y si cada uno arrancara en una coordenada inventada la
+pieza saltaría al entrar al modo.
+
+Por eso al activarlo se **miden** todos los elementos en su posición actual y se
+guardan esas coordenadas. El paso de apilado a libre no mueve nada de lugar.
+Mientras un elemento no tenga ajuste sigue en el flujo, así que las 92
+plantillas funcionan igual que antes para quien no toque nada.
+
+### Guías e imán
+
+Al arrastrar se comparan tres puntos del elemento —su borde inicial, su centro
+y su borde final— contra el centro del lienzo y contra los márgenes. Si alguno
+queda a menos de 8 px, el elemento se pega y aparece la guía. Comparar los tres
+puntos es lo que hace que alinear "por el centro del elemento" y "por sus
+extremos" funcionen igual de bien.
+
+La guía del centro se pinta celeste y las de margen rosadas, porque centrar es
+lo que más se busca.
+
+### Todo se calcula en píxeles del lienzo
+
+La vista previa está encogida con `transform: scale()`, así que cada movimiento
+del puntero se divide por esa escala antes de aplicarse. Sin eso, arrastrar
+10 px en pantalla movería el elemento 26 px en la pieza.
+
+### La UI del editor no entra en el PNG
+
+Durante la exportación el lienzo se dibuja sin editor, así que no existen ni las
+manijas ni los contornos; además el exportador descarta cualquier nodo con la
+clase `editor-ui`, y las guías viven fuera de la pieza. Está verificado con una
+prueba automatizada que apaga el modo y cuenta que no quede nada.
+
+### Dos trampas que ya costaron
+
+- **No llamar a `setPieza` dentro del updater de `setAjustando`.** Un setState
+  dentro del updater de otro es un efecto lateral y React lo descarta: el modo
+  se activaba pero no congelaba nada.
+- **El puntero se sigue en `window`, no en el elemento.** Si se arrastra rápido
+  el cursor se sale del elemento y los eventos dejarían de llegar.

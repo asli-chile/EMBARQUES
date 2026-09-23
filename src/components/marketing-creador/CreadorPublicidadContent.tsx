@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { toPng } from "html-to-image";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
-import { PiezaCanvas } from "./PiezaCanvas";
+import { PiezaCanvas, type TipoArrastre } from "./PiezaCanvas";
+import { medirElementos, mover, type Arrastre, type Guia } from "./editor";
 import {
   CATEGORIAS,
   COLORES_FLECHA,
@@ -227,6 +228,15 @@ export function CreadorPublicidadContent() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [theme] = useNeonTheme();
 
+  /* ---- ajuste manual ---- */
+  const [ajustando, setAjustando] = useState(false);
+  const [seleccion, setSeleccion] = useState<string | null>(null);
+  const [guias, setGuias] = useState<Guia[]>([]);
+  const arrastre = useRef<{
+    arrastre: Arrastre;
+    inicio: { puntero: { x: number; y: number }; ajuste: NonNullable<Pieza["ajustes"][string]>; alto: number };
+  } | null>(null);
+
   const [subiendo, setSubiendo] = useState<null | "foto" | "logo">(null);
   const [categoriaSubida, setCategoriaSubida] = useState("puerto");
   const [logos, setLogos] = useState<{ archivo: string; url: string }[]>([]);
@@ -361,6 +371,86 @@ export function CreadorPublicidadContent() {
     }));
   }, []);
 
+  /* ---- ajuste manual ----
+     Al entrar se miden todos los elementos y se congela su posicion actual.
+     Asi el salto de "apilado" a "libre" no mueve nada de lugar, que es lo que
+     pasaria si cada uno arrancara en una coordenada inventada. */
+  const alternarAjuste = useCallback(() => {
+    if (ajustando) {
+      setAjustando(false);
+      setSeleccion(null);
+      setGuias([]);
+      return;
+    }
+    // La medicion va fuera de cualquier updater: un setState dentro del
+    // updater de otro es un efecto lateral y React lo descarta.
+    const lienzo = canvasRef.current;
+    if (lienzo) {
+      const medidos = medirElementos(lienzo, escala);
+      setPieza((p) => ({ ...p, ajustes: { ...medidos, ...p.ajustes } }));
+    }
+    setAjustando(true);
+  }, [ajustando, escala]);
+
+  const restablecer = useCallback((id?: string) => {
+    setPieza((p) => {
+      if (!id) return { ...p, ajustes: {} };
+      const resto = { ...p.ajustes };
+      delete resto[id];
+      return { ...p, ajustes: resto };
+    });
+    setSeleccion(null);
+  }, []);
+
+  const tomar = useCallback(
+    (id: string, tipo: TipoArrastre, e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setSeleccion(id);
+
+      const ajuste = pieza.ajustes[id];
+      if (!ajuste) return;
+
+      // El alto lo decide el contenido, asi que se mide en vez de guardarlo.
+      const el = canvasRef.current?.querySelector<HTMLElement>(`[data-elemento="${id}"]`);
+      const alto = el ? el.getBoundingClientRect().height / escala : 0;
+
+      arrastre.current = {
+        arrastre:
+          tipo === "mover"
+            ? { modo: "mover", id }
+            : { modo: "redimensionar", id, esquina: tipo === "esquina" },
+        inicio: { puntero: { x: e.clientX, y: e.clientY }, ajuste, alto },
+      };
+    },
+    [escala, pieza.ajustes],
+  );
+
+  /* El puntero se sigue en la ventana y no en el elemento: si se mueve rapido,
+     el cursor se sale del elemento y los eventos dejarian de llegar. */
+  useEffect(() => {
+    const alMover = (e: PointerEvent) => {
+      const a = arrastre.current;
+      if (!a) return;
+      const r = mover(a.arrastre, a.inicio, { x: e.clientX, y: e.clientY }, escala);
+      setGuias(r.guias);
+      setPieza((p) => ({ ...p, ajustes: { ...p.ajustes, [a.arrastre.id]: r.ajuste } }));
+    };
+    const alSoltar = () => {
+      if (!arrastre.current) return;
+      arrastre.current = null;
+      setGuias([]);
+    };
+    window.addEventListener("pointermove", alMover);
+    window.addEventListener("pointerup", alSoltar);
+    window.addEventListener("pointercancel", alSoltar);
+    return () => {
+      window.removeEventListener("pointermove", alMover);
+      window.removeEventListener("pointerup", alSoltar);
+      window.removeEventListener("pointercancel", alSoltar);
+    };
+  }, [escala]);
+
   /* ---- exportar ---- */
   const exportar = useCallback(
     async (tipo: "png" | "jpg") => {
@@ -372,12 +462,20 @@ export function CreadorPublicidadContent() {
         const fontEmbedCSS = await cargarFuentes();
         await document.fonts.ready;
 
+        // El modo ajuste se apaga solo al exportar (el canvas recibe editor
+        // undefined), pero hay que esperar un repintado para que las manijas y
+        // el contorno ya no esten en el DOM cuando se serializa.
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+
         const opciones = {
           width: 1080,
           height: 1350,
           pixelRatio: 1,
           cacheBust: true,
           fontEmbedCSS,
+          // Cinturon y tirantes: si algo de la UI del editor quedara en el
+          // arbol, igual no entra al PNG.
+          filter: (nodo: HTMLElement) => !nodo.classList?.contains?.("editor-ui"),
           // La vista previa está encogida con transform; para el PNG se captura
           // el nodo a tamaño real.
           style: { transform: "scale(1)", transformOrigin: "top left" },
@@ -431,10 +529,31 @@ export function CreadorPublicidadContent() {
           className="flex min-w-0 shrink-0 flex-col items-center justify-center gap-4 overflow-hidden p-6 lg:h-full lg:w-[42%] lg:max-w-[820px]"
         >
           <div
-            className="overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-2xl"
+            className="relative overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-2xl"
             style={{ width: 1080 * escala, height: 1350 * escala }}
           >
-            <PiezaCanvas ref={canvasRef} pieza={pieza} escala={escala} />
+            <PiezaCanvas
+              ref={canvasRef}
+              pieza={pieza}
+              escala={escala}
+              /* Durante la exportacion se pasa sin editor: asi el PNG sale sin
+                 manijas ni contornos, sin tener que tocar el DOM a mano. */
+              editor={
+                ajustando && exportando === null
+                  ? { activo: true, seleccion, onTomar: tomar }
+                  : undefined
+              }
+            />
+
+            {/* Las guias van fuera de la pieza, en un overlay: asi no hay
+                manera de que terminen dentro de la imagen exportada. */}
+            {guias.map((g, i) => (
+              <div
+                key={`${g.eje}-${g.en}-${i}`}
+                className={`guia ${g.eje} ${g.tipo === "centro" ? "centro" : ""}`}
+                style={g.eje === "x" ? { left: g.en * escala } : { top: g.en * escala }}
+              />
+            ))}
           </div>
 
           <div className="flex w-full flex-wrap justify-center gap-3">
@@ -463,6 +582,50 @@ export function CreadorPublicidadContent() {
               JPG 600 correo
             </button>
           </div>
+
+          <div className="flex w-full flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={alternarAjuste}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition ${
+                ajustando
+                  ? "border-dash-neon bg-dash-neon/15 text-dash-fg"
+                  : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/50"
+              }`}
+            >
+              <Icon icon={ajustando ? "mdi:cursor-move" : "mdi:tune-variant"} className="h-4 w-4" />
+              {ajustando ? "Ajustando posiciones" : "Ajustar posiciones"}
+            </button>
+
+            {ajustando && seleccion ? (
+              <button
+                type="button"
+                onClick={() => restablecer(seleccion)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
+              >
+                <Icon icon="mdi:restore" className="h-4 w-4" />
+                Devolver este
+              </button>
+            ) : null}
+
+            {Object.keys(pieza.ajustes).length > 0 ? (
+              <button
+                type="button"
+                onClick={() => restablecer()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
+              >
+                <Icon icon="mdi:backup-restore" className="h-4 w-4" />
+                Devolver todo a la plantilla
+              </button>
+            ) : null}
+          </div>
+
+          {ajustando ? (
+            <p className="max-w-[420px] text-center text-xs text-dash-muted">
+              Arrastrá cualquier elemento. Las líneas marcan cuándo queda alineado al centro o a los
+              márgenes. Las manijas de la derecha cambian el ancho y el tamaño.
+            </p>
+          ) : null}
         </div>
 
         {/* ---------------- Herramientas (lo único que scrollea) ---------------- */}
