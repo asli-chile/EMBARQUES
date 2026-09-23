@@ -253,7 +253,48 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       <div className="wedge" />
       <div className="wedge-line" />
 
-      <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" style={estiloLogo} />
+      {maqueta.dupla && usa("logo2") ? (
+        /* Los dos logos como una sola unidad centrada: si se posicionaran por
+           separado, cambiar el ancho de uno descentraria al otro. */
+        <div className="logos-dupla" style={{ top: `${maqueta.logoTop}px` }}>
+          <img src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" style={{ width: `${maqueta.logoAncho}px` }} />
+          {pieza.logo2 ? (
+            <>
+              <span className="divisor" />
+              {/* El invitado va dentro de una caja de tamano fijo y se ajusta
+                  con object-fit. Los logos ajenos vienen cuadrados, apaisados o
+                  verticales: fijarle ancho o alto a la imagen deformaba unos y
+                  recortaba otros. Con la caja, cualquiera entra centrado y con
+                  su proporcion intacta. */}
+              <span
+                className="invitado-caja"
+                style={{
+                  height: `${Math.round(maqueta.logoAncho * 0.5)}px`,
+                  width: `${Math.round(maqueta.logoAncho * 1.1)}px`,
+                }}
+              >
+                <img src={pieza.logo2} alt="" />
+              </span>
+            </>
+          ) : null}
+        </div>
+      ) : (
+        <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" style={estiloLogo} />
+      )}
+
+      {!maqueta.dupla && usa("logo2") && pieza.logo2 && maqueta.logo2Top !== undefined ? (
+        <span
+          className="logo invitado-caja suelta"
+          style={{
+            top: `${maqueta.logo2Top}px`,
+            height: `${Math.round((maqueta.logo2Ancho ?? 200) * 0.55)}px`,
+            width: `${maqueta.logo2Ancho ?? 200}px`,
+            ...(maqueta.logo2Izq !== undefined ? { left: `${maqueta.logo2Izq}px`, transform: "none" } : {}),
+          }}
+        >
+          <img src={pieza.logo2} alt="" />
+        </span>
+      ) : null}
 
       <div className={`block${maqueta.alinear === "izquierda" ? " izq" : ""}`} style={estiloBloque}>
         {usa("eyebrow") && pieza.eyebrow ? <div className="eyebrow">{pieza.eyebrow}</div> : null}
@@ -415,6 +456,14 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
                 {c}
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {usa("evento") && (pieza.eventoFecha || pieza.eventoLugar || pieza.eventoStand) ? (
+          <div className="evento">
+            {pieza.eventoFecha ? <span>{pieza.eventoFecha}</span> : null}
+            {pieza.eventoLugar ? <span>{pieza.eventoLugar}</span> : null}
+            {pieza.eventoStand ? <span className="destacado">{pieza.eventoStand}</span> : null}
           </div>
         ) : null}
 

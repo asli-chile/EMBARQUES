@@ -35,9 +35,18 @@ export type CampoId =
   | "hitos"
   | "tabla"
   | "cita"
-  | "columnas";
+  | "columnas"
+  | "logo2"
+  | "evento";
 
-export type Familia = "comercial" | "informativa" | "datos" | "minimalista" | "noticias" | "redes";
+export type Familia =
+  | "comercial"
+  | "informativa"
+  | "datos"
+  | "minimalista"
+  | "noticias"
+  | "redes"
+  | "eventos";
 
 export const FAMILIAS: { id: Familia; nombre: string; descripcion: string }[] = [
   { id: "comercial", nombre: "Comercial", descripcion: "Captación y venta" },
@@ -46,6 +55,7 @@ export const FAMILIAS: { id: Familia; nombre: string; descripcion: string }[] = 
   { id: "minimalista", nombre: "Minimalista", descripcion: "Mucho aire, poco texto" },
   { id: "noticias", nombre: "Noticias", descripcion: "Novedades, hitos y testimonios" },
   { id: "redes", nombre: "Redes y educativo", descripcion: "Serie, carrusel y preguntas" },
+  { id: "eventos", nombre: "Ferias y visitas", descripcion: "Estamos en terreno, con el logo del evento" },
 ];
 
 /** Cómo se arma el lienzo. Medidas en px reales de la pieza (1080×1350). */
@@ -78,6 +88,12 @@ export type Maqueta = {
   /** La bajada se separa del bloque y se ancla abajo (sobre la foto). */
   soporteAbajo?: boolean;
   alinear?: "izquierda";
+  /** Los dos logos juntos y centrados, separados por una linea. */
+  dupla?: boolean;
+  /** Ubicacion suelta del logo invitado, cuando no va en dupla. */
+  logo2Top?: number;
+  logo2Ancho?: number;
+  logo2Izq?: number;
 };
 
 export type Plantilla = {
@@ -264,6 +280,36 @@ export const PLANTILLAS: Plantilla[] = [
   mk({ id: "carrusel-lista", familia: "redes", nombre: "Carrusel: lista", descripcion: "Lámina intermedia con viñetas.", campos: ["eyebrow", "l2", "lista"], l2: 100, maqueta: { ...M.solidoAlto, bloqueTop: 330 } }),
   mk({ id: "carrusel-cierre", familia: "redes", nombre: "Carrusel: cierre", descripcion: "Última lámina, con el llamado a la acción.", campos: ["eyebrow", "l1", "l2", "ribbon", "support"], l2: 116, maqueta: { ...M.solidoCentro, bloqueTop: 440 } }),
   mk({ id: "serie-numero", familia: "redes", nombre: "Serie numerada", descripcion: "Para entregas de una serie: #1, #2, #3.", campos: ["foto", "eyebrow", "dato", "l2", "support"], l2: 96, maqueta: { ...M.panelAbajoAlto, bloqueTop: 450 } }),
+
+  /* =============== Ferias y visitas =============== */
+  /* Todas llevan el logo del evento o del cliente junto al de ASLI. La dupla
+     los pone centrados y separados por una linea; cuando la composicion no
+     deja, el invitado va suelto en su propia esquina. */
+  mk({ id: "ev-estuvimos", familia: "eventos", nombre: "Estuvimos en", descripcion: "Los dos logos juntos sobre la foto del stand.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 104, maqueta: { ...M.heroPleno, logoTop: 70, logoAncho: 300, dupla: true, bloqueBottom: 130 } }),
+  mk({ id: "ev-estuvimos-panel", familia: "eventos", nombre: "Estuvimos en - panel", descripcion: "Foto arriba y los dos logos sobre el panel azul.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 116, maqueta: { ...M.panelAbajo, logoTop: 372, logoAncho: 300, dupla: true } }),
+  mk({ id: "ev-te-esperamos", familia: "eventos", nombre: "Te esperamos", descripcion: "Invitacion al stand, con fecha, lugar y numero.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "evento", "ribbon"], l2: 104, maqueta: { ...M.panelAbajo, logoTop: 372, logoAncho: 300, dupla: true, bloqueTop: 660 } }),
+  mk({ id: "ev-invitacion", familia: "eventos", nombre: "Invitacion", descripcion: "Invitacion formal con los datos del evento destacados.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "evento", "support"], l2: 110, maqueta: { ...M.panelAbajoAlto, logoTop: 252, logoAncho: 280, dupla: true, bloqueTop: 470 } }),
+  mk({ id: "ev-countdown", familia: "eventos", nombre: "Faltan X dias", descripcion: "Cuenta regresiva para el evento.", campos: ["foto", "logo2", "eyebrow", "dato", "l1", "evento"], maqueta: { ...M.heroPleno, logoTop: 66, logoAncho: 290, dupla: true, bloqueBottom: 130 } }),
+  mk({ id: "ev-dia", familia: "eventos", nombre: "Dia 1, dia 2...", descripcion: "Para publicar cada jornada de la feria.", campos: ["foto", "logo2", "eyebrow", "dato", "l2", "support"], maqueta: { ...M.panelAbajoAlto, logoTop: 252, logoAncho: 280, dupla: true, bloqueTop: 470 } }),
+  mk({ id: "ev-stand-numero", familia: "eventos", nombre: "Numero de stand", descripcion: "El numero de stand como protagonista.", campos: ["foto", "logo2", "eyebrow", "dato", "l1", "evento"], maqueta: { ...M.heroPleno, logoTop: 66, logoAncho: 290, dupla: true, bloqueBottom: 150 } }),
+  mk({ id: "ev-nos-vemos", familia: "eventos", nombre: "Nos vemos en", descripcion: "Anuncio breve de que vamos a estar.", campos: ["foto", "logo2", "eyebrow", "l2", "evento"], l2: 112, maqueta: { ...M.heroPleno, logoTop: 70, logoAncho: 300, dupla: true, bloqueBottom: 150 } }),
+  mk({ id: "ev-poster", familia: "eventos", nombre: "Poster de feria", descripcion: "Afiche con franjas y los dos logos arriba.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "ribbon"], l2: 96, maqueta: { fondo: "poster", logoTop: 56, logoAncho: 250, dupla: true, bloqueTop: 846 } }),
+  mk({ id: "ev-medallon", familia: "eventos", nombre: "Medallon de feria", descripcion: "La foto del stand en circulo y los logos arriba.", campos: ["foto", "logo2", "eyebrow", "l2", "support"], l2: 100, maqueta: { fondo: "medallon", logoTop: 84, logoAncho: 260, dupla: true, bloqueTop: 780 } }),
+  mk({ id: "ev-minimal", familia: "eventos", nombre: "Feria minimal", descripcion: "Solo los dos logos y una linea. Sin foto.", campos: ["logo2", "eyebrow", "l2", "evento"], l2: 118, maqueta: { fondo: "solido", logoTop: 300, logoAncho: 320, dupla: true, bloqueTop: 640 } }),
+  mk({ id: "ev-claro", familia: "eventos", nombre: "Feria en claro", descripcion: "Version crema, util cuando el logo invitado es oscuro.", campos: ["logo2", "eyebrow", "l2", "evento"], l2: 118, maqueta: { fondo: "claro", logoTop: 300, logoAncho: 320, dupla: true, bloqueTop: 640 }, flecha: AZUL }),
+  mk({ id: "ev-split", familia: "eventos", nombre: "Feria split", descripcion: "Foto del stand a un lado y los datos al otro.", campos: ["foto", "logo2", "eyebrow", "l2", "evento"], l2: 72, maqueta: { fondo: "split", logoTop: 92, logoAncho: 230, logoIzq: 528, bloqueTop: 340, bloqueIzq: 510, alinear: "izquierda", logo2Top: 196, logo2Ancho: 200, logo2Izq: 528 } }),
+  mk({ id: "ev-gracias", familia: "eventos", nombre: "Gracias por visitarnos", descripcion: "Cierre de feria, agradeciendo a quienes pasaron.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 112, maqueta: { ...M.panelAbajo, logoTop: 372, logoAncho: 300, dupla: true } }),
+  mk({ id: "ev-resumen", familia: "eventos", nombre: "Resumen de feria", descripcion: "Como nos fue: tres cifras del evento.", campos: ["foto", "logo2", "eyebrow", "l2", "metricas"], l2: 96, maqueta: { ...M.panelAbajoAlto, logoTop: 252, logoAncho: 280, dupla: true, bloqueTop: 455 } }),
+  mk({ id: "ev-highlights", familia: "eventos", nombre: "Lo destacado", descripcion: "Tres tarjetas con lo mejor del evento.", campos: ["foto", "logo2", "eyebrow", "l2", "tarjetas"], l2: 92, maqueta: { ...M.panelAbajoAlto, logoTop: 252, logoAncho: 280, dupla: true, bloqueTop: 450 } }),
+  mk({ id: "ev-agenda", familia: "eventos", nombre: "Agenda del evento", descripcion: "Tabla con horarios o actividades.", campos: ["logo2", "eyebrow", "l2", "tabla", "evento"], l2: 92, maqueta: { fondo: "solido", logoTop: 110, logoAncho: 290, dupla: true, bloqueTop: 400 } }),
+  mk({ id: "ev-cita", familia: "eventos", nombre: "Cita desde la feria", descripcion: "Una frase dicha en el evento.", campos: ["foto", "logo2", "eyebrow", "cita"], maqueta: { fondo: "foto", logoTop: 66, logoAncho: 280, dupla: true, bloqueTop: 450, velos: ["full", "bottom"] } }),
+  mk({ id: "ev-bienvenida-stand", familia: "eventos", nombre: "Bienvenidos al stand", descripcion: "Para publicar apenas abre la feria.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "evento"], l2: 104, maqueta: { ...M.heroPleno, logoTop: 70, logoAncho: 290, dupla: true, bloqueBottom: 140 } }),
+  mk({ id: "ev-equipo", familia: "eventos", nombre: "Equipo en terreno", descripcion: "La foto del equipo, con el logo del lugar.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 108, maqueta: { ...M.panelAbajo, logoTop: 372, logoAncho: 300, dupla: true } }),
+  mk({ id: "ev-visita", familia: "eventos", nombre: "Visita a cliente", descripcion: "Con el logo del cliente visitado junto al nuestro.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 108, maqueta: { ...M.heroPleno, logoTop: 70, logoAncho: 300, dupla: true, bloqueBottom: 130 } }),
+  mk({ id: "ev-visita-panel", familia: "eventos", nombre: "Visita - panel", descripcion: "La visita sobre panel azul, mas legible.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 116, maqueta: { ...M.panelAbajo, logoTop: 372, logoAncho: 300, dupla: true } }),
+  mk({ id: "ev-visita-banda", familia: "eventos", nombre: "Visita - banda al pie", descripcion: "Texto arriba y la foto de la visita al pie.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 108, maqueta: { fondo: "foto-banda-baja", logoTop: 140, logoAncho: 290, dupla: true, bloqueTop: 430 } }),
+  mk({ id: "ev-charla", familia: "eventos", nombre: "Charla o seminario", descripcion: "Para exposiciones y charlas, con fecha y lugar.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "evento", "support"], l2: 100, maqueta: { ...M.panelAbajo, logoTop: 372, logoAncho: 300, dupla: true, bloqueTop: 648 } }),
+  mk({ id: "ev-reunion", familia: "eventos", nombre: "Reunion de trabajo", descripcion: "Para reuniones y mesas de trabajo con clientes.", campos: ["foto", "logo2", "eyebrow", "l1", "l2", "support"], l2: 104, maqueta: { ...M.panelAbajoAlto, logoTop: 252, logoAncho: 280, dupla: true, bloqueTop: 468 } }),
 ];
 
 export function getPlantilla(id: PlantillaId): Plantilla {
@@ -305,6 +351,11 @@ export type Pieza = {
   colA: string[];
   colBTitulo: string;
   colB: string[];
+  /** Logo del evento o del cliente visitado. */
+  logo2: string;
+  eventoFecha: string;
+  eventoLugar: string;
+  eventoStand: string;
   foto: string;
   fotoPosicion: number;
   fotoPosicionX: number;
@@ -353,6 +404,10 @@ export const PIEZA_INICIAL: Pieza = {
   colA: ["Un ejecutivo dedicado", "Seguimiento en línea", "Documentos al día"],
   colBTitulo: "Sin operador",
   colB: ["Llamados a tres proveedores", "Sin visibilidad del embarque", "Multas por documentos tardíos"],
+  logo2: "",
+  eventoFecha: "14 al 16 de octubre",
+  eventoLugar: "Espacio Riesco, Santiago",
+  eventoStand: "Stand S50",
   foto: "",
   fotoPosicion: 50,
   fotoPosicionX: 50,

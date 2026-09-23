@@ -113,6 +113,41 @@ function aJpegCorreo(pngDataUrl: string): Promise<string> {
   });
 }
 
+/**
+ * Deja la imagen lista para subir: la reduce y la devuelve como data URL.
+ *
+ * Se hace en el navegador y no en el servidor para que la funcion no tenga que
+ * cargar una libreria de imagenes ni recibir archivos de 8 MB. Los logos van en
+ * PNG porque casi siempre traen transparencia; las fotos en JPEG, que pesa mucho
+ * menos para el mismo resultado.
+ */
+async function prepararImagen(file: File, tipo: "foto" | "logo"): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const { width: w, height: h } = bitmap;
+
+  let escala = 1;
+  if (tipo === "foto") {
+    const corto = Math.min(w, h);
+    escala = Math.min(1, 1300 / corto);
+  } else {
+    escala = Math.min(1, 600 / Math.max(w, h));
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w * escala);
+  canvas.height = Math.round(h * escala);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    bitmap.close();
+    throw new Error("El navegador no pudo procesar la imagen");
+  }
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  return tipo === "logo" ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.82);
+}
+
 function slugificar(texto: string): string {
   return (
     texto
@@ -193,6 +228,12 @@ export function CreadorPublicidadContent() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [theme] = useNeonTheme();
 
+  const [subiendo, setSubiendo] = useState<null | "foto" | "logo">(null);
+  const [categoriaSubida, setCategoriaSubida] = useState("puerto");
+  const [logos, setLogos] = useState<{ archivo: string; url: string }[]>([]);
+
+  const archivoFoto = useRef<HTMLInputElement>(null);
+  const archivoLogo = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const plantilla = getPlantilla(pieza.plantilla);
   const usaFoto = plantilla.campos.includes("foto");
@@ -220,6 +261,55 @@ export function CreadorPublicidadContent() {
       vivo = false;
     };
   }, []);
+
+  /* ---- logos del evento ---- */
+  const cargarLogos = useCallback(async () => {
+    try {
+      const r = await fetch("/embarques/api/marketing/banco");
+      if (!r.ok) return;
+      const d = (await r.json()) as { logos?: { archivo: string; url: string }[] };
+      setLogos(d.logos ?? []);
+    } catch {
+      /* si falla, el selector queda vacio y se puede subir uno igual */
+    }
+  }, []);
+
+  useEffect(() => {
+    void cargarLogos();
+  }, [cargarLogos]);
+
+  /* ---- subir al banco ---- */
+  const subir = useCallback(
+    async (file: File, tipo: "foto" | "logo") => {
+      setSubiendo(tipo);
+      setAviso(null);
+      try {
+        const dataUrl = await prepararImagen(file, tipo);
+        const r = await fetch("/embarques/api/marketing/banco", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: file.name, categoria: categoriaSubida, tipo, dataUrl }),
+        });
+        const d = (await r.json()) as { url?: string; archivo?: string; error?: string };
+        if (!r.ok || !d.url || !d.archivo) throw new Error(d.error ?? "No se pudo subir");
+
+        if (tipo === "foto") {
+          // Se agrega al listado local en vez de recargar el manifiesto: el
+          // bucket lo sirve con cache y volveria la version anterior.
+          setBanco((b) => [{ archivo: d.archivo!, categoria: categoriaSubida, estado: "ok" }, ...b]);
+          setPieza((pz) => ({ ...pz, foto: d.url! }));
+        } else {
+          setLogos((l) => [{ archivo: d.archivo!, url: d.url! }, ...l]);
+          setPieza((pz) => ({ ...pz, logo2: d.url! }));
+        }
+      } catch (e: unknown) {
+        setAviso(e instanceof Error ? e.message : "No se pudo subir la imagen");
+      } finally {
+        setSubiendo(null);
+      }
+    },
+    [categoriaSubida],
+  );
 
   const fotosVisibles = useMemo(() => {
     return banco.filter((f) => {
@@ -665,6 +755,44 @@ export function CreadorPublicidadContent() {
               </div>
             )}
 
+            {usaCampo(pieza.plantilla, "evento") && (
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className={label} htmlFor="c-ev-fecha">
+                    Fecha
+                  </label>
+                  <input
+                    id="c-ev-fecha"
+                    className={input}
+                    value={pieza.eventoFecha}
+                    onChange={(e) => set("eventoFecha", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="c-ev-lugar">
+                    Lugar
+                  </label>
+                  <input
+                    id="c-ev-lugar"
+                    className={input}
+                    value={pieza.eventoLugar}
+                    onChange={(e) => set("eventoLugar", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={label} htmlFor="c-ev-stand">
+                    Stand
+                  </label>
+                  <input
+                    id="c-ev-stand"
+                    className={input}
+                    value={pieza.eventoStand}
+                    onChange={(e) => set("eventoStand", e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+
             {usaCampo(pieza.plantilla, "ribbon") && (
               <div>
                 <label className={label} htmlFor="c-ribbon">
@@ -737,6 +865,68 @@ export function CreadorPublicidadContent() {
             </div>
           </div>
 
+          {/* ---- Logo del evento o del cliente ---- */}
+          {usaCampo(pieza.plantilla, "logo2") ? (
+            <div className={bloque}>
+              <div className="flex items-center justify-between">
+                <span className={`${label} mb-0`}>Logo del evento o cliente</span>
+                <button
+                  type="button"
+                  onClick={() => archivoLogo.current?.click()}
+                  disabled={subiendo !== null}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-1.5 text-xs font-bold text-dash-fg transition hover:border-dash-neon/50 disabled:opacity-50"
+                >
+                  <Icon
+                    icon={subiendo === "logo" ? "mdi:loading" : "mdi:upload"}
+                    className={`h-4 w-4 ${subiendo === "logo" ? "animate-spin" : ""}`}
+                  />
+                  Subir logo
+                </button>
+              </div>
+              <input
+                ref={archivoLogo}
+                type="file"
+                accept="image/png,image/webp,image/jpeg"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void subir(f, "logo");
+                  e.target.value = "";
+                }}
+              />
+
+              <div className="grid grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => set("logo2", "")}
+                  className={`flex h-16 items-center justify-center rounded border-2 text-xs font-semibold transition ${
+                    pieza.logo2 === ""
+                      ? "border-dash-neon text-dash-fg"
+                      : "border-dash-border text-dash-muted hover:border-dash-neon/40"
+                  }`}
+                >
+                  Sin logo
+                </button>
+                {logos.map((l) => (
+                  <button
+                    key={l.archivo}
+                    type="button"
+                    onClick={() => set("logo2", l.url)}
+                    title={l.archivo}
+                    className={`flex h-16 items-center justify-center rounded border-2 bg-white/90 p-1.5 transition ${
+                      pieza.logo2 === l.url ? "border-dash-neon" : "border-transparent hover:border-white/40"
+                    }`}
+                  >
+                    <img src={l.url} alt="" className="max-h-full max-w-full object-contain" />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-dash-muted">
+                Conviene un PNG con fondo transparente. Se guarda para las próximas piezas.
+              </p>
+            </div>
+          ) : null}
+
           {/* ---- Banco de imágenes ---- */}
           {usaFoto ? (
             <div className={bloque}>
@@ -760,6 +950,44 @@ export function CreadorPublicidadContent() {
                     {c.nombre}
                   </button>
                 ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => archivoFoto.current?.click()}
+                  disabled={subiendo !== null}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-1.5 text-xs font-bold text-dash-fg transition hover:border-dash-neon/50 disabled:opacity-50"
+                >
+                  <Icon
+                    icon={subiendo === "foto" ? "mdi:loading" : "mdi:image-plus"}
+                    className={`h-4 w-4 ${subiendo === "foto" ? "animate-spin" : ""}`}
+                  />
+                  {subiendo === "foto" ? "Subiendo…" : "Subir foto"}
+                </button>
+                <select
+                  value={categoriaSubida}
+                  onChange={(e) => setCategoriaSubida(e.target.value)}
+                  aria-label="Categoría de la foto que se sube"
+                  className="dash-control rounded-lg border border-dash-border px-2 py-1.5 text-xs text-dash-fg"
+                >
+                  {CATEGORIAS.filter((c) => c.id !== "todas").map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  ref={archivoFoto}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void subir(f, "foto");
+                    e.target.value = "";
+                  }}
+                />
               </div>
 
               {bancoError ? (

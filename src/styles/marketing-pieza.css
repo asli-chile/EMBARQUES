@@ -894,3 +894,85 @@
 .pieza.claro .tabla .valor {
   color: var(--red);
 }
+
+/* ============================================================
+   Ferias y visitas: logo invitado y datos del evento
+   ============================================================ */
+
+/* Los dos logos como una unidad: centrar el grupo y no cada uno por
+   separado evita que cambiar el ancho de uno descentre al otro. */
+.pieza .logos-dupla {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.65));
+}
+.pieza .logos-dupla img {
+  display: block;
+  height: auto;
+  object-fit: contain;
+}
+/* Caja de tamano fijo para el logo invitado: entra cualquiera, centrado y
+   sin deformarse, venga cuadrado, apaisado o vertical. */
+.pieza .invitado-caja {
+  display: block;
+  flex: none;
+  overflow: hidden;
+}
+.pieza .invitado-caja img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+.pieza .invitado-caja.suelta {
+  position: absolute;
+}
+.pieza .logos-dupla .divisor {
+  flex: none;
+  width: 3px;
+  height: 92px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.pieza.claro .logos-dupla .divisor {
+  background: rgba(20, 41, 79, 0.3);
+}
+.pieza .logo.invitado-caja {
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- Datos del evento ---------- */
+.pieza .evento {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 26px;
+}
+.pieza .block.izq .evento {
+  justify-content: flex-start;
+}
+.pieza .evento span {
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  padding: 9px 22px 10px;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.pieza.claro .evento span {
+  border-color: rgba(20, 41, 79, 0.28);
+  color: var(--navy);
+}
+.pieza .evento span.destacado {
+  background: var(--red);
+  border-color: var(--red);
+  font-weight: 900;
+  color: #fff;
+}

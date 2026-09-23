@@ -125,3 +125,39 @@ crema la blanca no se ve.
 La exportación usa el motor del navegador. En Chrome y Edge el PNG sale idéntico
 a la vista previa (verificado). En Safari puede variar el contorno del titular,
 que son ocho sombras superpuestas.
+
+## Subir imagenes desde la pagina
+
+Hay dos botones de subida: uno para fotos del banco (con su categoria) y otro
+para el logo del evento o del cliente, que aparece solo en las plantillas de
+ferias y visitas.
+
+La subida pasa por `src/pages/api/marketing/banco.ts` y no va directo del
+navegador al bucket: el bucket es publico solo de lectura, escribir exige la
+llave de servicio y esa no puede viajar al cliente. El endpoint revisa que sea
+superadmin, sube el archivo y actualiza `banco.json`.
+
+El navegador reduce la imagen antes de mandarla: las fotos a 1300 px de lado
+corto en JPEG, los logos a 600 px en PNG para no perder la transparencia. Asi
+la funcion no necesita una libreria de imagenes ni recibir archivos enormes.
+
+Los logos quedan guardados en `logos/` del mismo bucket y se ofrecen en las
+siguientes piezas, sin volver a subirlos.
+
+## Ferias y visitas
+
+Son 25 plantillas para cuando estamos en terreno. Todas llevan el logo del
+evento o del cliente junto al de ASLI, en dupla centrada y separados por una
+linea; en las composiciones donde no cabe, el invitado va suelto en su esquina.
+
+El logo invitado se dibuja dentro de una caja de tamano fijo con `object-fit`.
+Los logos ajenos vienen cuadrados, apaisados o verticales: fijarle ancho o alto
+a la imagen deformaba unos y recortaba otros.
+
+Ademas del titular, estas plantillas tienen tres datos propios del evento:
+fecha, lugar y numero de stand, que salen como etiquetas con borde (el stand
+va destacado en rojo).
+
+**Si el logo invitado es oscuro**, conviene usar "Feria en claro": sobre fondo
+crema un logo oscuro se lee, y sobre foto o panel azul se pierde. La otra
+opcion es subir una version blanca del logo.
