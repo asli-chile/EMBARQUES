@@ -1,0 +1,331 @@
+/* ============================================================
+   Receta de las piezas ASLI para redes — 1080 x 1350.
+   Es el mismo CSS que usan los archivos de graficas/ (asli-base.css),
+   acá con todo colgando de .pieza para no chocar con Tailwind.
+
+   Elementos fijos de identidad, en este orden de lectura:
+     esquina bandera · logo · cinta eyebrow · titular · cinta CTA · pie
+   Lo que cambia entre plantillas es la COMPOSICIÓN, no estos elementos.
+
+   Nada de rem ni de unidades relativas al viewport: la pieza mide siempre
+   1080x1350 px reales y se escala con transform para la vista previa. Si se
+   usaran rem, el PNG saldría de otro tamaño según el zoom del navegador.
+   ============================================================ */
+
+.pieza {
+  --navy: #14294f;
+  --navy-deep: #0d1b38;
+  --red: #c8102e;
+  --red-dark: #8e0a1f;
+
+  position: relative;
+  width: 1080px;
+  height: 1350px;
+  overflow: hidden;
+  background: var(--navy-deep);
+  font-family: "Montserrat", Arial, sans-serif;
+  /* La vista previa la escala desde la esquina superior izquierda. */
+  transform-origin: top left;
+}
+
+.pieza * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- Fondo fotográfico ---------- */
+.pieza .photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+.pieza .photo.top {
+  bottom: auto;
+  height: 720px;
+}
+.pieza .photo.bottom {
+  top: auto;
+  height: 790px;
+}
+.pieza .photo.band {
+  top: 0;
+  height: 430px;
+  bottom: auto;
+}
+
+.pieza .veil-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 380px;
+  background: linear-gradient(180deg, rgba(13, 27, 56, 0.88) 0%, rgba(13, 27, 56, 0.35) 55%, rgba(13, 27, 56, 0) 100%);
+}
+.pieza .veil-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 900px;
+  background: linear-gradient(
+    180deg,
+    rgba(13, 27, 56, 0) 0%,
+    rgba(13, 27, 56, 0.55) 32%,
+    rgba(13, 27, 56, 0.93) 72%,
+    rgba(10, 20, 42, 0.99) 100%
+  );
+}
+.pieza .veil-full {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(13, 27, 56, 0.42) 0%, rgba(13, 27, 56, 0.1) 38%, rgba(13, 27, 56, 0.6) 100%);
+}
+
+/* ---------- Panel navy ---------- */
+.pieza .panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(40, 72, 128, 0.55) 0%, rgba(20, 41, 79, 0) 62%),
+    linear-gradient(180deg, #16305c 0%, #14294f 45%, #0d1b38 100%);
+  clip-path: polygon(0 16%, 100% 0, 100% 100%, 0 100%);
+}
+.pieza .panel.up {
+  clip-path: polygon(0 0, 100% 0, 100% 86%, 0 100%);
+}
+.pieza .stripes {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.045) 0 5px,
+    rgba(255, 255, 255, 0) 5px 42px
+  );
+}
+
+/* ---------- Esquina bandera (arriba izquierda) ---------- */
+.pieza .flag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 365px;
+  height: 215px;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 56% 56%, 30% 27%, 0 72%);
+}
+.pieza .flag-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 148px;
+  height: 112px;
+  background: var(--navy);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* ---------- Cuña roja (abajo derecha) ---------- */
+.pieza .wedge {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  height: 190px;
+  background: var(--red);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.pieza .wedge-line {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  height: 190px;
+  background: var(--red-dark);
+  clip-path: polygon(100% 22%, 100% 34%, 22% 100%, 8% 100%);
+  opacity: 0.55;
+}
+
+/* ---------- Logo ---------- */
+.pieza .logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.65));
+}
+
+/* ---------- Bloque de texto ---------- */
+.pieza .block {
+  position: absolute;
+  left: 56px;
+  right: 56px;
+  text-align: center;
+}
+
+.pieza .eyebrow {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-family: "Barlow Condensed", Arial, sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 33px;
+  letter-spacing: 0.1em;
+  padding: 6px 28px 7px;
+  text-transform: uppercase;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.8);
+}
+
+.pieza h1 {
+  margin-top: 22px;
+  font-style: italic;
+  font-weight: 900;
+  color: #fff;
+  line-height: 0.94;
+  letter-spacing: -0.015em;
+  /* El contorno rojo son ocho sombras desplazadas: -webkit-text-stroke
+     recorta el interior de las letras y adelgaza demasiado la itálica. */
+  text-shadow:
+    3px 0 0 var(--red),
+    -3px 0 0 var(--red),
+    0 3px 0 var(--red),
+    0 -3px 0 var(--red),
+    2px 2px 0 var(--red),
+    -2px 2px 0 var(--red),
+    2px -2px 0 var(--red),
+    -2px -2px 0 var(--red),
+    10px 14px 26px rgba(0, 0, 0, 0.7);
+}
+.pieza h1 .l1 {
+  display: block;
+  font-size: 67px;
+}
+.pieza h1 .lm {
+  display: block;
+  font-size: 46px;
+  margin-top: 8px;
+  letter-spacing: 0.02em;
+}
+.pieza h1 .l2 {
+  display: block;
+  margin-top: 2px;
+}
+
+.pieza .ribbon {
+  display: inline-block;
+  margin-top: 26px;
+  background: var(--red);
+  color: #fff;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 38px;
+  letter-spacing: 0.02em;
+  padding: 11px 34px 13px;
+  text-transform: uppercase;
+  box-shadow: 0 16px 34px -14px rgba(0, 0, 0, 0.9);
+}
+
+.pieza .support {
+  margin: 24px auto 0;
+  max-width: 790px;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 25px;
+  line-height: 1.38;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+.pieza .support b {
+  font-weight: 800;
+  color: #fff;
+}
+.pieza .support-low {
+  position: absolute;
+  left: 120px;
+  right: 120px;
+  bottom: 126px;
+  text-align: center;
+}
+
+/* ---------- Chips de modo ---------- */
+.pieza .chips {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 26px;
+}
+.pieza .chip {
+  background: var(--red);
+  color: #fff;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 27px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 9px 26px 10px;
+  box-shadow: 0 12px 26px -12px rgba(0, 0, 0, 0.9);
+}
+
+/* ---------- Lista de servicios ---------- */
+.pieza .list {
+  margin: 30px auto 0;
+  max-width: 780px;
+  text-align: left;
+}
+.pieza .list li {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 29px;
+  line-height: 1.24;
+  color: #fff;
+  text-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+.pieza .list li::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 11px;
+  background: var(--red);
+  transform: skewX(-12deg);
+}
+
+/* ---------- Pie ---------- */
+.pieza .footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.pieza .footer .mark {
+  width: 30px;
+  height: 22px;
+  flex: none;
+}
+.pieza .footer .addr {
+  font-family: "Barlow Condensed", Arial, sans-serif;
+  font-style: italic;
+  font-size: 29px;
+  letter-spacing: 0.035em;
+  color: #fff;
+  text-transform: uppercase;
+}
+.pieza .footer .addr b {
+  font-weight: 700;
+}
+.pieza .footer .addr span {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+}

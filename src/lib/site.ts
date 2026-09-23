@@ -73,6 +73,12 @@ export const siteConfig = {
       ejecutivoAndAbove: true,
     },
     {
+      labelKey: "creadorPublicidad",
+      id: "creador-publicidad",
+      href: "/creador-publicidad",
+      superadminOnly: true,
+    },
+    {
       labelKey: "cartolasNubox",
       id: "cartolas-nubox",
       href: "/cartolas-nubox",

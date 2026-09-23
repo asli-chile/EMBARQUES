@@ -110,6 +110,9 @@ const LazyCartolasNuboxContent = lazy(() =>
 const LazyInformativosContent = lazy(() =>
   import("@/components/comunicaciones").then((m) => ({ default: m.InformativosContent })),
 );
+const LazyCreadorPublicidadContent = lazy(() =>
+  import("@/components/marketing-creador").then((m) => ({ default: m.CreadorPublicidadContent })),
+);
 const LazyMarketingOfficeContent = lazy(() =>
   import("@/components/marketing-office").then((m) => ({ default: m.MarketingOfficeContent })),
 );
@@ -262,6 +265,15 @@ export function AppShell({ children, pathname }: AppShellProps) {
       >
         <Sus>
           <LazyMarketingOfficeContent />
+        </Sus>
+      </ConfigGuard>
+    ) : pathname === "/creador-publicidad" ? (
+      <ConfigGuard
+        allowAdmin={false}
+        forbiddenMessage="No tienes acceso al creador de publicidad. Solo el superadmin puede verlo."
+      >
+        <Sus>
+          <LazyCreadorPublicidadContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/reservas/crear" ? (
