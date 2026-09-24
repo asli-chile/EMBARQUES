@@ -15,6 +15,8 @@ import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitr
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 import {
   parseOpDate,
+  desvioAnuncio,
+  mismoPuerto,
   type AisSnapshot,
   type Journey,
   type NaveIdent,
@@ -369,6 +371,29 @@ export function NavitrackShipment({
    * pregunta "¿en qué barco salió?" deja de tener la misma respuesta que "¿en
    * cuál va?".
    */
+  /*
+   * Cuánto se desvió un tramo respecto de lo anunciado.
+   *
+   * La naviera anuncia en UTC y casi nunca acierta: el atraque depende del
+   * clima y de que haya sitio en el puerto. Lo anunciado no se pisa nunca —es
+   * la promesa contra la que se mide—, y la llegada real la deja el AIS solo,
+   * sin gastar créditos ni pedirle nada a nadie.
+   *
+   * Sin hora anunciada se dice en días: "+13 h" contra un anuncio que solo dijo
+   * "el 20" sería inventar una precisión que el dato no tiene.
+   */
+  const desvioDe = (t: { pod: string | null; eta: string | null; eta_hora: string | null }): string | null => {
+    const llegada = recaladas.find((r) => mismoPuerto(r.puerto, t.pod) && r.recalado_at)?.recalado_at;
+    const d = desvioAnuncio(t.eta, t.eta_hora, llegada ?? null);
+    if (!d) return null;
+    if (d.soloDias) {
+      const dias = Math.round(d.horas / 24);
+      return dias === 0 ? tr.recaladaEnFecha : `${dias > 0 ? "+" : ""}${dias} d`;
+    }
+    const h = Math.round(d.horas);
+    return h === 0 ? tr.recaladaEnFecha : `${h > 0 ? "+" : ""}${h} h`;
+  };
+
   const hayCadena = tramos.length > 1;
   const tramoInicial = hayCadena
     ? [...tramos].sort((a, b) => a.orden - b.orden)[0]
@@ -1180,6 +1205,8 @@ export function NavitrackShipment({
               [
                 tramoInicial.pol,
                 tramoInicial.etd ? fmtFecha(parseOpDate(tramoInicial.etd), locale) : null,
+                // Cuánto se corrió la entrega respecto de lo que anunció la naviera.
+                desvioDe(tramoInicial),
               ]
                 .filter(Boolean)
                 .join(" · ") || null

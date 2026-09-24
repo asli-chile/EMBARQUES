@@ -162,6 +162,19 @@ export function NavitrackRecalada({
   const [naveElegida, setNaveElegida] = useState("");
   const [viaje, setViaje] = useState("");
   const [eta, setEta] = useState("");
+  /*
+   * Hora UTC del anuncio, opcional y aparte de la fecha.
+   *
+   * La naviera anuncia en UTC y casi nunca se cumple: el atraque depende del
+   * clima y de que haya sitio. Guardar la hora es lo que después permite medir
+   * cuánto se desvió contra lo que muestra el AIS; sin ella la comparación solo
+   * puede hacerse por día y un desvío de trece horas no se ve.
+   *
+   * Se deja vacía cuando solo dan el día. Obligarla haría que se escriba un
+   * "12:00" de relleno, y ese dato inventado ensucia justo esa comparación.
+   */
+  const [etdHora, setEtdHora] = useState("");
+  const [etaHora, setEtaHora] = useState("");
   const [notas, setNotas] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -359,6 +372,8 @@ export function NavitrackRecalada({
           // calculaba solo con la de llegada.
           etd: etd || undefined,
           eta: eta || undefined,
+          etdHora: etdHora || undefined,
+          etaHora: etaHora || undefined,
           notas: notas.trim() || undefined,
         }),
       });
@@ -912,23 +927,43 @@ export function NavitrackRecalada({
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
                   {tr.recaladaNuevoEtd}
                 </label>
-                <input
-                  type="date"
-                  value={etd}
-                  onChange={(e) => setEtd(e.target.value)}
-                  className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"
-                />
+                <div className="mt-1.5 flex gap-2">
+                  <input
+                    type="date"
+                    value={etd}
+                    onChange={(e) => setEtd(e.target.value)}
+                    className="dash-control w-full px-3 py-2.5 text-[14px]"
+                  />
+                  <input
+                    type="time"
+                    value={etdHora}
+                    onChange={(e) => setEtdHora(e.target.value)}
+                    aria-label={tr.recaladaHoraUtc}
+                    className="dash-control w-[108px] shrink-0 px-2 py-2.5 text-[14px] tabular-nums"
+                  />
+                </div>
+                <p className="mt-1 text-[10.5px] text-dash-muted">{tr.recaladaHoraOpcional}</p>
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-dash-muted">
                   {tr.recaladaNuevaEta}
                 </label>
-                <input
-                  type="date"
-                  value={eta}
-                  onChange={(e) => setEta(e.target.value)}
-                  className="dash-control mt-1.5 w-full px-3 py-2.5 text-[14px]"
-                />
+                <div className="mt-1.5 flex gap-2">
+                  <input
+                    type="date"
+                    value={eta}
+                    onChange={(e) => setEta(e.target.value)}
+                    className="dash-control w-full px-3 py-2.5 text-[14px]"
+                  />
+                  <input
+                    type="time"
+                    value={etaHora}
+                    onChange={(e) => setEtaHora(e.target.value)}
+                    aria-label={tr.recaladaHoraUtc}
+                    className="dash-control w-[108px] shrink-0 px-2 py-2.5 text-[14px] tabular-nums"
+                  />
+                </div>
+                <p className="mt-1 text-[10.5px] text-dash-muted">{tr.recaladaHoraOpcional}</p>
               </div>
             </div>
 

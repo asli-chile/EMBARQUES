@@ -149,6 +149,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     viaje?: string;
     etd?: string;
     eta?: string;
+    /*
+     * Hora UTC anunciada por la naviera, opcional.
+     *
+     * Se manda aparte de la fecha y no pegada a ella porque a veces solo dan el
+     * día. Con un timestamp único no habría forma de distinguir "el 20 a las
+     * 00:00" de "el 20, hora desconocida", y el formulario terminaría obligando
+     * a inventar una hora para poder guardar.
+     */
+    etdHora?: string;
+    etaHora?: string;
     notas?: string;
   } = {};
   try {
@@ -169,6 +179,19 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     const t = (v ?? "").trim();
     if (!t) return null;
     return /^\d{4}-\d{2}-\d{2}$/.test(t) ? `${t}T12:00:00Z` : t;
+  };
+
+  /**
+   * Hora del anuncio, en UTC. Null si la naviera solo dio el día.
+   *
+   * El input manda "14:00"; Postgres quiere "14:00:00". Cualquier otra cosa se
+   * descarta en vez de guardarse a medias: una hora inválida en esta columna
+   * arruina la comparación con el AIS, que es para lo que existe.
+   */
+  const horaAnunciada = (v: string | null | undefined): string | null => {
+    const t = (v ?? "").trim();
+    if (!t) return null;
+    return /^([01]d|2[0-3]):[0-5]d$/.test(t) ? `${t}:00` : null;
   };
 
   const { decision } = body;
@@ -436,6 +459,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       pod: op.pod,
       etd: (body.etd ?? "").trim() || null,
       eta: (body.eta ?? "").trim() || null,
+      etd_hora: horaAnunciada(body.etdHora),
+      eta_hora: horaAnunciada(body.etaHora),
       origen: "manual",
       /*
        * `confirmado` dice si el tramo ya es un hecho, no si el dato es fiable.

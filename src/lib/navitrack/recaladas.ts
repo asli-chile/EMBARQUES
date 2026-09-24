@@ -57,17 +57,33 @@ export async function registrarAnuncio(
     puertoDeclarado: string;
     nave: string | null;
     etaDeclarada: string | null;
-    /** POD comprometido: si el buque declara el destino final, no hay nada que verificar. */
+    /** Extremos del embarque: ninguno de los dos abre una pregunta. */
+    pol: string | null;
     pod: string | null;
   },
 ): Promise<"nueva" | "repetida" | "ignorada"> {
   const puerto = datos.puertoDeclarado.trim();
   if (!puerto) return "ignorada";
 
-  // Declarar el destino final no abre ninguna pregunta.
-  const p = normalizar(puerto);
-  const pod = normalizar(datos.pod);
-  if (p && pod && (p.includes(pod) || pod.includes(p))) return "ignorada";
+  /*
+   * Los extremos del viaje no son recaladas.
+   *
+   * El destino ya se descartaba; el **origen** no, y ahí el buque todavía no
+   * zarpó: declara el puerto donde está cargando. Eso entraba como "puerto
+   * anunciado" y terminaba pidiendo que alguien decidiera si la carga cambia de
+   * barco en el puerto del que aún no salió. El A00052 quedó así con San
+   * Antonio esperando respuesta.
+   *
+   * `registrarRecalada`, la función hermana, ya descartaba los dos. Esta se
+   * quedó a medias.
+   *
+   * La comparación la hace `mismoPuerto` y no un cotejo de texto: el AIS
+   * escribe "Hamburg Germany" donde el ERP dice "HAMBURGO", y buscar una cadena
+   * dentro de la otra no las reconoce —ni con el POD, que era el caso que ya
+   * estaba—. `mismoPuerto` resuelve el nombre y, si no calza, compara
+   * coordenadas.
+   */
+  if (mismoPuerto(puerto, datos.pol) || mismoPuerto(puerto, datos.pod)) return "ignorada";
 
   /*
    * Viaje marcado como directo.

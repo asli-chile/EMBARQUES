@@ -472,6 +472,43 @@ que lo llamara gastaría créditos ajenos.
 
 ---
 
+## Recaladas y transbordos: lo anunciado y lo que pasó
+
+El AIS declara el **próximo puerto**, no el destino final. Cada anuncio abre una
+pregunta que el dato no puede responder: ¿es una escala del itinerario, o ahí la
+carga cambia de barco? El sistema la guarda y la plantea el día en que el buque
+dijo que llegaría — antes de eso no molesta a nadie.
+
+**Los extremos del viaje no son recaladas.** Ni el POL ni el POD abren pregunta:
+en el origen el buque todavía está cargando, y el destino es donde la carga
+termina. La comparación la hace `mismoPuerto`, no un cotejo de texto: el AIS
+escribe "Hamburg Germany" donde el ERP dice "HAMBURGO". Durante un tiempo la
+función que anota lo anunciado descartaba solo el destino, y con un cotejo de
+texto que tampoco reconocía esos dos nombres; el A00052 quedó pidiendo que
+alguien decidiera si la carga cambiaba de barco en el puerto del que aún no
+había salido.
+
+### La hora del transbordo
+
+`navitrack_tramos` guarda el día en `etd`/`eta` y la hora en `etd_hora`/
+`eta_hora`, **en UTC**, que es como la anuncia la naviera.
+
+Van en columnas separadas porque la hora es opcional: a veces dan día y hora, a
+veces solo el día. Con un `timestamptz` único no habría forma de distinguir "el
+20 a las 00:00" de "el 20, hora desconocida", el formulario obligaría a poner
+una hora para poder guardar, y ese "12:00" de relleno ensucia justo la
+comparación que estas columnas existen para permitir.
+
+**Lo anunciado no se pisa nunca.** Es una estimación que casi nunca se cumple
+—el atraque depende del clima y de que haya sitio en el puerto, así que un buque
+anunciado en Italia el 20 a las 14:00 puede entrar el 19 o el 21— y su valor
+está justamente en ser la promesa contra la que se mide. La llegada real la deja
+el AIS solo, en `navitrack_recaladas.recalado_at`, sin gastar créditos.
+
+`desvioAnuncio()` calcula la diferencia, y **la precisión sigue al dato**: con
+hora anunciada responde en horas; sin ella, en días. Decir "+13 h" contra un
+anuncio que solo dijo "el 20" sería inventar una precisión que no existe.
+
 ## 6 bis. Quién entra, y con cuánto poder
 
 Tres permisos independientes, porque no son el mismo eje. Se resuelven en

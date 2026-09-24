@@ -474,6 +474,7 @@ export const GET: APIRoute = async ({ request, url }) => {
           puertoDeclarado: destinoAis,
           nave: String(op.nave ?? nave.nombre),
           etaDeclarada: fecha(detalle.etaUtc),
+          pol: op.pol,
           pod: op.pod,
         });
         if (anuncio === "nueva") resultado.escalas += 1;

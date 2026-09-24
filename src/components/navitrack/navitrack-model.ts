@@ -716,11 +716,63 @@ export type Tramo = {
   pod: string | null;
   etd: string | null;
   eta: string | null;
+  /** Horas UTC anunciadas por la naviera. Null = solo dieron el día. */
+  etd_hora: string | null;
+  eta_hora: string | null;
   confirmado: boolean;
 };
 
+/**
+ * Instante anunciado por la naviera, uniendo el día con la hora si la dieron.
+ *
+ * Las dos partes viven en columnas separadas a propósito: sin eso no habría
+ * forma de distinguir "el 20 a las 00:00" de "el 20, hora desconocida".
+ *
+ * Sin hora se sitúa a mediodía UTC, que es lo que ya hace `parseOpDate`: deja
+ * el día intacto en todo el continente en vez de correrlo al anterior.
+ */
+export function instanteAnunciado(dia: string | null, hora: string | null): Date | null {
+  if (!dia) return null;
+  const d = new Date(`${dia}T${hora ? hora.slice(0, 8) : "12:00:00"}Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Cuánto se desvió la llegada real respecto de lo que anunció la naviera.
+ *
+ * El anuncio es una estimación que casi nunca se cumple —el atraque depende del
+ * clima y de que haya sitio en el puerto—, así que un buque anunciado en Italia
+ * el 20 a las 14:00 puede entrar el 19 o el 21. Medir ese desvío es para lo que
+ * se guarda la hora.
+ *
+ * **Sin hora anunciada la comparación es por día**, no por horas: decir "+13 h"
+ * contra un anuncio que solo dijo "el 20" sería inventar una precisión que el
+ * dato no tiene.
+ *
+ * Devuelve null cuando falta cualquiera de las dos puntas: no hay desvío que
+ * mostrar, y un cero se leería como "llegó puntual".
+ */
+export function desvioAnuncio(
+  dia: string | null,
+  hora: string | null,
+  real: string | Date | null,
+): { horas: number; soloDias: boolean } | null {
+  const anunciado = instanteAnunciado(dia, hora);
+  if (!anunciado || !real) return null;
+  const llegada = real instanceof Date ? real : new Date(real);
+  if (Number.isNaN(llegada.getTime())) return null;
+
+  if (!hora) {
+    // Se comparan los días calendario, sin arrastrar la hora de relleno.
+    const dAnun = Date.UTC(anunciado.getUTCFullYear(), anunciado.getUTCMonth(), anunciado.getUTCDate());
+    const dReal = Date.UTC(llegada.getUTCFullYear(), llegada.getUTCMonth(), llegada.getUTCDate());
+    return { horas: (dReal - dAnun) / 3_600_000, soloDias: true };
+  }
+  return { horas: (llegada.getTime() - anunciado.getTime()) / 3_600_000, soloDias: false };
+}
+
 export const NAVITRACK_TRAMO_SELECT =
-  "operacion_id, orden, nave, viaje, pol, pod, etd, eta, origen, confirmado";
+  "operacion_id, orden, nave, viaje, pol, pod, etd, etd_hora, eta, eta_hora, origen, confirmado";
 
 /** Punto de la ruta: los puertos de conexión se dibujan distinto que los extremos. */
 export type Escala = {
