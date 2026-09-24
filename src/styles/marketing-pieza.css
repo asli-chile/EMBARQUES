@@ -38,6 +38,13 @@
 .pieza .photo {
   position: absolute;
   inset: 0;
+}
+/* La foto vive dentro del marco: el marco pone la geometria y el recorte, la
+   foto pone la imagen y es la que se acerca y se encuadra. Separarlos es lo
+   que deja redondear sin que el borde se escape con el zoom. */
+.pieza .photo-img {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
 }
@@ -1017,6 +1024,16 @@
 /* ---------- Estado de edición ---------- */
 .pieza .elemento.editable {
   cursor: move;
+}
+/* El fondo tambien se agarra, pero para reencuadrar. */
+.pieza .photo.movible {
+  cursor: grab;
+}
+/* El navegador arrastra las imagenes por su cuenta y ese gesto se come el
+   nuestro: el elemento queda inmovil sin ningun error a la vista. */
+.pieza img {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 .pieza .elemento.editable::after {
   content: "";

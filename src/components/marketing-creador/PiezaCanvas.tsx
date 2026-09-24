@@ -93,10 +93,12 @@ function BloqueExtra({
   extra,
   alineacion,
   completa,
+  redondeo,
 }: {
   extra: Extra;
   alineacion: string;
   completa: boolean;
+  redondeo: number;
 }) {
   const limpio = extra.lineas.filter((x) => x.trim());
   const pares = limpio.map(partir);
@@ -243,9 +245,13 @@ function BloqueExtra({
           className="imagen-bloque"
           src={extra.url}
           alt=""
+          /* Sin esto el navegador arranca su propio arrastre de imagen y el
+             gesto se pierde a mitad de camino. */
+          draggable={false}
           style={{
             marginLeft: alineacion === "izq" ? 0 : undefined,
             objectFit: completa ? "contain" : "cover",
+            borderRadius: redondeo ? `${redondeo}px` : undefined,
           }}
         />
       ) : (
@@ -258,12 +264,38 @@ function BloqueExtra({
   }
 }
 
+/** Fondos cuyo recorte es parte del diseno y no se deben redondear. */
+const SILUETA = ["split", "medallon", "arco"];
+
+/**
+ * Estilo del marco que recorta la foto.
+ *
+ * El redondeo va en el marco y no en la foto por el acercamiento: la foto se
+ * agranda con `transform: scale`, y si el borde viviera en ella se iria fuera
+ * de la vista junto con la imagen. En el marco se queda quieto.
+ */
+function marcoRedondeado(r: number, aSangre: boolean): React.CSSProperties {
+  return {
+    borderRadius: `${r}px`,
+    overflow: "hidden",
+    // Ademas del overflow, el recorte explicito: el exportador serializa el
+    // fondo y ahi el redondeo solo se sostiene con clip-path. Es el mismo
+    // motivo por el que el medallon usa circle() y no border-radius.
+    clipPath: `inset(0 round ${r}px)`,
+    // Una foto a sangre no mostraria el redondeo: sus esquinas caen fuera de
+    // la pieza. Se le deja un margen igual al radio para que el borde exista.
+    ...(aSangre ? { inset: `${r}px` } : null),
+  };
+}
+
 export type TipoArrastre = "mover" | "ancho" | "esquina";
 
 export type Editor = {
   activo: boolean;
   seleccion: string | null;
   onTomar: (id: string, tipo: TipoArrastre, e: React.PointerEvent) => void;
+  /** La foto de fondo no es un elemento: arrastrarla reencuadra. */
+  onTomarFoto: (e: React.PointerEvent) => void;
 };
 
 type Props = {
@@ -314,8 +346,29 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       }
     : { background: "#0d1b38" };
 
-  const foto = (extra = "") =>
-    <div className={`photo ${extra}${maqueta.arco ? " arco" : ""}`.trim()} style={estiloFoto} />;
+  const redondeo = pieza.fotoRedondeo ?? 0;
+
+  const foto = (extra = "") => {
+    const clases = `photo ${extra}${maqueta.arco ? " arco" : ""}`.trim();
+    // Las variantes con silueta propia (diagonal, medallon, arco) ya traen su
+    // clip-path. Redondearlas lo pisaria y perderian la forma, asi que no se
+    // tocan: esa silueta es el diseno de la plantilla.
+    const propia = SILUETA.some((c) => clases.includes(c));
+    const r = propia ? 0 : redondeo;
+    // La foto no tiene data-elemento, asi que el arrastre de elementos no la
+    // alcanza y en modo ajuste parecia trabada. Arrastrarla corre el encuadre,
+    // que es lo unico que tiene sentido mover en un fondo.
+    const movible = (editor?.activo ?? false) && !!pieza.foto;
+    return (
+      <div
+        className={`${clases}${movible ? " movible" : ""}`}
+        style={r ? marcoRedondeado(r, extra === "") : undefined}
+        onPointerDown={movible ? editor?.onTomarFoto : undefined}
+      >
+        <div className="photo-img" style={estiloFoto} />
+      </div>
+    );
+  };
 
   let fondo: ReactNode;
   switch (maqueta.fondo) {
@@ -715,7 +768,10 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   /* Los bloques agregados van al final, en su orden. Al llevar id propio
      entran al mismo sistema de posicionado, arrastre y marcador. */
   for (const extra of pieza.extras ?? []) {
-    sumar(extra.id, <BloqueExtra extra={extra} alineacion={alineacion} completa={completa} />);
+    sumar(
+      extra.id,
+      <BloqueExtra extra={extra} alineacion={alineacion} completa={completa} redondeo={redondeo} />,
+    );
   }
 
   /* ---------- Envoltorio de cada elemento ---------- */
@@ -886,13 +942,13 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
                     width: `${Math.round(maqueta.logoAncho * 1.1)}px`,
                   }}
                 >
-                  <img src={pieza.logo2} alt="" />
+                  <img src={pieza.logo2} alt="" draggable={false} />
                 </span>
               </>
             ) : null}
           </div>
         ) : (
-          <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" />
+          <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" draggable={false} />
         ),
         estiloLogo,
       )}
@@ -907,7 +963,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
             ...(maqueta.logo2Izq !== undefined ? { left: `${maqueta.logo2Izq}px`, transform: "none" } : {}),
           }}
         >
-          <img src={pieza.logo2} alt="" />
+          <img src={pieza.logo2} alt="" draggable={false} />
         </span>
       ) : null}
 

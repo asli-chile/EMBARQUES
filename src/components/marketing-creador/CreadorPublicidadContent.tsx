@@ -267,6 +267,37 @@ export function CreadorPublicidadContent() {
     inicio: { puntero: { x: number; y: number }; ajuste: NonNullable<Pieza["ajustes"][string]>; alto: number };
   } | null>(null);
 
+  /* Arrastrar la foto no mueve un elemento: corre el encuadre. Va en su propio
+     ref porque no comparte nada con el arrastre de elementos. */
+  const panFoto = useRef<{
+    puntero: { x: number; y: number };
+    desde: { x: number; y: number };
+    /** Cuanto sobresale la foto de su marco, en px de la pieza: todo el
+        recorrido que tiene el encuadre. Si es 0 no hay nada que correr. */
+    sobra: { x: number; y: number };
+    zoom: number;
+  } | null>(null);
+
+  /* El tamano real de la foto hace falta para que el arrastre siga al puntero:
+     sin el no se sabe cuanto sobresale. Se precarga al elegirla. */
+  const [fotoNatural, setFotoNatural] = useState<{ ancho: number; alto: number } | null>(null);
+
+  useEffect(() => {
+    if (!pieza.foto) {
+      setFotoNatural(null);
+      return;
+    }
+    let vivo = true;
+    const img = new Image();
+    img.onload = () => {
+      if (vivo) setFotoNatural({ ancho: img.naturalWidth, alto: img.naturalHeight });
+    };
+    img.src = pieza.foto;
+    return () => {
+      vivo = false;
+    };
+  }, [pieza.foto]);
+
   const [subiendo, setSubiendo] = useState<null | "foto" | "logo">(null);
   const [categoriaSubida, setCategoriaSubida] = useState("puerto");
   const [logos, setLogos] = useState<{ archivo: string; url: string }[]>([]);
@@ -488,10 +519,60 @@ export function CreadorPublicidadContent() {
     [escala, pieza.ajustes],
   );
 
+  const tomarFoto = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setSeleccion(null);
+      if (!fotoNatural) return;
+
+      const marco = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const ancho = marco.width / escala;
+      const alto = marco.height / escala;
+      if (!ancho || !alto) return;
+
+      // "llenar" agranda la foto hasta cubrir el marco y sobra por un lado;
+      // "completa" la achica hasta entrar y sobra el marco. Es la misma cuenta
+      // con el signo cambiado, asi que el arrastre sirve para los dos.
+      const cubre = pieza.fotoAjuste !== "completa";
+      const f = cubre
+        ? Math.max(ancho / fotoNatural.ancho, alto / fotoNatural.alto)
+        : Math.min(ancho / fotoNatural.ancho, alto / fotoNatural.alto);
+
+      panFoto.current = {
+        puntero: { x: e.clientX, y: e.clientY },
+        desde: { x: pieza.fotoPosicionX, y: pieza.fotoPosicion },
+        sobra: { x: fotoNatural.ancho * f - ancho, y: fotoNatural.alto * f - alto },
+        zoom: (pieza.fotoZoom || 100) / 100,
+      };
+    },
+    [escala, fotoNatural, pieza.fotoAjuste, pieza.fotoPosicion, pieza.fotoPosicionX, pieza.fotoZoom],
+  );
+
   /* El puntero se sigue en la ventana y no en el elemento: si se mueve rapido,
      el cursor se sale del elemento y los eventos dejarian de llegar. */
   useEffect(() => {
     const alMover = (e: PointerEvent) => {
+      const f = panFoto.current;
+      if (f) {
+        // El encuadre es un porcentaje del sobrante, asi que para que la foto
+        // siga al puntero hay que convertir los px arrastrados a ese
+        // porcentaje. El zoom divide porque agranda lo que se ve.
+        const corrido = (eje: "x" | "y", d: number) => {
+          const sobra = f.sobra[eje];
+          const desde = f.desde[eje];
+          if (!sobra) return desde;
+          const p = desde - ((d / escala / f.zoom) * 100) / sobra;
+          return Math.max(0, Math.min(100, Math.round(p)));
+        };
+        setPieza((p) => ({
+          ...p,
+          fotoPosicionX: corrido("x", e.clientX - f.puntero.x),
+          fotoPosicion: corrido("y", e.clientY - f.puntero.y),
+        }));
+        return;
+      }
+
       const a = arrastre.current;
       if (!a) return;
       const r = mover(a.arrastre, a.inicio, { x: e.clientX, y: e.clientY }, escala, dims);
@@ -499,6 +580,7 @@ export function CreadorPublicidadContent() {
       setPieza((p) => ({ ...p, ajustes: { ...p.ajustes, [a.arrastre.id]: r.ajuste } }));
     };
     const alSoltar = () => {
+      panFoto.current = null;
       if (!arrastre.current) return;
       arrastre.current = null;
       setGuias([]);
@@ -647,7 +729,7 @@ export function CreadorPublicidadContent() {
                  manijas ni contornos, sin tener que tocar el DOM a mano. */
               editor={
                 ajustando && exportando === null
-                  ? { activo: true, seleccion, onTomar: tomar }
+                  ? { activo: true, seleccion, onTomar: tomar, onTomarFoto: tomarFoto }
                   : undefined
               }
               /* Igual que el editor: durante la exportacion no se pasa, asi
@@ -1755,6 +1837,18 @@ export function CreadorPublicidadContent() {
                   </p>
                 ) : null}
               </div>
+
+              <Deslizador
+                id="c-redondeo"
+                titulo="Esquinas redondeadas"
+                valor={pieza.fotoRedondeo ?? 0}
+                min={0}
+                max={120}
+                paso={4}
+                sufijo="px"
+                nota="Las plantillas con recorte propio (diagonal, medallón, arco) mantienen su forma."
+                onChange={(v) => set("fotoRedondeo", v)}
+              />
 
               <Deslizador
                 id="c-zoom"

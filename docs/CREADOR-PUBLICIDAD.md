@@ -453,3 +453,61 @@ vuelve a la pieza inicial, con confirmación.
 `banco.json` se pide con `?t=<ahora>` y `cache: "no-store"`. Al subir una foto
 el archivo cambia, y una copia cacheada dejaría la foto recién subida fuera de
 la grilla —el mismo síntoma que arriba, por otra causa.
+
+## Esquinas redondeadas
+
+Deslizador en la pestaña Imagen, de 0 a 120 px de la pieza. Redondea la foto
+de fondo y también los bloques de imagen agregados a mano, para que una hoja
+en blanco no se comporte distinto a una plantilla.
+
+### Tres decisiones que no son cosméticas
+
+- **El redondeo va en un marco, no en la foto.** La foto se agranda con
+  `transform: scale` cuando se la acerca; si el borde viviera en ella, se
+  iría fuera de la vista junto con la imagen. Por eso `.photo` pasó a ser el
+  marco (geometría y recorte) y la imagen vive en `.photo-img` (fondo, zoom y
+  encuadre). Esa separación es la que hace que el borde se quede quieto.
+- **Se recorta con `clip-path: inset(0 round r)` además del `overflow`.** El
+  exportador serializa el fondo y ahí el redondeo solo se sostiene con el
+  recorte explícito. Es el mismo motivo por el que el medallón usa `circle()`
+  y no `border-radius`.
+- **Las siluetas propias no se tocan.** Diagonal, medallón y arco ya traen su
+  `clip-path`: redondearlas lo pisaría y perderían la forma, que es el diseño
+  de esas plantillas.
+
+Una foto a sangre no mostraría el redondeo, porque sus esquinas caen fuera de
+la pieza. En ese caso se le deja un margen igual al radio, para que el borde
+exista.
+
+## Arrastrar la foto reencuadra
+
+El modo **Ajustar posiciones** mueve elementos, y los elementos son los que
+tienen `data-elemento`. La foto de fondo no es uno, así que al arrastrarla no
+pasaba nada y el modo parecía trabado.
+
+Ahora arrastrar la foto corre el encuadre, que es lo único que tiene sentido
+mover en un fondo. El cursor cambia a `grab` para que se note.
+
+### La cuenta
+
+El encuadre es un porcentaje del **sobrante**: cuánto sobresale la foto de su
+marco. Para que la foto siga al puntero hay que convertir los px arrastrados a
+ese porcentaje, y para eso hace falta el tamaño real de la imagen, que se
+precarga al elegirla.
+
+```
+sobra  = ancho_natural * f - ancho_marco     (f = cover ? max : min de las razones)
+nuevo% = anterior% - (px_arrastrados / escala / zoom) * 100 / sobra
+```
+
+La escala divide porque la vista previa está encogida, y el zoom divide porque
+agranda lo que se ve. Con `completa` el sobrante es negativo y la misma cuenta
+sigue dando bien, así que el arrastre sirve en los dos modos. Si el sobrante
+es cero no hay recorrido y no se mueve nada.
+
+## El arrastre nativo de imágenes
+
+Un `<img>` lo arrastra el navegador por su cuenta, y ese gesto se come el
+nuestro: el elemento queda inmóvil sin ningún error a la vista. Todas las
+imágenes de la pieza llevan `draggable={false}`, y la hoja agrega
+`-webkit-user-drag: none`.
