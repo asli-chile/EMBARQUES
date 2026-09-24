@@ -180,6 +180,7 @@ function Deslizador({
   desactivado = false,
   nota,
   onChange,
+  foco,
 }: {
   id: string;
   titulo: string;
@@ -191,6 +192,8 @@ function Deslizador({
   desactivado?: boolean;
   nota?: string;
   onChange: (v: number) => void;
+  /** onFocus/onBlur para marcar el elemento en la vista previa. */
+  foco?: { onFocus: () => void; onBlur: () => void };
 }) {
   return (
     <div className={desactivado ? "opacity-45" : undefined}>
@@ -212,6 +215,7 @@ function Deslizador({
         value={valor}
         disabled={desactivado}
         onChange={(e) => onChange(Number(e.target.value))}
+        {...foco}
         className="w-full accent-[#C8102E] disabled:cursor-not-allowed"
       />
       {nota ? <p className="mt-1 text-xs text-dash-muted">{nota}</p> : null}
@@ -241,6 +245,9 @@ export function CreadorPublicidadContent() {
     "plantilla",
   );
   const [familiaVista, setFamiliaVista] = useState<string>("comercial");
+
+  /* Que elemento se esta editando, para marcarlo en la vista previa. */
+  const [campoActivo, setCampoActivo] = useState<string | null>(null);
 
   const [ajustando, setAjustando] = useState(false);
   const [seleccion, setSeleccion] = useState<string | null>(null);
@@ -519,6 +526,14 @@ export function CreadorPublicidadContent() {
   );
 
   /** Los campos de varias líneas se editan como texto y se guardan como lista. */
+  /* onFocus/onBlur listos para esparcir en cada control. El onBlur compara
+     antes de limpiar: si el foco salta directo a otro campo, el nuevo ya
+     escribio su id y no hay que borrarselo. */
+  const foco = (id: string) => ({
+    onFocus: () => setCampoActivo(id),
+    onBlur: () => setCampoActivo((actual) => (actual === id ? null : actual)),
+  });
+
   const porLineas = (
     campo: "lista" | "pasos" | "colA" | "colB" | "tarjetas" | "barras" | "metricas" | "hitos" | "tabla",
   ) => ({
@@ -558,6 +573,9 @@ export function CreadorPublicidadContent() {
                   ? { activo: true, seleccion, onTomar: tomar }
                   : undefined
               }
+              /* Igual que el editor: durante la exportacion no se pasa, asi
+                 el marcador no puede colarse en la imagen. */
+              resaltado={exportando === null ? campoActivo : null}
             />
 
             {/* Las guias van fuera de la pieza, en un overlay: asi no hay
@@ -796,6 +814,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-eyebrow"
+                  {...foco("eyebrow")}
                   className={input}
                   value={pieza.eyebrow}
                   onChange={(e) => set("eyebrow", e.target.value)}
@@ -812,6 +831,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-dato"
+                  {...foco(usaCampo(pieza.plantilla, "dona") ? "dona" : "dato")}
                     className={input}
                     value={pieza.dato}
                     onChange={(e) => set("dato", e.target.value)}
@@ -824,6 +844,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-dato-et"
+                  {...foco(usaCampo(pieza.plantilla, "dona") ? "dona" : "dato")}
                     className={input}
                     value={pieza.datoEtiqueta}
                     onChange={(e) => set("datoEtiqueta", e.target.value)}
@@ -839,6 +860,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-l1"
+                  {...foco("titular")}
                   className={input}
                   value={pieza.l1}
                   onChange={(e) => set("l1", e.target.value)}
@@ -853,6 +875,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-lm"
+                  {...foco("titular")}
                   className={input}
                   value={pieza.lm}
                   onChange={(e) => set("lm", e.target.value)}
@@ -868,6 +891,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-l2"
+                  {...foco("titular")}
                   className={input}
                   value={pieza.l2}
                   onChange={(e) => set("l2", e.target.value)}
@@ -881,6 +905,7 @@ export function CreadorPublicidadContent() {
                     max={180}
                     paso={2}
                     sufijo="px"
+                    foco={foco("titular")}
                     onChange={(v) => set("l2Tamano", v)}
                   />
                 </div>
@@ -895,6 +920,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <textarea
                     id="c-cita"
+                  {...foco("cita")}
                     className={`${input} min-h-[90px] resize-y`}
                     value={pieza.cita}
                     onChange={(e) => set("cita", e.target.value)}
@@ -906,6 +932,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-firma"
+                  {...foco("cita")}
                     className={input}
                     value={pieza.firma}
                     onChange={(e) => set("firma", e.target.value)}
@@ -921,6 +948,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-chips"
+                  {...foco("chips")}
                   className={input}
                   value={pieza.chips.join(", ")}
                   onChange={(e) =>
@@ -940,6 +968,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-lista"
+                  {...foco(usaCampo(pieza.plantilla, "checklist") ? "checklist" : "lista")}
                   className={`${input} min-h-[110px] resize-y`}
                   {...porLineas("lista")}
                 />
@@ -953,6 +982,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-pasos"
+                  {...foco("pasos")}
                   className={`${input} min-h-[110px] resize-y`}
                   {...porLineas("pasos")}
                 />
@@ -967,6 +997,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-colA-t"
+                  {...foco("columnas")}
                     className={input}
                     value={pieza.colATitulo}
                     onChange={(e) => set("colATitulo", e.target.value)}
@@ -974,6 +1005,7 @@ export function CreadorPublicidadContent() {
                   <textarea
                     className={`${input} mt-2 min-h-[100px] resize-y`}
                     aria-label="Puntos de la columna izquierda"
+                    {...foco("columnas")}
                     {...porLineas("colA")}
                   />
                 </div>
@@ -983,6 +1015,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-colB-t"
+                  {...foco("columnas")}
                     className={input}
                     value={pieza.colBTitulo}
                     onChange={(e) => set("colBTitulo", e.target.value)}
@@ -990,6 +1023,7 @@ export function CreadorPublicidadContent() {
                   <textarea
                     className={`${input} mt-2 min-h-[100px] resize-y`}
                     aria-label="Puntos de la columna derecha"
+                    {...foco("columnas")}
                     {...porLineas("colB")}
                   />
                 </div>
@@ -1003,6 +1037,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-tarjetas"
+                  {...foco("tarjetas")}
                   className={`${input} min-h-[110px] resize-y`}
                   {...porLineas("tarjetas")}
                 />
@@ -1016,6 +1051,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-barras"
+                  {...foco("barras")}
                   className={`${input} min-h-[90px] resize-y`}
                   {...porLineas("barras")}
                 />
@@ -1029,6 +1065,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-metricas"
+                  {...foco("metricas")}
                   className={`${input} min-h-[90px] resize-y`}
                   {...porLineas("metricas")}
                 />
@@ -1042,6 +1079,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-hitos"
+                  {...foco("hitos")}
                   className={`${input} min-h-[100px] resize-y`}
                   {...porLineas("hitos")}
                 />
@@ -1055,6 +1093,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-tabla"
+                  {...foco("tabla")}
                   className={`${input} min-h-[100px] resize-y`}
                   {...porLineas("tabla")}
                 />
@@ -1069,6 +1108,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-ev-fecha"
+                  {...foco("evento")}
                     className={input}
                     value={pieza.eventoFecha}
                     onChange={(e) => set("eventoFecha", e.target.value)}
@@ -1080,6 +1120,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-ev-lugar"
+                  {...foco("evento")}
                     className={input}
                     value={pieza.eventoLugar}
                     onChange={(e) => set("eventoLugar", e.target.value)}
@@ -1091,6 +1132,7 @@ export function CreadorPublicidadContent() {
                   </label>
                   <input
                     id="c-ev-stand"
+                  {...foco("evento")}
                     className={input}
                     value={pieza.eventoStand}
                     onChange={(e) => set("eventoStand", e.target.value)}
@@ -1106,6 +1148,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-ribbon"
+                  {...foco("ribbon")}
                   className={input}
                   value={pieza.ribbon}
                   onChange={(e) => set("ribbon", e.target.value)}
@@ -1120,6 +1163,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <input
                   id="c-ribbon2"
+                  {...foco("ribbon2")}
                   className={input}
                   value={pieza.ribbon2}
                   onChange={(e) => set("ribbon2", e.target.value)}
@@ -1134,6 +1178,7 @@ export function CreadorPublicidadContent() {
                 </label>
                 <textarea
                   id="c-support"
+                  {...foco("support")}
                   className={`${input} min-h-[80px] resize-y`}
                   value={pieza.support}
                   onChange={(e) => set("support", e.target.value)}

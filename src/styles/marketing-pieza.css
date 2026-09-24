@@ -1326,3 +1326,35 @@
   flex: 0 0 auto;
   min-width: 200px;
 }
+
+/* ============================================================
+   Marcador del elemento que se está editando
+   ============================================================ */
+
+/* Usa ::before y no ::after porque el ::after ya es el contorno del modo
+   ajuste: si compartieran pseudo-elemento, uno taparía al otro. */
+.pieza .elemento.resaltado::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border: 3px solid #00e8ff;
+  border-radius: 5px;
+  box-shadow:
+    0 0 0 3px rgba(0, 232, 255, 0.16),
+    0 0 26px rgba(0, 232, 255, 0.5);
+  pointer-events: none;
+  z-index: 4;
+  animation: marcador-edicion 1.5s ease-in-out infinite;
+}
+
+/* El latido es para que se note sin necesidad de mirar fijo: el cambio de
+   opacidad llama la atención con el rabillo del ojo mientras se escribe. */
+@keyframes marcador-edicion {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}

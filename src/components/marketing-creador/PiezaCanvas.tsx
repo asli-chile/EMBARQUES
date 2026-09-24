@@ -84,13 +84,15 @@ export type Editor = {
 
 type Props = {
   pieza: Pieza;
+  /** Id del elemento que se está editando: se marca en la vista previa. */
+  resaltado?: string | null;
   /** 1 = tamaño real. La vista previa se ajusta al hueco disponible. */
   escala?: number;
   editor?: Editor;
 };
 
 export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanvas(
-  { pieza, escala = 1, editor },
+  { pieza, escala = 1, editor, resaltado },
   ref,
 ) {
   const { campos, maqueta } = getPlantilla(pieza.plantilla);
@@ -545,7 +547,9 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         data-elemento={id}
         className={`elemento${ajuste ? " suelto" : ""}${editable ? " editable" : ""}${
           seleccionado ? " sel" : ""
-        }${maqueta.alinear === "izquierda" ? " izq" : ""} al-${alineacion}`}
+        }${maqueta.alinear === "izquierda" ? " izq" : ""} al-${alineacion}${
+          resaltado === id ? " resaltado" : ""
+        }`}
         style={estilo}
         onPointerDown={editable ? (e) => editor?.onTomar(id, "mover", e) : undefined}
       >

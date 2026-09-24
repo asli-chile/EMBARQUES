@@ -343,3 +343,22 @@ Alinear no es solo `text-align`, porque los elementos no se comportan igual:
 - **Las cifras** se repartían el ancho con `flex: 1`, así que alinearlas no
   hacía nada y parecía que el control estaba roto. Fuera del centro dejan de
   estirarse y se agrupan hacia el lado elegido.
+
+## Marcador del elemento que se edita
+
+Al poner el foco en cualquier campo de Contenido, el elemento correspondiente
+se marca en la vista previa con un recuadro celeste que late. Al salir del
+campo, se apaga.
+
+Detalles que importan:
+
+- Usa `::before` y no `::after`, porque el `::after` ya es el contorno del modo
+  ajuste: si compartieran pseudo-elemento, uno taparía al otro.
+- El `onBlur` compara antes de limpiar. Si el foco salta directo a otro campo,
+  el nuevo ya escribió su id y borrarlo dejaría la marca apagada.
+- Varios campos apuntan al mismo elemento: las tres líneas del titular y su
+  deslizador de tamaño marcan `titular`. Y algunos dependen de la plantilla:
+  el campo de la cifra marca `dona` o `dato`, y el de lista marca `checklist`
+  o `lista`, según cuál use la plantilla en curso.
+- Igual que el editor, **no se pasa durante la exportación**, así que no puede
+  colarse en la imagen.
