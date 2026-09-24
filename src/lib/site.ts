@@ -36,13 +36,14 @@ export const siteConfig = {
         { labelKey: "papeleraTransportes", id: "papelera-transportes", href: "/transportes/papelera", staffOnly: true },
       ],
     },
-    {
-      labelKey: "documentos",
-      id: "documentos",
-      children: [
-        { labelKey: "misDocumentos", id: "mis-documentos", href: "/documentos/mis-documentos", operational: true },
-      ],
-    },
+    /*
+     * Documentos, directo y sin desplegable.
+     *
+     * Era un grupo con un solo hijo, "Mis documentos": dos clics para llegar a
+     * la única pantalla que tenía. Proforma e instructivo se generan desde otras
+     * pantallas y no están en el menú, así que no hay nada que agrupar.
+     */
+    { labelKey: "documentos", id: "documentos", href: "/documentos/mis-documentos", operational: true },
     /*
      * Seguimiento, justo debajo de Documentos.
      *

@@ -1,4 +1,4 @@
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
+import { Fragment, memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { sendEmail } from "@/lib/email/sendEmail";
 import { Icon } from "@iconify/react";
@@ -36,6 +36,8 @@ import {
   ContenedorTransporteModal,
   type ContenedorTransporteSaved,
 } from "@/components/reservas/ContenedorTransporteModal";
+import { ReservaDetalle, type ReservaDetalleLabels } from "@/components/reservas/ReservaDetalle";
+import { propsFilaDesplegable, useFilaDesplegable } from "@/components/ui/FilaDesplegable";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
 const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 44px" };
@@ -134,6 +136,8 @@ type Operacion = {
 type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "contenedor" | "estado_operacion" | "solicitud_ventana";
 type SortDirection = "asc" | "desc";
 type ViewMode = "table" | "cards";
+/** Celdas de la tabla que se completan en línea cuando están vacías. */
+type InlineEditableField = "pol" | "pod";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -768,6 +772,9 @@ type TableRowProps = {
   logosNaviera: Map<string, string>;
   idx: number;
   selected: boolean;
+  /** Si su detalle está desplegado debajo. Solo una fila a la vez. */
+  expanded: boolean;
+  onToggle: (id: string) => void;
   isCliente: boolean;
   canInlineEdit: boolean;
   canEditContenedor: boolean;
@@ -828,6 +835,8 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   op,
   idx,
   selected,
+  expanded,
+  onToggle,
   isCliente,
   canInlineEdit,
   canEditContenedor,
@@ -856,21 +865,39 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
   return (
     <tr
-      style={ROW_CV}
+      style={expanded ? undefined : ROW_CV}
       onContextMenu={(event) => onContextMenu(event, op)}
-      className={`border-b border-dash-border ${
-        selected ? "bg-dash-neon/15" : idx % 2 === 0 ? "bg-transparent hover:bg-dash-neon/10" : "bg-dash-control/30 hover:bg-dash-neon/10"
+      /* La fila entera abre el detalle, salvo lo que ya tiene su propio clic:
+         booking, contenedor, estado, celdas editables, casilla y acciones. */
+      {...propsFilaDesplegable(op.id, expanded, onToggle)}
+      className={`cursor-pointer border-b outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dash-neon/50 ${
+        expanded
+          ? "border-transparent bg-[color-mix(in_srgb,var(--estado-curso)_16%,transparent)]"
+          : selected
+            ? "border-dash-border bg-dash-neon/15"
+            : idx % 2 === 0
+              ? "border-dash-border bg-transparent hover:bg-dash-neon/10"
+              : "border-dash-border bg-dash-control/30 hover:bg-dash-neon/10"
       }`}
     >
       {!isCliente && (
-        <td className="relative px-3 py-2 text-center w-10">
+        <td data-row-action className="relative px-3 py-2 text-center w-10">
           {cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
           <input type="checkbox" checked={selected} onChange={() => onSelect(op.id)} className="w-4 h-4 rounded border-neutral-300 accent-[var(--dash-neon)]" />
         </td>
       )}
       <td className={`px-3 py-2 text-center ${isCliente ? "relative" : ""}`}>
         {isCliente && cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
-        <span className="font-bold text-dash-fg text-[14px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
+        <span className="inline-flex items-center gap-1.5">
+          <Icon
+            icon="lucide:chevron-right"
+            width={14}
+            height={14}
+            className={`shrink-0 text-dash-muted transition-transform duration-150 ${expanded ? "rotate-90 text-[var(--estado-curso)]" : ""}`}
+            aria-hidden
+          />
+          <span className="font-bold text-dash-fg text-[14px] tabular-nums tracking-tight">{displayRefAsli(op.ref_asli, op.correlativo, "-")}</span>
+        </span>
       </td>
       <td className="px-3 py-2 min-w-[10rem] text-center">
         {!isCliente ? (
@@ -1638,6 +1665,31 @@ export function MisReservasContent() {
     });
   }, []);
 
+  /* Casilla (solo personal interno) + 13 columnas de datos. */
+  const tableColCount = isCliente ? 13 : 14;
+
+  /*
+   * Una reserva desplegada a la vez, con la mecánica compartida con
+   * Documentos (ver FilaDesplegable). Mientras hay una abierta no se abre
+   * otra: el panel tapa al resto y el único camino es replegar primero.
+   */
+  const visiblesIds = useMemo(() => filteredOperaciones.map((op) => op.id), [filteredOperaciones]);
+  const fila = useFilaDesplegable({
+    visibles: visiblesIds,
+    habilitado: viewMode === "table",
+    bloqueoEscape: !!(emailModal || bookingModal || contenedorModal),
+  });
+  const expandedId = fila.abiertaId;
+  const handleToggleExpand = fila.toggle;
+
+  const detalleLabels = useMemo<ReservaDetalleLabels>(
+    () => ({
+      tr: tr as unknown as Record<string, string>,
+      campos: t.registros as unknown as Record<string, string>,
+    }),
+    [tr, t.registros],
+  );
+
   const handleCopy = useCallback(async (op: Operacion) => {
     const ok = await copyToClipboard(op);
     if (ok) sileo.success({ title: tr.copiedSuccess });
@@ -2046,6 +2098,16 @@ export function MisReservasContent() {
         <div className="absolute bottom-20 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
       </div>
 
+      {/*
+        * Cabecera de la página: título, indicadores, búsqueda y filtros.
+        *
+        * Con una reserva desplegada se repliega para darle al detalle todo el
+        * alto de la pantalla. Vuelve apenas se empieza a replegar el detalle,
+        * así las dos transiciones corren juntas. `inert` saca sus controles del
+        * foco mientras no se ven.
+        */}
+      <div className="rd-colapsable relative z-10 shrink-0" data-colapsado={fila.cabeceraOculta} inert={fila.cabeceraOculta || undefined}>
+      <div>
       {/* ── Toolbar ── */}
       <div className="dash-toolbar relative z-10 shrink-0">
         <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
@@ -2409,13 +2471,18 @@ export function MisReservasContent() {
         )}
       </div>
 
+      </div>
+      </div>
+
       {/* ── Área de contenido ── */}
       <div className="relative z-10 flex-1 min-h-0 overflow-auto p-2 sm:p-3">
 
         {/* Vista Tabla */}
         {viewMode === "table" && (
           <div className="dash-card-static flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]" style={{ minHeight: 300 }}>
-            <div className="overflow-auto flex-1 min-h-0">
+            {/* Con una reserva desplegada la tabla no se desplaza en vertical: la
+                fila queda arriba, el detalle llena el resto y se recorre por dentro. */}
+            <div {...fila.scrollProps} className={`flex-1 min-h-0 ${fila.scrollProps.className}`}>
               <table className="w-full text-[13.5px]">
                 <thead>
                   <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
@@ -2443,7 +2510,7 @@ export function MisReservasContent() {
                 <tbody>
                   {filteredOperaciones.length === 0 ? (
                     <tr>
-                      <td colSpan={isCliente ? 16 : 17} className="px-4 py-14 text-center">
+                      <td colSpan={tableColCount} className="px-4 py-14 text-center">
                         <div className="flex flex-col items-center gap-2">
                           <span className="w-10 h-10 rounded-xl bg-dash-control border border-dash-border flex items-center justify-center">
                             <Icon icon="typcn:clipboard" width={20} height={20} className="text-dash-muted" />
@@ -2457,12 +2524,14 @@ export function MisReservasContent() {
                     </tr>
                   ) : (
                     filteredOperaciones.map((op, idx) => (
+                      <Fragment key={op.id}>
                       <MisReservasTableRow
-                        key={op.id}
                         op={op}
                         logosNaviera={logosNaviera}
                         idx={idx}
                         selected={selectedIds.has(op.id)}
+                        expanded={expandedId === op.id}
+                        onToggle={handleToggleExpand}
                         isCliente={isCliente}
                         canInlineEdit={canInlineEdit}
                         canEditContenedor={canEditContenedor}
@@ -2488,6 +2557,21 @@ export function MisReservasContent() {
                         onEstadoSave={handleEstadoSave}
                         arriboLabels={arriboLabels}
                       />
+                      {expandedId === op.id && (
+                        <tr className="bg-[color-mix(in_srgb,var(--estado-curso)_6%,transparent)]">
+                          <td colSpan={tableColCount} className="p-0">
+                            <ReservaDetalle
+                              op={op}
+                              isCliente={isCliente}
+                              supabase={supabase}
+                              labels={detalleLabels}
+                              cerrando={fila.cerrando}
+                              onClose={fila.cerrar}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     ))
                   )}
                 </tbody>

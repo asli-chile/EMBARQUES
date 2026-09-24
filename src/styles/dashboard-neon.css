@@ -717,6 +717,7 @@ html[data-erp-neon="light"] {
   --marca-oliva: #669900;
   --marca-teal: #007a7b;
   --marca-navy: #11224e;
+  --marca-teal-oscuro: #003f5a;
   --marca-gris: #6b7280;
   --marca-rojo: #b91c1c;
 
@@ -800,4 +801,118 @@ html[data-erp-neon="light"] {
   border: 1px solid color-mix(in srgb, var(--estado) 35%, transparent);
   background: color-mix(in srgb, var(--estado) 13%, transparent);
   color: var(--estado);
+}
+
+/* ── Detalle de reserva (Mis Reservas) ──────────────────────────────────────
+ *
+ * La cabecera es una franja de marca —navy al teal oscuro del manual— igual en
+ * los dos temas: es la identidad de ASLI, no una superficie del tema. Por eso
+ * su tinta es blanca fija y su acento es un teal aclarado para leerse sobre
+ * navy; el cuerpo, en cambio, usa los tokens del tema como el resto del ERP.
+ */
+.rd-hero {
+  --rd-acento: color-mix(in srgb, var(--marca-teal) 52%, #9af7f0);
+  --rd-tinta: #ffffff;
+  --rd-tinta-suave: color-mix(in srgb, #ffffff 66%, transparent);
+  position: relative;
+  isolation: isolate;
+  color: var(--rd-tinta);
+  background:
+    radial-gradient(90% 160% at 100% 0%, color-mix(in srgb, var(--marca-teal) 42%, transparent) 0%, transparent 60%),
+    radial-gradient(60% 120% at 0% 100%, color-mix(in srgb, var(--marca-oliva) 16%, transparent) 0%, transparent 65%),
+    linear-gradient(125deg, var(--marca-navy) 0%, color-mix(in srgb, var(--marca-navy) 50%, var(--marca-teal-oscuro)) 55%, var(--marca-teal-oscuro) 100%);
+}
+/* Retícula de puntos que se desvanece: textura de carta náutica, sin imagen. */
+.rd-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(color-mix(in srgb, #ffffff 16%, transparent) 1px, transparent 1.3px);
+  background-size: 16px 16px;
+  -webkit-mask-image: linear-gradient(100deg, transparent 20%, #000 75%);
+  mask-image: linear-gradient(100deg, transparent 20%, #000 75%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.rd-muted {
+  color: var(--rd-tinta-suave);
+}
+.rd-acento {
+  color: var(--rd-acento);
+}
+.rd-vidrio {
+  background: color-mix(in srgb, #ffffff 7%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 13%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.rd-btn {
+  background: color-mix(in srgb, #ffffff 9%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 16%, transparent);
+  color: var(--rd-tinta);
+}
+.rd-btn:hover,
+.rd-btn[aria-pressed="true"] {
+  background: color-mix(in srgb, #ffffff 17%, transparent);
+  border-color: color-mix(in srgb, var(--rd-acento) 60%, transparent);
+}
+.rd-btn-primario {
+  background: var(--rd-acento);
+  border: 1px solid var(--rd-acento);
+  color: var(--marca-navy);
+}
+.rd-btn-primario:hover {
+  background: color-mix(in srgb, var(--rd-acento) 85%, #ffffff);
+}
+/* La ruta: trazo punteado que se enciende hacia el destino. */
+.rd-ruta {
+  height: 2px;
+  background-image: linear-gradient(90deg, color-mix(in srgb, #ffffff 35%, transparent) 50%, transparent 50%);
+  background-size: 10px 2px;
+}
+.rd-ruta--destino {
+  background-image: linear-gradient(90deg, var(--rd-acento) 50%, transparent 50%);
+}
+.rd-nave {
+  background: var(--rd-acento);
+  color: var(--marca-navy);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--rd-acento) 22%, transparent), 0 8px 22px -6px rgba(0, 0, 0, 0.55);
+}
+
+/* Cuerpo: tarjetas del tema con el teal de marca como único acento. */
+.rd-card {
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  transition: border-color var(--motion-duration-fast, 160ms) ease, box-shadow var(--motion-duration-fast, 160ms) ease;
+}
+.rd-card:hover {
+  border-color: color-mix(in srgb, var(--estado-curso) 45%, transparent);
+  box-shadow: 0 14px 30px -22px rgba(0, 0, 0, 0.5);
+}
+.rd-icono {
+  color: var(--estado-curso);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--estado-curso) 24%, transparent), color-mix(in srgb, var(--estado-curso) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--estado-curso) 30%, transparent);
+}
+.rd-chip {
+  background: var(--dash-control);
+  border: 1px solid var(--dash-border);
+  color: var(--dash-muted);
+}
+.rd-chip:hover {
+  color: var(--dash-fg);
+  border-color: color-mix(in srgb, var(--estado-curso) 50%, transparent);
+  background: color-mix(in srgb, var(--estado-curso) 12%, var(--dash-control));
+}
+
+/* Acción principal con el teal de marca. El hex del manual con texto blanco
+   contrasta en los dos temas, así que no se aclara como los estados. */
+.btn-marca {
+  background: var(--marca-teal);
+  border: 1px solid var(--marca-teal);
+  color: #ffffff;
+}
+.btn-marca:hover {
+  background: color-mix(in srgb, var(--marca-teal) 85%, #000000);
 }

@@ -46,13 +46,9 @@ import {
   type TransbordoDecision,
 } from "./navitrack-estado";
 
-/** Ventana hacia atrás: un embarque arribado hace más de esto ya no es seguimiento. */
-const VENTANA_DIAS = 21;
-
-function isoHaceDias(dias: number): string {
-  const d = new Date(Date.now() - dias * 86_400_000);
-  return d.toISOString().slice(0, 10);
-}
+/* La ventana y el resto del alcance viven en `alcance.ts`: Mis Reservas
+   enlaza a NaviTrack y necesita saber si la operación va a aparecer acá. */
+import { NAVITRACK_VENTANA_DIAS as VENTANA_DIAS, isoHaceDias } from "@/lib/navitrack/alcance";
 
 /** Nombre de buque comparable: sin acentos, sin viaje pegado y sin dobles espacios. */
 function claveNave(raw: string | null | undefined): string {

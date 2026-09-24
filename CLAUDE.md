@@ -312,18 +312,25 @@ Dos ejes que se parecen y no son lo mismo:
 | Estado del papeleo | Completo / en curso / sin documentos | `estadoDocsDe()`, cuenta documentos contra tipos exigibles |
 | Estado del viaje | En tránsito, cancelada, solicitada… | `operaciones.estado_operacion` |
 
-En la **lista** el color de la tarjeta habla del viaje; en la **ficha** de un
-embarque, del papeleo. Mezclarlos deja al lector sin saber cuál está viendo.
+Se ve y se comporta como Mis Reservas: la misma cabecera con indicadores, la
+misma tabla, y cada fila **se despliega en el lugar** mostrando la ficha del
+embarque con un espacio por documento. Un espacio vacío es una zona para soltar
+el archivo o hacer clic; uno lleno muestra el archivo con sus acciones.
 
-- Los once tipos se agrupan en cuatro etapas (`GRUPOS_DOCUMENTO`), en el orden
-  del viaje, que es también el orden en que se buscan. En la pestaña "Todos" los
-  grupos se separan con una línea más gruesa del borde de siempre.
-- **La etapa no tiene color propio.** Lo tuvo —violeta, azul, celeste y
-  esmeralda de Tailwind— y era lo único así en todo el ERP: acá el color
-  significa **estado** (`--estado-*`) o selección (`--dash-neon`), nunca
-  categoría. Cuatro tonos más, por bien elegidos que estén, desentonan con el
-  resto y además compiten con el chip de estado de la misma fila. El grupo se
-  identifica por su nombre y su contador.
+En la **fila**, la barra del canto habla del viaje y la columna de documentos,
+del papeleo. En la **ficha**, todo habla del papeleo. Mezclarlos deja al lector
+sin saber cuál está viendo.
+
+- La ficha tiene una tira con los datos del embarque y pestañas: Documentos,
+  Seguimiento (abre NaviTrack en otra pestaña), Datos de la operación, Hitos
+  (las fechas que la operación tiene cargadas, en orden) y Notas
+  (`observaciones`). No hay pestaña de contenedores: cada operación tiene uno.
+- Los documentos van en una grilla plana y numerada, en el orden del viaje que
+  fija `GRUPOS_DOCUMENTO`. "Subir múltiples" sugiere el tipo por el nombre del
+  archivo, pero el usuario lo confirma antes de subir; "Descargar todo" arma un
+  .zip con `jszip`.
+- El papeleo usa los estados de marca: completo en oliva (`estado--ok`), a
+  medias en teal (`estado--curso`), sin nada en ámbar (`estado--atencion`).
 - `TIPOS_FUERA` retira tipos de la pantalla **y de la cuenta**. Se filtra en vez
   de borrar del catálogo: la columna y el histórico siguen en la base. Si se
   retira uno de la vista sin sacarlo de la cuenta, el contador pide un documento
@@ -331,12 +338,20 @@ embarque, del papeleo. Mezclarlos deja al lector sin saber cuál está viendo.
 - `visibleTipos` va en `useMemo`. No es optimización: de esa lista cuelgan un
   Set, las funciones de carga y los efectos que llaman a `setState`, así que
   recalcularla en cada render deja la pantalla en bucle infinito.
-- Los estados usan los tokens de marca (`estado--ok|curso|espera|atencion|transito`).
 
 **Lo que no existe** y conviene no prometer: observaciones por documento,
 estados "en revisión" y "observado", documentos aduaneros (DUA, liberación) y
 "descargar checklist". Aparecen en los mockups pero no hay campo ni tabla
 detrás.
+
+### Filas que se despliegan
+
+Mis Reservas y Documentos comparten la mecánica en
+`src/components/ui/FilaDesplegable.tsx`: una fila abierta a la vez, la
+cabecera de la página se repliega, el panel ocupa el alto que queda y la tabla
+deja de desplazarse hasta replegar. La ficha de marca (franja navy → teal
+oscuro) usa las clases `rd-*` de `dashboard-neon.css`. Si una tercera pantalla
+necesita lo mismo, usar esa pieza en vez de copiarla.
 
 ## Módulo de Transportes
 

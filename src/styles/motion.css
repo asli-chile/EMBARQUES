@@ -194,6 +194,49 @@
     transform var(--motion-duration-fast) var(--motion-ease-exit);
 }
 
+/* Despliegue en el lugar: un panel que se abre bajo el elemento que lo pidió
+   (el detalle de una fila en Mis Reservas). Crece desde su borde superior,
+   así se lee como algo que sale de la fila y no como algo que cae encima. */
+.motion-unfold {
+  transform-origin: top center;
+  opacity: 0;
+  transform: translate3d(0, calc(var(--motion-distance-sm) * -1), 0) scaleY(0.92);
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-standard),
+    transform var(--motion-duration-slow) var(--motion-ease-enter);
+}
+.motion-unfold[data-state="open"] {
+  opacity: 1;
+  transform: none;
+}
+.motion-unfold[data-state="closed"] {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-exit),
+    transform var(--motion-duration-fast) var(--motion-ease-exit);
+}
+
+/* Repliegue de una franja completa (la cabecera de Mis Reservas mientras hay
+   un detalle abierto). Es la única transición de alto del sistema: el espacio
+   que libera es justo lo que se quiere mostrar, y animar solo `transform`
+   dejaría el hueco. Se usa `grid-template-rows` 1fr → 0fr, que no necesita
+   conocer el alto y no provoca saltos de layout al terminar. */
+.rd-colapsable {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--motion-duration-slow) var(--motion-ease-enter),
+    opacity var(--motion-duration-fast) var(--motion-ease-standard);
+}
+.rd-colapsable > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.rd-colapsable[data-colapsado="true"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
 /* Bottom sheet en móvil: el panel sube desde abajo, sin escala. */
 @media (max-width: 639px) {
   .motion-panel-sheet {
@@ -321,12 +364,15 @@
 
   .motion-panel,
   .motion-panel-sheet,
+  .motion-unfold,
+  .rd-colapsable,
   .motion-backdrop {
     transition-duration: 1ms;
     transform: none;
   }
   .motion-panel[data-state="closed"],
-  .motion-panel-sheet[data-state="closed"] {
+  .motion-panel-sheet[data-state="closed"],
+  .motion-unfold[data-state="closed"] {
     transform: none;
   }
 

@@ -16,7 +16,14 @@
       "Bash(grep -o \"onIdle[?:]*[^;,}]\\\\{0,40\\\\}\\\\|onLoad[?:]*[^;,}]\\\\{0,40\\\\}\" node_modules/react-map-gl/dist/maplibre.d.ts)",
       "Bash(npx tsx *)",
       "Bash(awk 'NR>=615 && NR<=780' src/components/configuracion/NavesTrackingContent.tsx)",
-      "Bash(awk '/<tbody/,/<\\\\/tbody>/' src/components/configuracion/NavesTrackingContent.tsx)"
+      "Bash(awk '/<tbody/,/<\\\\/tbody>/' src/components/configuracion/NavesTrackingContent.tsx)",
+      "Bash(grep -m2 '\\\\\\\\r')",
+      "Bash(node \"C:/Users/rodri/AppData/Local/Temp/claude/c--Users-rodri-OneDrive-Desktop-DEVELOPER-ERP-WEB-ERP/a05e7c54-2af4-414c-b2b4-c2ebbc530720/scratchpad/adelgazar.js\")",
+      "Bash(cd \"c:/Users/rodri/OneDrive/Desktop/DEVELOPER/ERP+WEB/ERP\" && echo \"lineas CLAUDE.md:\" && wc -l < CLAUDE.md && echo \"--- .mcp.json ---\" && ls .mcp.json 2>/dev/null || echo \"no existe \\(correcto\\)\" && echo \"--- git status \\(solo modificados\\) ---\" && git status --porcelain | grep -v '^??' && echo \"--- boveda ---\" && find \"C:/Users/rodri/OneDrive/Documentos/obsidian/ASLI\" -name \"*.md\" | wc -l)",
+      "Read(//c/Users/rodri/OneDrive/Documentos/obsidian/ASLI/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\rodri\\OneDrive\\Documentos\\obsidian\\ASLI"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -11,6 +11,20 @@ import { es } from "date-fns/locale";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { withBase } from "@/lib/basePath";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
+import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
+import { staggerStyle } from "@/lib/ui/motion";
+import { motivoFueraDeNavitrack } from "@/lib/navitrack/alcance";
+import { NavieraLogo } from "@/components/navitrack/NavieraLogo";
+import { Bandera, SeccionesOperacion, fmtFecha, gruposOperacion, useOperacionCompleta } from "@/components/reservas/ReservaDetalle";
+import { PanelBajoFila, propsFilaDesplegable, useFilaDesplegable } from "@/components/ui/FilaDesplegable";
+
+/** Evita pintar filas fuera de viewport, como en Mis Reservas. */
+const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize: "auto 44px" };
+
+/** Encabezado de columna: el mismo de Mis Reservas, sin orden. */
+const TH =
+  "sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 whitespace-nowrap border-b border-dash-border text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted backdrop-blur-sm";
 
 type Operacion = {
   id: string;
@@ -19,6 +33,9 @@ type Operacion = {
   correlativo: number;
   cliente: string;
   naviera: string;
+  /** Para saber si NaviTrack puede mostrarla (ver `alcance.ts`). */
+  nave: string | null;
+  viaje: string | null;
   booking: string;
   contenedor: string | null;
   pol: string | null;
@@ -109,7 +126,6 @@ const TIPOS_DOCUMENTO_CLIENTE: readonly TipoDocumento[] = [
 const GRUPOS_DOCUMENTO = [
   {
     id: "comerciales",
-    label: "Comerciales",
     icon: "lucide:receipt",
     /* Sin color propio: en el ERP el color significa estado, no categoría. El
        grupo se identifica por su nombre y su contador. */
@@ -117,19 +133,16 @@ const GRUPOS_DOCUMENTO = [
   },
   {
     id: "origen",
-    label: "Origen",
     icon: "lucide:stamp",
     tipos: ["CERTIFICADO_ORIGEN", "CERTIFICADO_FITOSANITARIO", "DUS"],
   },
   {
     id: "transporte",
-    label: "Transporte y Nave",
     icon: "lucide:ship",
     tipos: ["INSTRUCTIVO_EMBARQUE", "BL_TELEX_SWB_AWB", "FACTURA_GATE_OUT"],
   },
   {
     id: "cierre",
-    label: "Cierre",
     icon: "lucide:flag",
     tipos: ["FULLSET"],
   },
@@ -148,22 +161,19 @@ function grupoDeTipo(tipo: string) {
   return GRUPOS_DOCUMENTO.find((g) => (g.tipos as readonly string[]).includes(tipo)) ?? null;
 }
 
-const PAGE_SIZE_OPTIONS = [10, 50, 100] as const;
-type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
-
-const TIPO_META: Record<TipoDocumento, { label: string; icon: string; color: string }> = {
-  BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list", color: "text-sky-300 bg-sky-500/15" },
-  INSTRUCTIVO_EMBARQUE:    { label: "Instructivo de Embarque (IE)",   icon: "lucide:file-text",      color: "text-violet-300 bg-violet-500/15" },
-  PACKING_LIST:            { label: "Packing List",                   icon: "lucide:package",       color: "text-orange-300 bg-orange-500/15" },
-  FACTURA_PROFORMA:        { label: "Factura Proforma",               icon: "lucide:file-check",     color: "text-amber-300 bg-amber-500/15" },
-  CERTIFICADO_FITOSANITARIO: { label: "Certificado Fitosanitario",   icon: "lucide:leaf",           color: "text-emerald-300 bg-emerald-500/15" },
-  CERTIFICADO_ORIGEN:      { label: "Certificado de Origen",         icon: "lucide:globe",          color: "text-teal-300 bg-teal-500/15" },
-  BL_TELEX_SWB_AWB:        { label: "BL / Telex / SWB / AWB",       icon: "lucide:ship",           color: "text-cyan-300 bg-cyan-500/15" },
-  FULLSET:                 { label: "Fullset",                       icon: "lucide:layers",         color: "text-dash-muted bg-dash-control" },
-  FACTURA_COMERCIAL:       { label: "Factura Comercial",             icon: "lucide:shopping-bag",   color: "text-pink-300 bg-pink-500/15" },
-  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send",           color: "text-lime-300 bg-lime-500/15" },
-  FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt",        color: "text-orange-300 bg-orange-500/15" },
-  DUS:                     { label: "DUS",                           icon: "lucide:landmark",       color: "text-indigo-300 bg-indigo-500/15" },
+const TIPO_META: Record<TipoDocumento, { label: string; icon: string }> = {
+  BOOKING:                 { label: "Booking",                        icon: "lucide:clipboard-list" },
+  INSTRUCTIVO_EMBARQUE:    { label: "Instructivo de Embarque (IE)",   icon: "lucide:file-text" },
+  PACKING_LIST:            { label: "Packing List",                   icon: "lucide:package" },
+  FACTURA_PROFORMA:        { label: "Factura Proforma",               icon: "lucide:file-check" },
+  CERTIFICADO_FITOSANITARIO: { label: "Certificado Fitosanitario",   icon: "lucide:leaf" },
+  CERTIFICADO_ORIGEN:      { label: "Certificado de Origen",         icon: "lucide:globe" },
+  BL_TELEX_SWB_AWB:        { label: "BL / Telex / SWB / AWB",       icon: "lucide:ship" },
+  FULLSET:                 { label: "Fullset",                       icon: "lucide:layers" },
+  FACTURA_COMERCIAL:       { label: "Factura Comercial",             icon: "lucide:shopping-bag" },
+  SOLICITUD_RESERVA:       { label: "Solicitud de Reserva",           icon: "lucide:send" },
+  FACTURA_GATE_OUT:        { label: "Factura Gate Out",               icon: "lucide:receipt" },
+  DUS:                     { label: "DUS",                           icon: "lucide:landmark" },
 };
 
 function opRef(op: Operacion) {
@@ -205,33 +215,19 @@ export function MisDocumentosContent() {
    * a qué embarque le falta documentación. No habla del viaje del barco.
    */
   const [filtroDocs, setFiltroDocs] = useState<"todos" | "pendientes" | "curso" | "completos">("todos");
-  /** Tarjeta con los datos del embarque desplegados, en la vista de teléfono. */
-  const [detalleAbierto, setDetalleAbierto] = useState<string | null>(null);
-  /**
-   * Grupos que el usuario abrió o cerró a mano.
-   *
-   * Sin entrada, manda el estado del grupo: los completos nacen plegados y los
-   * que tienen algo pendiente, abiertos. Una decisión manual pesa más que esa
-   * regla, que para eso se tomó.
-   */
-  const [gruposCerrados, setGruposCerrados] = useState<Record<string, boolean>>({});
-  /** Fila con su menú de acciones desplegado. Solo uno a la vez. */
-  const [menuTipo, setMenuTipo] = useState<string | null>(null);
-
-  /** Etapa que se está mirando en la ficha del embarque. */
-  const [etapaActiva, setEtapaActiva] = useState<string>("todos");
-
-  /**
-   * Lista lateral plegada.
-   *
-   * Es para revisar un embarque con toda la pantalla; la operación abierta no
-   * se toca. Al cerrar la operación se despliega sola: plegada y sin ficha al
-   * lado, la pantalla quedaría vacía.
-   */
-  const [listaColapsada, setListaColapsada] = useState(false);
+  /** Tipo sobre el que se está arrastrando un archivo, para iluminar su espacio. */
+  const [arrastrando, setArrastrando] = useState<string | null>(null);
+  /** Pestaña de la ficha desplegada. */
+  const [tabFicha, setTabFicha] = useState<"docs" | "datos" | "hitos" | "notas">("docs");
+  /** Menú ⋮ abierto: de una tarjeta de documento o de una fila. Uno a la vez. */
+  const [menuDoc, setMenuDoc] = useState<string | null>(null);
+  const [menuFila, setMenuFila] = useState<string | null>(null);
+  /** Archivos elegidos en "Subir múltiples", cada uno con el tipo que se le asigna. */
+  const [subida, setSubida] = useState<{ file: File; tipo: string }[] | null>(null);
+  const [subiendoVarios, setSubiendoVarios] = useState(false);
+  const [descargando, setDescargando] = useState(false);
+  const [logosNaviera, setLogosNaviera] = useState<Map<string, string>>(new Map());
   const [previewDoc, setPreviewDoc] = useState<Documento | null>(null);
-  const [pageSize, setPageSize] = useState<PageSize>(10);
-  const [page, setPage] = useState(1);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; confirmLabel: string; onConfirm: () => void } | null>(null);
 
   const supabase = useMemo(() => {
@@ -285,9 +281,11 @@ export function MisDocumentosContent() {
   const fetchOperaciones = useCallback(async () => {
     if (!supabase || authLoading || temporadaLoading) return;
     setLoading(true);
-    const baseCols =
-      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, booking, contenedor, pol, pod, etd, eta, estado_operacion, booking_doc_url, created_at";
-    const withNaCols = `${baseCols}, solicitud_reserva_no_aplica, factura_gate_out_no_aplica`;
+    /* Tipadas como `string` a propósito: con el literal, el parser de tipos de
+       supabase-js se ahoga ("excessively deep") y el fallback no calza. */
+    const baseCols: string =
+      "id, ref_asli, referencia_externa, correlativo, cliente, naviera, nave, viaje, booking, contenedor, pol, pod, etd, eta, estado_operacion, booking_doc_url, created_at";
+    const withNaCols: string = `${baseCols}, solicitud_reserva_no_aplica, factura_gate_out_no_aplica`;
 
     let q = supabase.from("operaciones").select(withNaCols).is("deleted_at", null);
     q = applyOperacionesClienteFilter(q, { isCliente, empresaNombres });
@@ -312,7 +310,7 @@ export function MisDocumentosContent() {
     }
 
     const ops: Operacion[] = (data ?? []).map((row) => {
-      const r = row as Record<string, unknown>;
+      const r = row as unknown as Record<string, unknown>;
       return {
         id: String(r.id),
         ref_asli: String(r.ref_asli ?? ""),
@@ -320,6 +318,8 @@ export function MisDocumentosContent() {
         correlativo: Number(r.correlativo ?? 0),
         cliente: String(r.cliente ?? ""),
         naviera: String(r.naviera ?? ""),
+        nave: (r.nave as string | null) ?? null,
+        viaje: (r.viaje as string | null) ?? null,
         booking: String(r.booking ?? ""),
         contenedor: (r.contenedor as string | null) ?? null,
         pol: (r.pol as string | null) ?? null,
@@ -492,33 +492,50 @@ export function MisDocumentosContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operaciones, searchTerm, filtroDocs, docCounts, visibleTipos]);
 
+  /*
+   * Una operación desplegada a la vez, con la misma mecánica de Mis Reservas
+   * (ver FilaDesplegable). La operación abierta es la "seleccionada": de ella
+   * cuelgan la carga de documentos y el canal en vivo.
+   */
+  const visiblesIds = useMemo(() => filteredOperaciones.map((o) => o.id), [filteredOperaciones]);
+  const fila = useFilaDesplegable({
+    visibles: visiblesIds,
+    habilitado: !loading,
+    bloqueoEscape: !!previewDoc || !!confirmDialog || !!subida,
+  });
+  const { completa: opCompleta } = useOperacionCompleta(supabase, fila.abiertaId);
   useEffect(() => {
-    // Cambiar de filtro o de búsqueda devuelve a la primera página: quedarse en
-    // la cuarta de un listado que ahora tiene dos es mirar una página vacía.
-    setPage(1);
-  }, [searchTerm, pageSize, filtroDocs]);
+    setTabFicha("docs");
+    setMenuDoc(null);
+  }, [fila.abiertaId]);
+  useEffect(() => {
+    setSelectedOperacion(fila.abiertaId ?? "");
+  }, [fila.abiertaId]);
 
-  // Deep-link desde Registros: /documentos/mis-documentos?op=<uuid>
+  // Enlace profundo: /documentos/mis-documentos?op=<uuid> (Registros, Mis Reservas).
+  const deepLinkHecho = useRef(false);
+  const abrirFila = fila.abrir;
   useEffect(() => {
-    if (operaciones.length === 0 || typeof window === "undefined") return;
+    if (deepLinkHecho.current || loading || visiblesIds.length === 0 || typeof window === "undefined") return;
+    deepLinkHecho.current = true;
     const opId = new URLSearchParams(window.location.search).get("op");
-    if (!opId) return;
-    const idx = operaciones.findIndex((o) => o.id === opId);
-    if (idx < 0) return;
-    setSelectedOperacion(opId);
-    setPage(Math.floor(idx / pageSize) + 1);
-  }, [operaciones, pageSize]);
+    if (opId && visiblesIds.includes(opId)) abrirFila(opId);
+  }, [loading, visiblesIds, abrirFila]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredOperaciones.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-
-  const pagedOperaciones = useMemo(() => {
-    const start = (safePage - 1) * pageSize;
-    return filteredOperaciones.slice(start, start + pageSize);
-  }, [filteredOperaciones, safePage, pageSize]);
-
-  const rangeFrom = filteredOperaciones.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const rangeTo = Math.min(safePage * pageSize, filteredOperaciones.length);
+  useEffect(() => {
+    if (!supabase) return;
+    void supabase
+      .from("navieras")
+      .select("nombre, logo_url")
+      .then(({ data }) => {
+        const mapa = new Map<string, string>();
+        for (const n of (data ?? []) as { nombre: string | null; logo_url: string | null }[]) {
+          const nombre = (n.nombre ?? "").trim().toUpperCase();
+          if (nombre && n.logo_url) mapa.set(nombre, n.logo_url);
+        }
+        setLogosNaviera(mapa);
+      });
+  }, [supabase]);
 
   const documentosPorTipo = useMemo(() => {
     const map = new Map<TipoDocumento, Documento | null>();
@@ -686,22 +703,12 @@ export function MisDocumentosContent() {
     void reloadCounts(nextOps);
   };
 
-  const handleSelectOperacion = (id: string) => {
-    if (!id) setListaColapsada(false);
-    setSelectedOperacion(id);
-  };
-
-  const handlePageSizeChange = (value: PageSize) => {
-    setPageSize(value);
-    setPage(1);
-  };
-
   if (loading) {
     return (
       <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
         <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
           <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
-            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
+            <Icon icon="lucide:loader-2" className="h-4 w-4 animate-spin text-[var(--estado-curso)]" />
             <span>{tr.loading}</span>
           </div>
         </main>
@@ -709,1436 +716,1058 @@ export function MisDocumentosContent() {
     );
   }
 
-  const hasSelection = !!selectedOperacion && !!operacionActual;
-  const progressDenom = Math.max(tiposAplicables, 1);
-  const progressPct = tiposAplicables === 0
-    ? 100
-    : Math.round((docsCompletados / progressDenom) * 100);
-  const totalTipos = visibleTipos.length;
+  const trR = t.misReservas as unknown as Record<string, string>;
+  const opsPorId = new Map(operaciones.map((o) => [o.id, o]));
 
-  const docsBadge = (opId: string, compacto = false) => {
-    const op = operaciones.find((o) => o.id === opId);
-    const naCount = countTiposNoAplica(op, visibleTipos);
-    const denom = Math.max(totalTipos - naCount, 1);
-    const count = docCounts.get(opId) ?? 0;
-    const completo = totalTipos - naCount === 0 || count >= denom;
-    const pct = totalTipos - naCount === 0
-      ? 100
-      : Math.min(100, Math.round((count / denom) * 100));
-    return (
-      <span
-        className={`estado-chip inline-flex items-center gap-1 text-base font-extrabold px-2 py-0.5 rounded-sm tabular-nums ${
-          completo ? "estado--ok" : count > 0 ? "estado--curso" : "estado--espera"
-        }`}
-      >
-        {count}/{totalTipos - naCount}
-        {/* "1/12 (8%)" dice dos veces lo mismo, y en una tarjeta angosta el
-            porcentaje le quita sitio a los datos del embarque. */}
-        {!compacto && <span className="opacity-70 font-semibold">({pct}%)</span>}
-      </span>
-    );
+  /** Documentos exigibles de una operación: los visibles menos los "no aplica". */
+  const docsExigiblesDe = (opId: string) =>
+    Math.max(visibleTipos.length - countTiposNoAplica(opsPorId.get(opId), visibleTipos), 0);
+  const docsRecibidosDe = (opId: string) => docCounts.get(opId) ?? 0;
+
+  /**
+   * El papeleo con los estados de marca: completo en oliva, a medias en teal,
+   * sin nada en ámbar —hay que mirarlo—. El mismo criterio en la fila, en los
+   * indicadores y en la ficha, para que no digan cosas distintas.
+   */
+  const metaPapeleo = (e: EstadoDocs) =>
+    e === "completo"
+      ? { clase: "estado--ok", label: tr.estadoCompleto, icon: "lucide:check-circle" }
+      : e === "curso"
+        ? { clase: "estado--curso", label: tr.estadoEnCurso, icon: "lucide:loader" }
+        : { clase: "estado--atencion", label: tr.estadoPendiente, icon: "lucide:alert-circle" };
+
+  const COLUMNAS = 11;
+  const trReg = t.registros as unknown as Record<string, string>;
+
+  /** Los tipos en el orden del viaje: es el número que lleva cada tarjeta. */
+  const tiposOrdenados = GRUPOS_DOCUMENTO.flatMap((g) => g.tipos as readonly string[]).filter((t) =>
+    visibleTiposSet.has(t),
+  ) as TipoDocumento[];
+
+  const alSoltar = (tipo: TipoDocumento) => (e: DragEvent) => {
+    e.preventDefault();
+    setArrastrando(null);
+    const f = e.dataTransfer.files?.[0];
+    if (f) void handleUpload(tipo, f);
   };
 
-  const paginationBar = (
-    <div className={`border-t border-dash-border flex flex-col gap-2 bg-dash-control/40 ${hasSelection ? "px-2 py-2" : "px-3 sm:px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}`}>
-      <div className={`flex flex-wrap items-center gap-2 text-[13px] sm:text-base text-dash-muted ${hasSelection ? "justify-center" : ""}`}>
-        {/* "Ver de a" es una etiqueta de escritorio: en el teléfono los tres
-            números al lado del rango ya se explican solos. */}
-        {!hasSelection && <span className="hidden font-semibold text-dash-muted sm:inline">{tr.rowsPerPage}</span>}
-        <div className="inline-flex rounded-lg border border-dash-border overflow-hidden bg-dash-control">
-          {PAGE_SIZE_OPTIONS.map((size) => (
-            <button
-              key={size}
-              type="button"
-              onClick={() => handlePageSizeChange(size)}
-              className={`font-bold transition-colors ${
-                hasSelection ? "px-2 py-1 text-sm" : "px-3 py-1.5 text-[13px] sm:text-base"
-              } ${
-                pageSize === size
-                  ? "bg-dash-neon/25 text-dash-fg border-dash-neon/40"
-                  : "text-dash-muted hover:bg-dash-neon/10 hover:text-dash-fg"
-              }`}
-            >
-              {size}
-            </button>
-          ))}
-        </div>
-        {(
-          <span className="text-dash-muted tabular-nums text-[12.5px] sm:text-base">
-            {tr.showingRange
-              .replace("{from}", String(rangeFrom))
-              .replace("{to}", String(rangeTo))
-              .replace("{total}", String(filteredOperaciones.length))}
-          </span>
-        )}
-      </div>
-
-      <div className={`flex items-center gap-1 ${hasSelection ? "justify-center" : "gap-2"}`}>
-        <button
-          type="button"
-          disabled={safePage <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          className="inline-flex min-h-10 items-center justify-center gap-1 px-3 py-2 text-[13px] sm:text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
-          title={tr.prevPage}
-        >
-          <Icon icon="lucide:chevron-left" width={16} height={16} />
-          {!hasSelection && <span className="max-sm:sr-only">{tr.prevPage}</span>}
-        </button>
-        {/*
-          * Páginas numeradas.
-          *
-          * "Página 3 de 5" obliga a pulsar Siguiente dos veces para llegar a la
-          * cinco. Con pocas caben todas; con muchas se muestra una ventana
-          * alrededor de la actual, que es lo que hace falta para moverse sin
-          * perder de vista dónde se está.
-          *
-          * Con el panel de una operación abierto la columna es angosta y vuelve
-          * la fracción, que ocupa lo que hay.
-          */}
-        {(
-          <span className="flex items-center gap-1">
-            {(() => {
-              const ventana = 5;
-              const hasta = Math.min(totalPages, Math.max(ventana, safePage + Math.floor(ventana / 2)));
-              const desde = Math.max(1, Math.min(safePage - Math.floor(ventana / 2), hasta - ventana + 1));
-              const paginas: number[] = [];
-              for (let n = Math.max(1, desde); n <= hasta; n += 1) paginas.push(n);
-              return paginas.map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setPage(n)}
-                  aria-current={n === safePage ? "page" : undefined}
-                  className={`min-h-9 min-w-9 rounded-lg px-2 text-[13px] font-bold tabular-nums transition-colors ${
-                    n === safePage
-                      ? "bg-dash-neon/25 text-dash-fg ring-1 ring-dash-neon/40"
-                      : "text-dash-muted hover:bg-dash-neon/10 hover:text-dash-fg"
-                  }`}
-                >
-                  {n}
-                </button>
-              ));
-            })()}
-          </span>
-        )}
-        <button
-          type="button"
-          disabled={safePage >= totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          className="inline-flex min-h-10 items-center justify-center gap-1 px-3 py-2 text-[13px] sm:text-base font-semibold rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:bg-dash-neon/15 hover:text-dash-fg disabled:opacity-40 disabled:pointer-events-none transition-colors"
-          title={tr.nextPage}
-        >
-          {!hasSelection && <span className="max-sm:sr-only">{tr.nextPage}</span>}
-          <Icon icon="lucide:chevron-right" width={16} height={16} />
-        </button>
-      </div>
-    </div>
+  const inputArchivo = (tipo: TipoDocumento, disabled = false, alElegir?: () => void) => (
+    <input
+      type="file"
+      accept=".pdf,.xls,.xlsx"
+      className="sr-only"
+      disabled={disabled}
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) void handleUpload(tipo, f);
+        e.target.value = "";
+        alElegir?.();
+      }}
+    />
   );
 
   /**
-   * Tarjeta de un tipo de documento.
-   *
-   * Era el cuerpo del map que recorría los doce tipos. Se le puso nombre para
-   * poder dibujarla dentro de cada grupo: la tarjeta no cambió, cambió quién
-   * decide en qué orden y bajo qué título aparece.
+   * Adivina el tipo de un archivo por su nombre, para "Subir múltiples". Es
+   * solo una sugerencia: el usuario la ve y la corrige antes de subir.
    */
+  const adivinarTipo = (nombre: string, usados: Set<string>): string => {
+    const n = ` ${nombre.toUpperCase().replace(/[_\-.]+/g, " ")} `;
+    const reglas: [RegExp, TipoDocumento][] = [
+      [/PACKING/, "PACKING_LIST"],
+      [/PROFORMA/, "FACTURA_PROFORMA"],
+      [/GATE/, "FACTURA_GATE_OUT"],
+      [/FACTURA|INVOICE/, "FACTURA_COMERCIAL"],
+      [/FITO|PHYTO/, "CERTIFICADO_FITOSANITARIO"],
+      [/ORIGEN|ORIGIN/, "CERTIFICADO_ORIGEN"],
+      [/FULL ?SET/, "FULLSET"],
+      [/INSTRUCTIVO/, "INSTRUCTIVO_EMBARQUE"],
+      [/ DUS /, "DUS"],
+      [/ BL | TELEX | SWB | AWB |LADING/, "BL_TELEX_SWB_AWB"],
+      [/BOOKING|RESERVA/, "BOOKING"],
+    ];
+    for (const [re, tipo] of reglas) {
+      if (re.test(n) && visibleTiposSet.has(tipo) && !usados.has(tipo)) return tipo;
+    }
+    return "";
+  };
+
+  const prepararSubida = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const usados = new Set<string>();
+    const lista = Array.from(files).map((file) => {
+      const tipo = adivinarTipo(file.name, usados);
+      if (tipo) usados.add(tipo);
+      return { file, tipo };
+    });
+    setSubida(lista);
+  };
+
+  const confirmarSubida = async () => {
+    if (!subida) return;
+    setSubiendoVarios(true);
+    for (const item of subida) {
+      if (item.tipo) await handleUpload(item.tipo as TipoDocumento, item.file);
+    }
+    setSubiendoVarios(false);
+    setSubida(null);
+  };
+
+  /** Todos los documentos recibidos en un .zip, con el orden de las tarjetas. */
+  const descargarTodo = async (op: Operacion) => {
+    const docs = tiposOrdenados
+      .map((t) => documentosPorTipo.get(t))
+      .filter((d): d is Documento => !!d);
+    if (docs.length === 0) return;
+    setDescargando(true);
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      await Promise.all(
+        docs.map(async (d) => {
+          const res = await fetch(d.url);
+          if (!res.ok) throw new Error(String(res.status));
+          const n = tiposOrdenados.indexOf(d.tipo as TipoDocumento) + 1;
+          zip.file(`${String(n).padStart(2, "0")}_${d.nombre_archivo}`, await res.blob());
+        }),
+      );
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${opRef(op)}_documentos.zip`;
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } catch {
+      setError(tr.descargaError);
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  const btnIcono =
+    "motion-interactive inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-dash-muted hover:bg-dash-control hover:text-dash-fg";
+  const itemMenu =
+    "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12.5px] font-semibold text-dash-fg hover:bg-[color-mix(in_srgb,var(--estado-curso)_12%,transparent)]";
+
   /**
-   * Una fila por documento.
+   * La tarjeta de un documento, numerada en el orden del viaje.
    *
-   * Antes cada tipo era una tarjeta con su zona de carga desplegada; doce de
-   * ellas convertían la pantalla en un formulario largo donde no se veía el
-   * conjunto. La fila dice lo único que se consulta de un vistazo —si el
-   * documento está y de cuándo es— y guarda las acciones en su menú.
-   *
-   * Subir sigue a un toque para quien puede: en una fila pendiente, el menú se
-   * abre directamente sobre la acción de cargar.
+   * Si el documento está, adentro va el archivo con su menú; si falta, la zona
+   * para soltarlo o hacer clic. Así la grilla se lee como un formulario con
+   * sus casilleros, y los vacíos saltan a la vista.
    */
-  const renderTipoDocumento = (tipo: TipoDocumento) => {
+  const renderTarjeta = (tipo: TipoDocumento, n: number, i: number) => {
     const doc = documentosPorTipo.get(tipo);
-    const isUploading = uploading === tipo;
     const meta = TIPO_META[tipo];
-    const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
     const tipoLabel = tr.tipoLabels[tipo as keyof typeof tr.tipoLabels] ?? meta.label;
+    const isUploading = uploading === tipo;
+    const isSyntheticBooking = !!doc && doc.id.startsWith("__booking_url__");
     const marcadoNoAplica = isTipoMarcadoNoAplica(operacionActual, tipo);
     const puedeMarcarNoAplica = !isCliente && isTipoNoAplicaEligible(tipo);
-    const menuAbierto = menuTipo === tipo;
+    const menuAbierto = menuDoc === tipo;
+    const encima = arrastrando === tipo;
 
-    const estadoFila = marcadoNoAplica
-      ? { clase: "estado--espera", label: tr.noAplica, icono: "lucide:minus-circle" }
-      : doc
-        ? { clase: "estado--transito", label: tr.estadoRecibido, icono: "lucide:check-circle" }
-        : { clase: "estado--atencion", label: tr.estadoPendienteDoc, icono: "lucide:clock" };
+    let cuerpo: ReactNode;
+    if (marcadoNoAplica) {
+      cuerpo = (
+        <div className="estado--espera flex flex-1 flex-col items-center justify-center gap-1.5 rounded-lg border border-dash-border bg-dash-control/40 px-3 py-4 text-center">
+          <span className="estado-chip rounded-full px-2.5 py-0.5 text-[11px] font-bold">{tr.noAplica}</span>
+          <span className="text-[11px] text-dash-muted">{tr.noAplicaHint}</span>
+          {puedeMarcarNoAplica && (
+            <button
+              type="button"
+              onClick={() => void handleToggleNoAplica(tipo, false)}
+              className="text-[11px] font-semibold text-[var(--estado-curso)] hover:underline"
+            >
+              {tr.reactivar}
+            </button>
+          )}
+        </div>
+      );
+    } else if (doc) {
+      const pdf = isPdf(doc.mime_type);
+      cuerpo = (
+        <div className="relative flex items-center gap-2.5 rounded-lg border border-dash-border bg-dash-control/50 px-3 py-2.5">
+          <span className={`${pdf ? "estado--error" : "estado--ok"} shrink-0 text-[var(--estado)]`}>
+            <Icon icon={pdf ? "mdi:file-pdf-box" : "mdi:file-excel-box"} width={30} height={30} aria-hidden />
+          </span>
+          <button type="button" onClick={() => handlePreview(doc)} className="min-w-0 flex-1 text-left" title={doc.nombre_archivo}>
+            <span className="block truncate text-[12.5px] font-bold text-dash-fg hover:underline">{doc.nombre_archivo}</span>
+            <span className="block truncate text-[11px] tabular-nums text-dash-muted">
+              {fmtFecha((isSyntheticBooking ? operacionActual?.created_at : doc.created_at)?.slice(0, 10) ?? "") || "—"}
+              {doc.tamano ? `  ·  ${formatFileSize(doc.tamano)}` : ""}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMenuDoc(menuAbierto ? null : tipo)}
+            className={btnIcono}
+            aria-label={tr.acciones}
+            aria-expanded={menuAbierto}
+          >
+            <Icon icon={isUploading ? "lucide:loader-2" : "lucide:more-vertical"} width={16} height={16} className={isUploading ? "animate-spin" : ""} />
+          </button>
+          {menuAbierto && (
+            <>
+              <button type="button" aria-hidden tabIndex={-1} onClick={() => setMenuDoc(null)} className="fixed inset-0 z-[60] cursor-default" />
+              <div className="absolute right-1 top-full z-[61] mt-1 w-48 overflow-hidden rounded-xl border border-dash-border bg-dash-surface py-1 shadow-xl">
+                <button type="button" className={itemMenu} onClick={() => { setMenuDoc(null); handlePreview(doc); }}>
+                  <Icon icon="lucide:eye" width={14} height={14} /> {tr.preview}
+                </button>
+                <button type="button" className={itemMenu} onClick={() => { setMenuDoc(null); handleDownload(doc); }}>
+                  <Icon icon="lucide:download" width={14} height={14} /> {tr.download}
+                </button>
+                {!isCliente && !isSyntheticBooking && (
+                  <>
+                    <label className={`${itemMenu} cursor-pointer`}>
+                      <Icon icon="lucide:refresh-cw" width={14} height={14} /> {tr.replace}
+                      {inputArchivo(tipo, isUploading, () => setMenuDoc(null))}
+                    </label>
+                    <button
+                      type="button"
+                      className={`${itemMenu} estado--error border-t border-dash-border !text-[var(--estado)]`}
+                      onClick={() => { setMenuDoc(null); handleDelete(doc); }}
+                    >
+                      <Icon icon="lucide:trash-2" width={14} height={14} /> {tr.deleteDocument}
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      );
+    } else if (isCliente) {
+      cuerpo = (
+        <div className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-dash-border px-3 py-4 text-center">
+          <Icon icon="lucide:file-clock" width={20} height={20} className="text-dash-muted" aria-hidden />
+          <span className="estado--atencion estado-chip rounded-full px-2.5 py-0.5 text-[11px] font-bold">{tr.estadoPendienteDoc}</span>
+        </div>
+      );
+    } else {
+      cuerpo = (
+        <label
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (arrastrando !== tipo) setArrastrando(tipo);
+          }}
+          onDragLeave={() => setArrastrando((v) => (v === tipo ? null : v))}
+          onDrop={alSoltar(tipo)}
+          className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-3 py-3.5 text-center transition-colors ${
+            encima
+              ? "border-[var(--estado-curso)] bg-[color-mix(in_srgb,var(--estado-curso)_12%,transparent)]"
+              : "border-dash-border hover:border-[color-mix(in_srgb,var(--estado-curso)_55%,transparent)] hover:bg-[color-mix(in_srgb,var(--estado-curso)_5%,transparent)]"
+          }`}
+        >
+          <span className="flex items-center gap-2.5">
+            <Icon
+              icon={isUploading ? "lucide:loader-2" : encima ? "lucide:arrow-down-to-line" : "lucide:cloud-upload"}
+              width={20}
+              height={20}
+              className={`shrink-0 ${isUploading ? "animate-spin" : ""} ${encima ? "text-[var(--estado-curso)]" : "text-dash-muted"}`}
+              aria-hidden
+            />
+            <span className="text-left text-[11.5px] leading-snug text-dash-fg/80">
+              {isUploading ? tr.uploading : encima ? tr.soltarAqui : tr.arrastraOClic}
+            </span>
+          </span>
+          <span className="text-[10px] text-dash-muted/80">{tr.fileTypesHint}</span>
+          {inputArchivo(tipo, isUploading)}
+        </label>
+      );
+    }
 
     return (
-      <div key={tipo} className={`relative ${estadoFila.clase}`}>
-        <div className="flex items-center gap-3 px-3.5 py-2.5 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
-          <span className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none">
-            {/*
-              * Un solo icono para todos.
-              *
-              * Cada tipo tenía el suyo —barco, hoja, globo— y a tamaño de fila
-              * no se distinguen: parecían ruido de colores distintos delante de
-              * un nombre que ya dice qué es. Lo que sí hay que distinguir de un
-              * vistazo es el estado, y ese tiene su chip.
-              */}
-            <Icon
-              icon="lucide:file-text"
-              width={16}
-              height={16}
-              className="shrink-0 text-dash-muted/70"
-              aria-hidden
-            />
-            <span className="min-w-0 truncate text-[14px] font-semibold text-dash-fg">
-              {tipoLabel}
+      <article
+        key={tipo}
+        style={staggerStyle(i)}
+        className="motion-enter motion-stagger motion-stagger-tight flex min-w-0 flex-col gap-2.5 rounded-xl border border-dash-border bg-dash-surface p-3 shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+      >
+        <header className="flex min-w-0 items-center gap-2">
+          <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md border border-dash-border bg-dash-control px-1 text-[11px] font-bold tabular-nums text-dash-muted">
+            {n}
+          </span>
+          <Icon icon={meta.icon} width={17} height={17} className="shrink-0 text-dash-fg" aria-hidden />
+          <p className="min-w-0 flex-1 truncate text-[13px] font-bold text-dash-fg" title={tipoLabel}>{tipoLabel}</p>
+          {doc && !marcadoNoAplica ? (
+            <span className="estado--ok shrink-0 text-[var(--estado)]" title={tr.estadoRecibido}>
+              <Icon icon="mdi:check-circle" width={19} height={19} aria-label={tr.estadoRecibido} />
             </span>
-          </span>
-
-          {/*
-            * Etapa del documento.
-            *
-            * En la lista plana hace falta: sin el grupo alrededor, nada diría a
-            * qué momento del embarque pertenece cada papel. En pantalla angosta
-            * se calla, porque ahí la pestaña activa ya lo dice.
-            */}
-          <span className="estado-chip inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold">
-            <Icon icon={estadoFila.icono} width={12} height={12} aria-hidden />
-            {estadoFila.label}
-          </span>
-
-          {/*
-            * Chip neutro, no un color por etapa.
-            *
-            * En el ERP el color significa **estado**: los tokens `--estado-*` y
-            * el acento, y nada más. La etapa es una categoría, no un estado, y
-            * pintarla con un tono propio metía una cuarta familia de colores
-            * que no existe en ninguna otra pantalla. Además compite con el chip
-            * de estado que va justo al lado, en la misma fila.
-            *
-            * El nombre de la etapa ya la identifica; el color sobraba.
-            */}
-          {grupoDeTipo(tipo) ? (
-            <span className="hidden w-fit items-center gap-1.5 rounded-full border border-dash-border bg-dash-control/60 px-2 py-0.5 text-[11.5px] font-bold text-dash-muted lg:inline-flex">
-              {grupoDeTipo(tipo)!.label}
-            </span>
-          ) : (
-            <span className="hidden lg:block" aria-hidden />
-          )}
-
-          {/*
-            * Fecha de recepción.
-            *
-            * El booking que llega con la operación no tiene fila propia en
-            * documentos, así que se mostraba con un guion aunque el archivo
-            * esté: su fecha conocida es la del embarque, y es la que vale como
-            * "cuándo llegó este papel".
-            */}
-          <span className="truncate text-[12px] tabular-nums text-dash-muted max-sm:hidden">
-            {doc
-              ? formatDate(isSyntheticBooking ? operacionActual?.created_at ?? null : doc.created_at)
-              : "—"}
-          </span>
-
-          {/*
-            * Acciones a la vista, no dentro de un menú.
-            *
-            * En escritorio sobra ancho y lo que se hace con un documento es
-            * siempre lo mismo: verlo, bajarlo o subirlo. Tenerlas escondidas
-            * tras tres puntos cobraba dos toques por cada archivo. El menú se
-            * queda con lo que no es de todos los días —reemplazar, eliminar,
-            * marcar no aplica— y con el teléfono, donde no cabe una barra.
-            */}
-          <span className="flex shrink-0 items-center justify-end gap-1">
-            {doc ? (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handlePreview(doc); }}
-                  title={tr.preview}
-                  className="hidden h-9 items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/50 bg-dash-neon/25 px-3 text-[12.5px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/40 sm:inline-flex"
-                >
-                  <Icon icon="lucide:eye" width={15} height={15} aria-hidden />
-                  {tr.accionVer}
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
-                  title={tr.download}
-                  className="estado--transito hidden h-9 w-9 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_22%,transparent)] text-[var(--estado)] transition-colors hover:bg-[color-mix(in_srgb,var(--estado)_35%,transparent)] sm:inline-flex"
-                >
-                  <Icon icon="lucide:download" width={15} height={15} aria-hidden />
-                </button>
-              </>
-            ) : !isCliente && !marcadoNoAplica ? (
-              <label
-                title={tr.uploadFile}
-                className="hidden h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-lg border border-dash-neon/40 bg-dash-neon/12 px-3 text-[12.5px] font-bold text-dash-fg transition-colors hover:bg-dash-neon/25 sm:inline-flex"
-              >
-                <Icon
-                  icon={isUploading ? "lucide:loader-2" : "lucide:upload"}
-                  width={14}
-                  height={14}
-                  className={isUploading ? "animate-spin" : ""}
-                  aria-hidden
-                />
-                {isUploading ? tr.uploading : tr.accionSubir}
-                <input
-                  type="file"
-                  accept=".pdf,.xls,.xlsx"
-                  className="hidden"
-                  disabled={isUploading}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleUpload(tipo, f);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            ) : null}
-
+          ) : !doc && !marcadoNoAplica && puedeMarcarNoAplica ? (
             <button
               type="button"
-              aria-label={tr.acciones}
-              aria-expanded={menuAbierto}
-              onClick={() => setMenuTipo(menuAbierto ? null : tipo)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+              onClick={() => void handleToggleNoAplica(tipo, true)}
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold text-dash-muted hover:bg-dash-control hover:text-dash-fg"
+              title={tr.noAplicaHint}
             >
-              <Icon
-                icon={isUploading ? "lucide:loader-2" : "lucide:more-horizontal"}
-                width={16}
-                height={16}
-                className={isUploading ? "animate-spin" : ""}
-                aria-hidden
-              />
+              {tr.noAplica}
             </button>
-          </span>
+          ) : null}
+        </header>
+        {cuerpo}
+      </article>
+    );
+  };
+
+  /** Fechas de la operación en orden: la historia del embarque hasta hoy. */
+  const HITOS: { key: string; label: string; icono: string }[] = [
+    { key: "ingreso", label: trReg.colEntryDate, icono: "lucide:file-plus" },
+    { key: "fecha_confirmacion_booking", label: trReg.colBookingConfirmation, icono: "lucide:bookmark-check" },
+    { key: "citacion", label: trReg.colCitation, icono: "lucide:calendar-clock" },
+    { key: "llegada_planta", label: trReg.colPlantArrival, icono: "lucide:factory" },
+    { key: "salida_planta", label: trReg.colPlantDeparture, icono: "lucide:truck" },
+    { key: "inicio_stacking", label: trReg.colStackingStart, icono: "lucide:door-open" },
+    { key: "ingreso_stacking", label: trReg.colStackingEntry, icono: "lucide:container" },
+    { key: "fin_stacking", label: trReg.colStackingEnd, icono: "lucide:door-closed" },
+    { key: "corte_documental", label: trReg.colDocCutoff, icono: "lucide:file-lock" },
+    { key: "etd", label: trReg.colETD, icono: "lucide:ship" },
+    { key: "fecha_envio_documentacion", label: trReg.colDocSent, icono: "lucide:send" },
+    { key: "eta", label: trReg.colETA, icono: "lucide:anchor" },
+    { key: "fecha_entrega_bl", label: trReg.colBLDelivery, icono: "lucide:file-check" },
+  ];
+
+  /** La ficha desplegada bajo la fila, como la referencia: tira de datos, pestañas y contenido. */
+  const renderFicha = (op: Operacion) => {
+    const cfg = getEstadoOperacionStyle(op.estado_operacion);
+    const estadoTxt = etiquetaEstado(op.estado_operacion);
+    const fuera = motivoFueraDeNavitrack(op);
+    const datos: Record<string, unknown> = { ...(opCompleta ?? {}), ...op };
+    const hoy = new Date().toISOString().slice(0, 10);
+    const hitos = HITOS.map((h) => ({ ...h, valor: datos[h.key] }))
+      .filter((h) => typeof h.valor === "string" && h.valor.trim() !== "")
+      .map((h) => ({ ...h, valor: String(h.valor) }))
+      .sort((a, b) => a.valor.localeCompare(b.valor));
+    const notas = typeof datos.observaciones === "string" ? datos.observaciones.trim() : "";
+    const hayDocs = tiposOrdenados.some((t) => documentosPorTipo.get(t));
+
+    const celda = "min-w-0 shrink-0 border-l border-dash-border px-5 first:border-l-0 first:pl-0";
+    const etiquetaCelda = "text-[10px] font-bold uppercase tracking-wider text-dash-muted";
+    const tabClase = (activa: boolean) =>
+      `-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-[13px] font-semibold transition-colors ${
+        activa
+          ? "border-[var(--estado-curso)] text-[var(--estado-curso)]"
+          : "border-transparent text-dash-muted hover:text-dash-fg"
+      }`;
+
+    return (
+      <PanelBajoFila cerrando={fila.cerrando} className="bg-dash-surface">
+        {/* ── Tira del embarque: cada dato en su celda, separados por una línea ── */}
+        <div className="flex shrink-0 items-center gap-4 border-b border-dash-border px-4 py-3.5">
+          <button
+            type="button"
+            onClick={fila.cerrar}
+            className="motion-interactive flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:text-dash-fg"
+            title={`${trR.detalleReplegar} (Esc)`}
+            aria-label={trR.detalleReplegar}
+          >
+            <Icon icon="lucide:chevrons-up" width={15} height={15} />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center overflow-x-auto py-0.5">
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colOperacion}</p>
+              <p className="text-[19px] font-extrabold tabular-nums leading-tight text-dash-fg">{opRef(op)}</p>
+              {op.referencia_externa ? (
+                <p className="truncate text-[11px] text-dash-muted">{op.referencia_externa}</p>
+              ) : null}
+            </div>
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colBooking}</p>
+              <p className="font-mono text-[15px] font-bold tracking-tight text-dash-fg">{op.booking || "—"}</p>
+              {op.contenedor ? <p className="font-mono text-[11px] text-dash-muted">{op.contenedor}</p> : null}
+            </div>
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colNaviera}</p>
+              <div className="mt-0.5 flex items-center gap-2">
+                {op.naviera ? (
+                  <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={30} />
+                ) : null}
+                <span className="truncate text-[13px] font-semibold text-dash-fg">{op.naviera || "—"}</span>
+              </div>
+            </div>
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colNaveViaje}</p>
+              <p className="truncate text-[13.5px] font-bold text-dash-fg">{op.nave || "—"}</p>
+              <p className="truncate text-[11.5px] text-dash-muted">{op.viaje || "—"}</p>
+            </div>
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colOrigen}</p>
+              <p className="flex items-center gap-1.5 text-[13.5px] font-bold text-dash-fg">
+                <Bandera puerto={op.pol} />
+                <span className="truncate">{op.pol || "—"}</span>
+              </p>
+              <p className="text-[11px] tabular-nums text-dash-muted">ETD {op.etd ? fmtFecha(op.etd) : "—"}</p>
+            </div>
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colDestino}</p>
+              <p className="flex items-center gap-1.5 text-[13.5px] font-bold text-dash-fg">
+                <Bandera puerto={op.pod} />
+                <span className="truncate">{op.pod || "—"}</span>
+              </p>
+              <p className="text-[11px] tabular-nums text-dash-muted">ETA {op.eta ? fmtFecha(op.eta) : "—"}</p>
+            </div>
+            <div className={celda}>
+              <p className={etiquetaCelda}>{tr.colEstado}</p>
+              {estadoTxt ? (
+                <span
+                  className={`mt-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-[12px] font-bold ${
+                    cfg ? `${cfg.bg} ${cfg.text} ${cfg.border}` : "border-dash-border text-dash-muted"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${cfg?.dot ?? "bg-dash-muted"}`} aria-hidden />
+                  {estadoTxt}
+                </span>
+              ) : (
+                <p className="text-[13px] text-dash-muted">—</p>
+              )}
+            </div>
+          </div>
         </div>
 
-        {menuAbierto && (
-          <>
-            {/* Tocar fuera cierra: en un teléfono no hay dónde “hacer clic al lado”. */}
-            <button
-              type="button"
-              aria-hidden
-              tabIndex={-1}
-              onClick={() => setMenuTipo(null)}
-              className="fixed inset-0 z-[60] cursor-default"
-            />
-            <div className="absolute right-2 top-11 z-[61] w-56 overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-xl">
-              {doc ? (
-                <>
+        {/* ── Pestañas ── */}
+        <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-dash-border px-4" role="tablist">
+          <button type="button" role="tab" aria-selected={tabFicha === "docs"} onClick={() => setTabFicha("docs")} className={tabClase(tabFicha === "docs")}>
+            <Icon icon="lucide:file-text" width={16} height={16} aria-hidden />
+            {tr.tabDocumentos} ({docsCompletados}/{tiposAplicables})
+          </button>
+          {fuera ? (
+            <span className={`${tabClase(false)} cursor-not-allowed opacity-50`} title={trR[`detalleNavitrack_${fuera}`]} aria-disabled="true">
+              <Icon icon="lucide:radar" width={16} height={16} aria-hidden />
+              {tr.tabSeguimiento}
+            </span>
+          ) : (
+            <a
+              href={`${withBase("/navitrack")}?op=${encodeURIComponent(op.id)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={tabClase(false)}
+            >
+              <Icon icon="lucide:radar" width={16} height={16} aria-hidden />
+              {tr.tabSeguimiento}
+              <Icon icon="lucide:arrow-up-right" width={12} height={12} className="opacity-60" aria-hidden />
+            </a>
+          )}
+          <button type="button" role="tab" aria-selected={tabFicha === "datos"} onClick={() => setTabFicha("datos")} className={tabClase(tabFicha === "datos")}>
+            <Icon icon="lucide:package" width={16} height={16} aria-hidden />
+            {tr.tabDatos}
+          </button>
+          <button type="button" role="tab" aria-selected={tabFicha === "hitos"} onClick={() => setTabFicha("hitos")} className={tabClase(tabFicha === "hitos")}>
+            <Icon icon="lucide:milestone" width={16} height={16} aria-hidden />
+            {tr.tabHitos}
+          </button>
+          <button type="button" role="tab" aria-selected={tabFicha === "notas"} onClick={() => setTabFicha("notas")} className={tabClase(tabFicha === "notas")}>
+            <Icon icon="lucide:notebook-pen" width={16} height={16} aria-hidden />
+            {tr.tabNotas}
+          </button>
+        </div>
+
+        {/* ── Contenido de la pestaña, con scroll propio ── */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[color-mix(in_srgb,var(--dash-control)_35%,var(--dash-surface))] p-4">
+          {tabFicha === "docs" && (
+            <section className="rounded-2xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_25%,var(--dash-surface))] p-4">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <Icon icon="lucide:file-text" width={26} height={26} className="mt-0.5 shrink-0 text-[var(--estado-curso)]" aria-hidden />
+                  <div className="min-w-0">
+                    <h3 className="text-[16px] font-bold text-dash-fg">{tr.docsTitulo}</h3>
+                    <p className="text-[12.5px] text-dash-muted">{tr.docsSubtitulo}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => { setMenuTipo(null); handlePreview(doc); }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15"
+                    onClick={() => void descargarTodo(op)}
+                    disabled={!hayDocs || descargando}
+                    className="motion-interactive inline-flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--estado-curso)_55%,transparent)] bg-dash-surface px-3.5 py-2 text-[12.5px] font-semibold text-[var(--estado-curso)] hover:bg-[color-mix(in_srgb,var(--estado-curso)_8%,var(--dash-surface))] disabled:pointer-events-none disabled:opacity-40"
                   >
-                    <Icon icon="lucide:eye" width={15} height={15} aria-hidden />
-                    {tr.preview}
+                    <Icon icon={descargando ? "lucide:loader-2" : "lucide:download"} width={15} height={15} className={descargando ? "animate-spin" : ""} aria-hidden />
+                    {descargando ? tr.descargando : tr.descargarTodo}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setMenuTipo(null); handleDownload(doc); }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15"
-                  >
-                    <Icon icon="lucide:download" width={15} height={15} aria-hidden />
-                    {tr.download}
-                  </button>
-                  {!isCliente && !isSyntheticBooking && (
-                    <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15">
-                      <Icon icon="lucide:refresh-cw" width={15} height={15} aria-hidden />
-                      {tr.replace}
+                  {!isCliente && (
+                    <label className="btn-marca motion-interactive inline-flex cursor-pointer items-center gap-2 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold">
+                      <Icon icon="lucide:upload" width={15} height={15} aria-hidden />
+                      {tr.subirMultiples}
                       <input
                         type="file"
+                        multiple
                         accept=".pdf,.xls,.xlsx"
-                        className="hidden"
+                        className="sr-only"
                         onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) handleUpload(tipo, f);
+                          prepararSubida(e.target.files);
                           e.target.value = "";
-                          setMenuTipo(null);
                         }}
                       />
                     </label>
                   )}
-                  {!isCliente && !isSyntheticBooking && (
-                    <button
-                      type="button"
-                      onClick={() => { setMenuTipo(null); handleDelete(doc); }}
-                      className="estado--error flex w-full items-center gap-2.5 border-t border-dash-border px-3 py-2.5 text-left text-[13px] font-semibold text-[var(--estado)] hover:bg-[color-mix(in_srgb,var(--estado)_12%,transparent)]"
-                    >
-                      <Icon icon="lucide:trash-2" width={15} height={15} aria-hidden />
-                      {tr.deleteDocument}
-                    </button>
-                  )}
-                </>
-              ) : isCliente ? (
-                <p className="px-3 py-3 text-[12.5px] text-dash-muted">{tr.noDocument}</p>
-              ) : (
-                <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2.5 text-[13px] font-semibold text-dash-fg hover:bg-dash-neon/15">
-                  <Icon icon="lucide:upload" width={15} height={15} aria-hidden />
-                  {tr.uploadFile}
-                  <input
-                    type="file"
-                    accept=".pdf,.xls,.xlsx"
-                    className="hidden"
-                    disabled={isUploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUpload(tipo, f);
-                      e.target.value = "";
-                      setMenuTipo(null);
-                    }}
-                  />
-                </label>
+                </div>
+              </div>
+
+              {error && (
+                <div className="estado--error estado-chip mb-3 flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold">
+                  <Icon icon="lucide:alert-circle" width={16} height={16} className="shrink-0" aria-hidden />
+                  <span className="min-w-0 flex-1">{error}</span>
+                  <button type="button" onClick={() => setError(null)} aria-label={tr.closeSelection} className="shrink-0 opacity-70 hover:opacity-100">
+                    <Icon icon="lucide:x" width={14} height={14} />
+                  </button>
+                </div>
               )}
 
-              {puedeMarcarNoAplica && (
-                <label
-                  className="flex w-full cursor-pointer items-center gap-2.5 border-t border-dash-border px-3 py-2.5 text-[13px] font-semibold text-dash-muted hover:bg-dash-neon/15"
-                  title={tr.noAplicaHint}
-                >
-                  <input
-                    type="checkbox"
-                    checked={marcadoNoAplica}
-                    onChange={(e) => { void handleToggleNoAplica(tipo, e.target.checked); setMenuTipo(null); }}
-                    className="h-4 w-4 rounded-sm accent-[var(--dash-neon)]"
-                  />
-                  {tr.noAplica}
-                </label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                {tiposOrdenados.map((tipo, i) => renderTarjeta(tipo, i + 1, i))}
+              </div>
+            </section>
+          )}
+
+          {tabFicha === "datos" && (
+            <SeccionesOperacion
+              fila={datos}
+              grupos={gruposOperacion(isCliente)}
+              soloConDatos={false}
+              labels={{ tr: trR, campos: trReg }}
+            />
+          )}
+
+          {tabFicha === "hitos" && (
+            <section className="rounded-2xl border border-dash-border bg-dash-surface p-5">
+              {hitos.length === 0 ? (
+                <p className="py-8 text-center text-[13px] text-dash-muted">{tr.sinHitos}</p>
+              ) : (
+                <ol className="relative ml-3 border-l-2 border-dash-border">
+                  {hitos.map((h, i) => {
+                    const cumplido = h.valor.slice(0, 10) <= hoy;
+                    return (
+                      <li
+                        key={h.key}
+                        style={staggerStyle(i)}
+                        className={`motion-enter motion-stagger motion-stagger-tight relative pb-5 pl-6 last:pb-0 ${cumplido ? "estado--ok" : "estado--curso"}`}
+                      >
+                        <span
+                          className={`absolute -left-[13px] top-0 flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                            cumplido
+                              ? "border-[var(--estado)] bg-[var(--estado)] text-white"
+                              : "border-[var(--estado)] bg-dash-surface text-[var(--estado)]"
+                          }`}
+                        >
+                          <Icon icon={cumplido ? "lucide:check" : h.icono} width={12} height={12} aria-hidden />
+                        </span>
+                        <p className="text-[13.5px] font-bold text-dash-fg">{h.label}</p>
+                        <p className="text-[12px] tabular-nums text-dash-muted">
+                          {fmtFecha(h.valor)}
+                          <span className="ml-2 font-semibold text-[var(--estado)]">{cumplido ? tr.hitoCumplido : tr.hitoProximo}</span>
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ol>
               )}
-            </div>
-          </>
-        )}
-      </div>
+            </section>
+          )}
+
+          {tabFicha === "notas" && (
+            <section className="rounded-2xl border border-dash-border bg-dash-surface p-5">
+              {notas ? (
+                <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-dash-fg">{notas}</p>
+              ) : (
+                <p className="py-8 text-center text-[13px] text-dash-muted">{tr.sinNotas}</p>
+              )}
+            </section>
+          )}
+        </div>
+      </PanelBajoFila>
     );
   };
 
-  /**
-   * Estado del viaje de una operación cualquiera.
-   *
-   * Verde cuando la carga ya navega o llegó, ámbar mientras no zarpa, rojo si
-   * se canceló. Son los tres desenlaces que le importan a quien mira la lista;
-   * el detalle del estado exacto lo dice la etiqueta.
-   */
-  const estadoViajeDe = (op: Operacion) => {
-    const bruto = (op.estado_operacion ?? "").trim();
-    const norm = bruto.toUpperCase();
-    const label = bruto ? bruto.charAt(0).toUpperCase() + bruto.slice(1).toLowerCase() : tr.sinEstado;
-    if (norm.includes("CANCEL")) return { clase: "estado--error", label, icono: "lucide:x-circle" };
-    if (
-      norm.includes("ZARP") ||
-      norm.includes("TRANS") ||
-      norm.includes("NAVEG") ||
-      norm.includes("ARRIB") ||
-      norm.includes("CERR") ||
-      norm.includes("ENTREG")
-    ) {
-      return { clase: "estado--transito", label, icono: "lucide:ship" };
-    }
-    return { clase: "estado--atencion", label, icono: "lucide:clock" };
-  };
-
-  /** Documentos exigibles de una operación: los visibles menos los "no aplica". */
-  const docsExigiblesDe = (opId: string) => {
-    const op = operaciones.find((o) => o.id === opId);
-    return Math.max(visibleTipos.length - countTiposNoAplica(op, visibleTipos), 0);
-  };
-
-  const docsRecibidosDe = (opId: string) => docCounts.get(opId) ?? 0;
-
-  const estadoViaje = (() => {
-    const bruto = (operacionActual?.estado_operacion ?? "").trim();
-    if (!bruto) return { label: tr.sinEstado, clase: "estado--espera" };
-    const norm = bruto.toUpperCase();
-    const clase =
-      norm.includes("CANCEL")
-        ? "estado--error"
-        : norm.includes("CERR") || norm.includes("ARRIB") || norm.includes("ENTREG")
-          ? "estado--ok"
-          : "estado--curso";
-    // Se muestra como llega, solo con la primera en mayúscula: inventarle
-    // etiquetas propias haría que esta pantalla nombre los estados distinto
-    // que el resto del ERP.
-    return { label: bruto.charAt(0).toUpperCase() + bruto.slice(1).toLowerCase(), clase };
-  })();
-
-  const docsPanel = hasSelection && operacionActual ? (
-    <div className="space-y-3">
-      <div className={`dash-card rounded-xl overflow-hidden border-2 ${
-        progressPct === 100
-          ? "border-emerald-400/50 bg-emerald-500/10"
-          : "border-dash-neon/40"
-      }`}>
-        {/*
-          * Banner del embarque.
-          *
-          * Dos zonas: quién es a la izquierda, cómo va su papeleo a la derecha.
-          * En pantalla ancha conviven en una línea; bajo lg el avance baja,
-          * porque partir seis datos y un anillo en 380 px no deja leer ninguno.
-          */}
-        <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 sm:py-3.5 lg:flex-row lg:items-center lg:gap-6">
-          <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
-            <div
-              className={`estado-icono flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${estadoViaje.clase}`}
-            >
-              <Icon icon="lucide:container" width={24} height={24} aria-hidden />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="truncate text-2xl font-extrabold leading-none tracking-tight text-dash-fg sm:text-[1.65rem]">
-                  {opRef(operacionActual)}
-                </p>
-                <span
-                  className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider ${estadoViaje.clase}`}
-                >
-                  <span className="estado-barra h-1.5 w-1.5 rounded-full" />
-                  {estadoViaje.label}
-                </span>
-              </div>
-
-              {operacionActual.cliente ? (
-                <p className="mt-1 truncate text-sm font-bold text-dash-neon">
-                  {operacionActual.cliente}
-                </p>
-              ) : null}
-
-              {/* Los seis datos del embarque, en una sola fila cuando cabe. */}
-              <div className="mt-2.5 grid grid-cols-3 gap-x-3 gap-y-2.5 border-t border-dash-border pt-2.5 sm:grid-cols-6">
-                {(
-                  [
-                    [tr.colBooking, operacionActual.booking],
-                    [tr.colContenedor, operacionActual.contenedor],
-                    [tr.colNaviera, operacionActual.naviera],
-                    [
-                      tr.colRuta,
-                      [operacionActual.pol, operacionActual.pod].filter(Boolean).join(" → "),
-                    ],
-                    [tr.colEtd, operacionActual.etd ? formatDate(operacionActual.etd) : null],
-                    [tr.colEta, operacionActual.eta ? formatDate(operacionActual.eta) : null],
-                  ] as [string, string | null][]
-                ).map(([etiqueta, valor]) => (
-                  <div key={etiqueta} className="min-w-0">
-                    <p className="truncate text-[9.5px] font-semibold text-dash-muted/70">{etiqueta}</p>
-                    <p className="truncate text-[11.5px] font-bold text-dash-fg sm:text-[12px]" title={valor ?? undefined}>
-                      {valor || "—"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Avance del papeleo. */}
-          <div
-            className={`flex shrink-0 items-center gap-3 lg:w-[22rem] ${
-              docsCompletados > 0 ? "estado--transito" : "estado--espera"
-            }`}
-          >
-            <span className="relative flex h-16 w-16 shrink-0 items-center justify-center" aria-hidden>
-              <svg viewBox="0 0 44 44" className="h-16 w-16 -rotate-90">
-                <circle cx="22" cy="22" r="19" fill="none" strokeWidth="5" className="stroke-dash-border" />
-                <circle
-                  cx="22"
-                  cy="22"
-                  r="19"
-                  fill="none"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  stroke="var(--estado)"
-                  strokeDasharray={`${(progressPct / 100) * 2 * Math.PI * 19} ${2 * Math.PI * 19}`}
-                  style={{ transition: "stroke-dasharray 500ms var(--dash-ease)" }}
-                />
-              </svg>
-              <span className="absolute text-[14px] font-extrabold tabular-nums text-dash-fg">
-                {docsCompletados}/{tiposAplicables}
-              </span>
-            </span>
-
-            <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-bold text-dash-fg">{tr.docsRecibidosTitulo}</span>
-              <span className="mt-0.5 block text-[12.5px] text-dash-muted">
-                {tr.docsRecibidosDetalle
-                  .replace("{recibidos}", String(docsCompletados))
-                  .replace("{pendientes}", String(Math.max(tiposAplicables - docsCompletados, 0)))}
-              </span>
-              <span className="mt-2 block h-2 overflow-hidden rounded-full bg-dash-control">
-                <span
-                  className="estado-barra block h-full rounded-full transition-all duration-500"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </span>
-
-              {/*
-                * Leyenda: solo los estados que el sistema distingue de verdad.
-                *
-                * La referencia incluye "En revisión" y "Observados"; no existen
-                * como dato, así que aparecerían clavados en cero para siempre y
-                * prometerían un seguimiento que nadie puede llevar.
-                */}
-              <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold">
-                <span className="estado--transito inline-flex items-center gap-1.5 text-dash-muted">
-                  <span className="estado-barra h-2 w-2 rounded-full" />
-                  {docsCompletados} {tr.estadoRecibido}
-                </span>
-                <span className="estado--atencion inline-flex items-center gap-1.5 text-dash-muted">
-                  <span className="estado-barra h-2 w-2 rounded-full" />
-                  {Math.max(tiposAplicables - docsCompletados, 0)} {tr.estadoPendienteDoc}
-                </span>
-                {visibleTipos.length - tiposAplicables > 0 && (
-                  <span className="estado--espera inline-flex items-center gap-1.5 text-dash-muted">
-                    <span className="estado-barra h-2 w-2 rounded-full" />
-                    {visibleTipos.length - tiposAplicables} {tr.noAplica}
-                  </span>
-                )}
-              </span>
-            </span>
-          </div>
-
-          <div className="flex shrink-0 items-start gap-0.5 max-lg:absolute max-lg:right-3 max-lg:top-3">
-            <a
-              href={`${withBase("/navitrack")}?op=${encodeURIComponent(opRef(operacionActual))}`}
-              title={tr.accionTracking}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-            >
-              <Icon icon="lucide:chevron-right" width={20} height={20} aria-hidden />
-            </a>
-            <button
-              type="button"
-              onClick={() => setSelectedOperacion("")}
-              className="-mr-1 flex h-9 w-9 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-              title={tr.closeSelection}
-            >
-              <Icon icon="lucide:x" width={18} height={18} aria-hidden />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="px-3 py-2 bg-red-500/15 border border-red-400/35 rounded-xl text-red-300 text-base font-medium flex items-center gap-2">
-          <Icon icon="lucide:alert-circle" className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-
-      {/*
-        * Pestañas por etapa y lista plana.
-        *
-        * Los grupos plegables obligaban a abrir y cerrar para comparar; con
-        * pestañas se ve una etapa completa de una vez y "Todos" sigue dando la
-        * vista entera, que es como se revisa antes de cerrar un embarque.
-        *
-        * El contador de cada pestaña es lo que antes decía la cabecera del
-        * grupo: cuántos hay y cuántos faltan sin entrar.
-        */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {([
-          { id: "todos", label: tr.filtroTodos, tipos: null },
-          ...GRUPOS_DOCUMENTO.map((g) => ({
-            id: g.id as string,
-            label: g.label as string,
-            tipos: g.tipos as readonly string[] | null,
-          })),
-        ] as { id: string; label: string; tipos: readonly string[] | null }[])
-          .map((tab) => {
-            const tipos = (tab.tipos ?? visibleTipos).filter((t) =>
-              (visibleTipos as readonly string[]).includes(t),
-            );
-            if (tipos.length === 0) return null;
-            const activa = etapaActiva === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                aria-pressed={activa}
-                onClick={() => setEtapaActiva(tab.id)}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-[13px] font-bold transition-colors ${
-                  activa
-                    ? "border-dash-neon/50 bg-dash-neon/20 text-dash-fg"
-                    : "border-dash-border bg-dash-control/50 text-dash-muted hover:text-dash-fg"
-                }`}
-              >
-                {/*
-                  * El punto toma el acento cuando la pestaña está activa y se
-                  * apaga cuando no, igual que las pestañas del resto del ERP
-                  * (`nt-tab`). Antes llevaba el color de la etapa: cuatro
-                  * colores fijos que no cambiaban nada al seleccionar, así que
-                  * no decían qué estaba activo y sí desentonaban.
-                  */}
-                <span
-                  className={`h-2 w-2 rounded-full ${activa ? "bg-dash-neon" : "bg-dash-muted/45"}`}
-                  aria-hidden
-                />
-                {tab.label}
-                <span className="text-[12px] font-semibold tabular-nums opacity-70">
-                  ({tipos.length})
-                </span>
-              </button>
-            );
-          })}
-      </div>
-
-      <div className="overflow-hidden rounded-xl border border-dash-border bg-dash-surface/40">
-        {/* Cabecera de columnas: solo donde hay ancho para que signifiquen algo. */}
-        {/*
-          * Rejilla, no flex.
-          *
-          * Con `flex-1` el nombre del documento se quedaba con todo el espacio
-          * sobrante y empujaba etapa, fecha y estado contra el borde derecho,
-          * dejando un vacío en medio. En una rejilla de proporciones el sobrante
-          * se reparte entre las columnas y cada dato cae donde su cabecera dice.
-          */}
-        <div className="hidden items-center gap-3 border-b border-dash-border px-3.5 py-2.5 text-[11.5px] font-bold uppercase tracking-wide text-dash-muted/70 sm:grid sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_9rem] lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_9rem]">
-          <span className="min-w-0">{tr.colDocumento}</span>
-          <span className="min-w-0">{tr.colEstado}</span>
-          <span className="hidden min-w-0 lg:block">{tr.colEtapa}</span>
-          <span className="min-w-0">{tr.colFechaRecepcion}</span>
-          <span className="sr-only">{tr.acciones}</span>
-        </div>
-
-        {/*
-          * En "Todos", las filas se agrupan por etapa con su encabezado.
-          *
-          * Once documentos seguidos se leen como una lista sin forma: la
-          * etiqueta de cada fila dice a qué etapa pertenece, pero hay que
-          * leerlas una por una para reconstruir el conjunto. Con el encabezado
-          * y su cuenta, el reparto se ve sin leer ninguna.
-          *
-          * Dentro de una pestaña concreta no hace falta: ahí todas son de la
-          * misma etapa y el encabezado sería repetir el nombre de la pestaña.
-          */}
-        {etapaActiva === "todos" ? (
-          GRUPOS_DOCUMENTO.map((grupo) => {
-            const tipos = (grupo.tipos as readonly string[]).filter((t) =>
-              (visibleTipos as readonly string[]).includes(t),
-            );
-            if (tipos.length === 0) return null;
-            const recibidos = tipos.filter(
-              (t) => documentosPorTipo.has(t as TipoDocumento) && !isTipoMarcadoNoAplica(operacionActual, t),
-            ).length;
-            const exigibles = tipos.filter((t) => !isTipoMarcadoNoAplica(operacionActual, t)).length;
-
-            return (
-              /*
-               * Los grupos se separan con una línea, sin encabezado.
-               *
-               * La etiqueta de etapa va en cada fila, así que un título encima
-               * repetía la misma palabra cuatro veces seguidas y sumaba una
-               * línea por grupo. La línea basta para que el bloque se lea como
-               * bloque, y la lista queda del alto que cabe en pantalla.
-               *
-               * El contador de cada etapa no se pierde: vive en su pestaña.
-               */
-              <div
-                key={grupo.id}
-                /*
-                 * El separador se distingue por grosor, no por color.
-                 *
-                 * Una línea fina y neutra se perdía entre las divisiones de
-                 * fila, que son del mismo gris, y había que contar para saber
-                 * dónde termina un grupo. Se resolvía con el color de la etapa,
-                 * pero eso traía a la tabla una familia de colores que el ERP
-                 * no usa para categorías. Tres píxeles del borde de siempre
-                 * separan igual de bien y no inventan un código de color.
-                 */
-                className="divide-y divide-dash-border/60 border-t-[3px] border-t-dash-border first:border-t-0"
-                aria-label={`${grupo.label}: ${recibidos}/${exigibles}`}
-              >
-                {tipos.map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
-              </div>
-            );
-          })
-        ) : (
-          <div className="divide-y divide-dash-border/60">
-            {((GRUPOS_DOCUMENTO.find((g) => g.id === etapaActiva)?.tipos ?? []) as readonly string[])
-              .filter((t) => (visibleTipos as readonly string[]).includes(t))
-              .map((tipo) => renderTipoDocumento(tipo as TipoDocumento))}
-          </div>
-        )}
-      </div>
-    </div>
-  ) : null;
+  const kpis = [
+    { clave: "todos" as const, label: tr.kpiTotal, valor: resumenDocs.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
+    { clave: "completos" as const, label: tr.filtroCompletados, valor: resumenDocs.completas, pct: resumenDocs.pctCompletas, tono: "estado--ok", icon: "lucide:check-circle" },
+    { clave: "curso" as const, label: tr.filtroEnCurso, valor: resumenDocs.curso, pct: resumenDocs.pctCurso, tono: "estado--curso", icon: "lucide:loader" },
+    { clave: "pendientes" as const, label: tr.filtroPendientes, valor: resumenDocs.pendientes, pct: resumenDocs.pctPendientes, tono: "estado--atencion", icon: "lucide:alert-circle" },
+  ];
 
   return (
     <>
     <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
-      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
+      <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-hidden" role="main">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-          <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
-          <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
+          <div className="absolute -right-16 top-8 h-64 w-64 rounded-full bg-dash-neon/15 blur-3xl" />
+          <div className="absolute bottom-20 left-1/4 h-56 w-56 rounded-full bg-dash-neon-hot/10 blur-3xl" />
         </div>
 
+        {/*
+          * Cabecera de la página, la misma de Mis Reservas: título, indicadores
+          * y búsqueda. Se repliega con una operación desplegada, para darle a
+          * la ficha toda la pantalla.
+          */}
+        <div className="rd-colapsable relative z-10 shrink-0" data-colapsado={fila.cabeceraOculta} inert={fila.cabeceraOculta || undefined}>
+        <div>
         <div className="dash-toolbar relative z-10 shrink-0">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
-              {/*
-                * Volver.
-                *
-                * Con una operación abierta devuelve a la lista, que es de donde
-                * se vino; sin selección, al inicio. Un mismo control con dos
-                * destinos según dónde estás, en lugar de una flecha que a veces
-                * no lleva a ninguna parte.
-                */}
-              {hasSelection ? (
-                <button
-                  type="button"
-                  onClick={() => setSelectedOperacion("")}
-                  aria-label={tr.backToList}
-                  title={tr.backToList}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                >
-                  <Icon icon="lucide:arrow-left" width={20} height={20} aria-hidden />
-                </button>
-              ) : (
-                <a
-                  href={withBase("/inicio")}
-                  aria-label={tr.backHome}
-                  title={tr.backHome}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                >
-                  <Icon icon="lucide:arrow-left" width={20} height={20} aria-hidden />
-                </a>
-              )}
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)] max-sm:hidden">
-                <Icon icon="lucide:folder-open" width={22} height={22} className="text-dash-neon" aria-hidden />
+            <div className="flex min-w-0 items-center gap-3">
+              <a
+                href={withBase("/inicio")}
+                title={tr.backHome}
+                aria-label={tr.backHome}
+                className="dash-control inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-sm font-semibold sm:px-3"
+              >
+                <Icon icon="lucide:arrow-left" width={18} height={18} className="shrink-0" />
+              </a>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-neon/40 bg-dash-neon/15">
+                <Icon icon="lucide:folder-open" width={18} height={18} className="text-dash-neon" />
               </div>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
-                <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
+                <h1 className="truncate text-lg font-bold leading-tight tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
+                <p className="mt-0.5 truncate text-xs text-dash-muted">
+                  {tr.subtitle}
+                  {filteredOperaciones.length !== operaciones.length ? (
+                    <span className="ml-1.5 font-semibold tabular-nums text-dash-neon">
+                      {filteredOperaciones.length}/{operaciones.length}
+                    </span>
+                  ) : null}
+                </p>
               </div>
             </div>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+
+            {/*
+              * Indicadores del papeleo. Cada uno filtra la tabla —y lo quita si
+              * ya estaba activo—, igual que los de Mis Reservas. Ocultos en
+              * teléfono: ahí el filtro va en chips bajo la búsqueda.
+              */}
+            <div className="hidden min-w-0 flex-1 gap-2 md:grid md:grid-cols-4 xl:gap-2.5">
+              {kpis.map((k) => {
+                const activo = filtroDocs === k.clave && k.clave !== "todos";
+                return (
+                  <button
+                    key={k.clave}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => setFiltroDocs(activo ? "todos" : k.clave)}
+                    className={`${k.tono} flex items-center gap-2.5 rounded-xl border bg-dash-control/40 px-2.5 py-2 text-left transition-colors hover:bg-dash-neon/10 ${
+                      activo
+                        ? "border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_10%,transparent)]"
+                        : "border-dash-border"
+                    }`}
+                  >
+                    <span className="estado-icono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                      <Icon icon={k.icon} width={16} height={16} aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex items-baseline gap-1.5">
+                        <span className="text-[18px] font-extrabold leading-none tabular-nums text-dash-fg">{k.valor}</span>
+                        {k.pct !== null && (
+                          <span className="text-[11.5px] font-semibold tabular-nums text-dash-muted">{k.pct}%</span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] font-semibold text-dash-muted">{k.label}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => void fetchOperaciones()}
-                className="dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-sm"
+                className="dash-control inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-dash-muted hover:text-dash-fg"
                 title={tr.updateTooltip}
               >
                 <Icon icon="lucide:refresh-cw" width={14} height={14} />
-                {tr.updateTooltip}
+                <span className="hidden sm:inline">{tr.updateTooltip}</span>
               </button>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 min-h-0 w-full flex-1 overflow-hidden p-1.5 sm:p-2.5">
-          <div className="flex flex-col lg:flex-row gap-2 h-full min-h-0 w-full">
-
-            {/* Columna operaciones */}
-            <div
-              className={`flex flex-col min-h-0 min-w-0 transition-all duration-300 ease-out ${
-                hasSelection
-                  ? listaColapsada
-                    ? "hidden lg:flex lg:w-[3.25rem] lg:shrink-0"
-                    : "hidden lg:flex lg:w-[330px] xl:w-[350px] lg:shrink-0"
-                  : "w-full flex-1"
-              }`}
-            >
-              {hasSelection && listaColapsada ? (
-                <div className="dash-card-static flex h-full w-full flex-col items-center gap-2 rounded-xl border border-dash-border py-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setListaColapsada(false)}
-                    title={tr.expandOperations}
-                    aria-label={tr.expandOperations}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                  >
-                    <Icon icon="lucide:panel-left-open" width={18} height={18} aria-hidden />
-                  </button>
-                  {/* Cuántas operaciones esperan al otro lado, sin abrir la lista. */}
-                  <span className="rounded-md bg-dash-control px-1.5 py-1 text-[11px] font-bold tabular-nums text-dash-muted">
-                    {filteredOperaciones.length}
-                  </span>
-                </div>
-              ) : (
-              <div className="dash-card-static flex flex-col min-h-0 h-full w-full rounded-xl border border-dash-border overflow-hidden">
-                {/*
-                  * Indicadores de escritorio.
-                  *
-                  * En una pantalla ancha sobra sitio arriba y la pregunta que
-                  * se hace primero es cuánto falta en total, no de un embarque.
-                  * Cada uno filtra la tabla: son el mismo criterio que los chips
-                  * del teléfono, con otra forma.
-                  *
-                  * No están en móvil: ahí ese alto es la lista.
-                  */}
-                {!hasSelection && (
-                  <div className="hidden shrink-0 gap-2.5 border-b border-dash-border p-2.5 md:grid md:grid-cols-4 xl:gap-3">
-                    {(
-                      [
-                        { clave: "todos" as const, label: tr.kpiTotal, valor: resumenDocs.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
-                        { clave: "completos" as const, label: tr.filtroCompletados, valor: resumenDocs.completas, pct: resumenDocs.pctCompletas, tono: "estado--transito", icon: "lucide:check-circle" },
-                        { clave: "curso" as const, label: tr.filtroEnCurso, valor: resumenDocs.curso, pct: resumenDocs.pctCurso, tono: "estado--curso", icon: "lucide:clock" },
-                        { clave: "pendientes" as const, label: tr.filtroPendientes, valor: resumenDocs.pendientes, pct: resumenDocs.pctPendientes, tono: "estado--atencion", icon: "lucide:alert-circle" },
-                      ]
-                    ).map((k) => {
-                      const activo = filtroDocs === k.clave;
-                      return (
-                        <button
-                          key={k.clave}
-                          type="button"
-                          aria-pressed={activo}
-                          onClick={() => setFiltroDocs(k.clave)}
-                          className={`${k.tono} flex items-center gap-3 rounded-xl border bg-dash-control/40 px-3.5 py-3 text-left transition-colors hover:bg-dash-neon/10 ${
-                            activo
-                              ? "border-[color-mix(in_srgb,var(--estado)_55%,transparent)] bg-[color-mix(in_srgb,var(--estado)_10%,transparent)]"
-                              : "border-dash-border"
-                          }`}
-                        >
-                          <span className="estado-icono flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                            <Icon icon={k.icon} width={20} height={20} aria-hidden />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-[12.5px] font-semibold text-dash-muted">
-                              {k.label}
-                            </span>
-                            <span className="flex items-baseline gap-1.5">
-                              <span className="text-[22px] font-extrabold leading-none tabular-nums text-dash-fg">
-                                {k.valor}
-                              </span>
-                              {k.pct !== null && (
-                                <span className="text-[12px] font-semibold tabular-nums text-dash-muted">
-                                  {k.pct}%
-                                </span>
-                              )}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/*
-                  * Cabecera de la lista en dos líneas.
-                  *
-                  * Antes el título, el buscador, los filtros y el botón de
-                  * plegar compartían una fila que se desbordaba, así que el
-                  * botón terminaba solo debajo de los filtros, lejos de lo que
-                  * controla. Arriba va lo que identifica la lista y su control;
-                  * abajo, con qué se acota.
-                  */}
-                <div className={`shrink-0 border-b border-dash-border ${hasSelection ? "px-2.5 py-2.5" : "px-3 py-2.5"}`}>
-                  <div className="flex items-center gap-2">
-                    <Icon
-                      icon="lucide:history"
-                      width={hasSelection ? 16 : 18}
-                      height={hasSelection ? 16 : 18}
-                      className="shrink-0 text-dash-neon"
-                      aria-hidden
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className={`font-bold text-dash-fg ${hasSelection ? "text-[13.5px]" : "text-base"}`}>
-                        {tr.recentMovements}
-                      </p>
-                      {!hasSelection && (
-                        <p className="hidden truncate text-base text-dash-muted sm:block">
-                          {tr.selectOperationPrompt}
-                        </p>
-                      )}
-                    </div>
-
-                    {hasSelection && (
-                      /*
-                       * Plegar la lista, no cerrar la operación.
-                       *
-                       * Este botón decía "Ampliar operaciones" y ejecutaba
-                       * setSelectedOperacion(""): devolvía a la lista y perdía
-                       * el embarque abierto. Lo que promete —y ahora hace— es
-                       * darle toda la pantalla a los documentos.
-                       */
-                      <button
-                        type="button"
-                        onClick={() => setListaColapsada(true)}
-                        className="shrink-0 rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                        title={tr.colapsarLista}
-                        aria-label={tr.colapsarLista}
-                      >
-                        <Icon icon="lucide:panel-left-close" width={16} height={16} aria-hidden />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {!hasSelection && (
-                    <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[12rem] sm:max-w-md lg:max-w-xl">
-                      <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted w-4 h-4 pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder={tr.searchPlaceholderCorto}
-                        title={tr.searchPlaceholder}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="dash-control w-full pl-9 pr-3 py-2 text-sm text-dash-fg border border-dash-border rounded-lg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50"
-                      />
-                    </div>
-                  )}
-                  {(
-                    /*
-                     * Filtros por avance del papeleo: es la pregunta que trae a
-                     * esta pantalla ("¿a cuáles les falta algo?"), y responderla
-                     * hoy exige recorrer la lista mirando contadores.
-                     *
-                     * Se desplazan en horizontal en el teléfono en vez de
-                     * apilarse: cuatro chips en dos filas empujan la lista, que
-                     * es lo que se vino a ver.
-                     */
-                    /*
-                      * El relleno vertical no es estético: un contenedor con
-                      * overflow recorta lo que sobresale, y el borde y el anillo
-                      * del chip activo sobresalen. Sin este aire se veían
-                      * cortados por arriba y por abajo.
-                      */
-                    <div className="-mx-1 flex w-full shrink-0 items-center gap-1.5 overflow-x-auto px-1 py-1 md:w-auto md:overflow-visible">
-                      {(
-                        [
-                          ["todos", tr.filtroTodos, ""],
-                          ["pendientes", tr.filtroPendientes, "estado--espera"],
-                          ["curso", tr.filtroEnCurso, "estado--curso"],
-                          ["completos", tr.filtroCompletados, "estado--ok"],
-                        ] as const
-                      ).map(([clave, etiqueta, punto]) => {
-                        const activo = filtroDocs === clave;
-                        return (
-                          <button
-                            key={clave}
-                            type="button"
-                            aria-pressed={activo}
-                            onClick={() => setFiltroDocs(clave)}
-                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold transition-colors ${
-                              activo
-                                ? "border-dash-neon/50 bg-dash-neon/20 text-dash-fg"
-                                : "border-dash-border bg-dash-control text-dash-muted hover:text-dash-fg"
-                            }`}
-                          >
-                            {punto ? (
-                              <span className={`estado-barra h-1.5 w-1.5 rounded-full ${punto}`} aria-hidden />
-                            ) : null}
-                            {etiqueta}
-                            {/* La cuenta de cada filtro: sin ella hay que
-                                probarlos uno por uno para saber si traen algo. */}
-                            <span className="rounded-md bg-dash-control px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-dash-muted">
-                              {clave === "todos"
-                                ? resumenDocs.total
-                                : clave === "completos"
-                                  ? resumenDocs.completas
-                                  : clave === "curso"
-                                    ? resumenDocs.curso
-                                    : resumenDocs.pendientes}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                  </div>
-                </div>
-
-                <div className="flex-1 min-h-0 overflow-auto w-full">
-                  {/* Lista compacta (selección activa): Ref ASLI, Ref Externa, Booking, Contenedor */}
-                  {hasSelection ? (
-                    /*
-                     * Lista de al lado, con una operación abierta.
-                     *
-                     * Antes repetía los mismos campos que la tabla —referencia
-                     * externa, contenedor— en una columna de 300 px, así que
-                     * todo se partía en dos líneas. Acá solo va lo que sirve
-                     * para saltar de un embarque a otro: cuál es, de quién, su
-                     * booking y cuánto le falta.
-                     */
-                    <div className="space-y-2 p-2">
-                      {pagedOperaciones.length === 0 ? (
-                        <div className="py-8 px-3 text-center text-dash-muted text-base">{tr.noOperations}</div>
-                      ) : (
-                        pagedOperaciones.map((op) => {
-                          const isActive = selectedOperacion === op.id;
-                          const viaje = estadoViajeDe(op);
-                          const total = docsExigiblesDe(op.id);
-                          const hechos = Math.min(docsRecibidosDe(op.id), total);
-                          const pct = total === 0 ? 0 : Math.round((hechos / total) * 100);
-                          return (
-                            <button
-                              key={op.id}
-                              type="button"
-                              onClick={() => handleSelectOperacion(op.id)}
-                              className={`relative w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                                isActive
-                                  ? "border-dash-neon/50 bg-dash-neon/12 ring-1 ring-inset ring-dash-neon/30"
-                                  : "border-dash-border bg-dash-control/30 hover:bg-dash-neon/10"
-                              }`}
-                            >
-                              <div className="flex items-start gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-[15px] font-extrabold leading-tight text-dash-fg">
-                                    {opRef(op)}
-                                  </p>
-                                  <p className="mt-0.5 truncate text-[12.5px] font-semibold text-dash-muted">
-                                    {op.cliente || "-"}
-                                  </p>
-                                  <p className="mt-0.5 truncate text-[12px] text-dash-muted/80">
-                                    <span className="text-dash-muted/60">{tr.colBooking}:</span>{" "}
-                                    <span className="tabular-nums">{op.booking || "—"}</span>
-                                  </p>
-                                </div>
-
-                                <div className={`flex shrink-0 flex-col items-end gap-1.5 ${viaje.clase}`}>
-                                  <span className="estado-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold">
-                                    <Icon icon={viaje.icono} width={10} height={10} aria-hidden />
-                                    {viaje.label}
-                                  </span>
-                                  <Icon
-                                    icon="lucide:chevron-right"
-                                    width={16}
-                                    height={16}
-                                    className="text-dash-muted/60"
-                                    aria-hidden
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Avance: la fracción y la barra, que es lo que
-                                  deja comparar embarques sin abrirlos. */}
-                              <div
-                                className={`mt-1.5 ${
-                                  pct === 100 ? "estado--transito" : hechos > 0 ? "estado--curso" : "estado--espera"
-                                }`}
-                              >
-                                <p className="text-[12px] font-bold tabular-nums text-dash-fg">
-                                  {hechos}/{total}
-                                </p>
-                                <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-dash-control">
-                                  <span
-                                    className="estado-barra block h-full rounded-full transition-all duration-500"
-                                    style={{ width: `${pct}%` }}
-                                  />
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {/* Cards móvil sin selección */}
-                      {/*
-                        * Tarjetas de la lista, según el mockup aprobado.
-                        *
-                        * Color por estado del VIAJE, no del papeleo: verde si
-                        * la carga va navegando, ámbar si todavía no. Es la
-                        * lectura que pidió el negocio para esta lista; el
-                        * contador de documentos acompaña con el mismo tono para
-                        * que la tarjeta hable de una sola cosa a la vez.
-                        *
-                        * El borde va completo en vez de una barra al canto: así
-                        * cada embarque se lee como una ficha cerrada y no como
-                        * filas de una tabla.
-                        */}
-                      <div className="space-y-2.5 p-2 md:hidden">
-                        {pagedOperaciones.length === 0 ? (
-                          <div className="py-12 px-4 text-center">
-                            <Icon icon="lucide:folder" width={28} height={28} className="text-dash-neon/40 mx-auto mb-2" />
-                            <p className="text-dash-muted text-base">{tr.noOperations}</p>
-                          </div>
-                        ) : (
-                          pagedOperaciones.map((op) => {
-                            const viaje = estadoViajeDe(op);
-                            const abierto = detalleAbierto === op.id;
-
-                            return (
-                              <article
-                                key={op.id}
-                                className={`overflow-hidden rounded-2xl border bg-dash-surface/80 ${viaje.clase} border-[color-mix(in_srgb,var(--estado)_45%,transparent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--estado)_12%,transparent),0_10px_30px_-18px_color-mix(in_srgb,var(--estado)_60%,transparent)]`}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => handleSelectOperacion(op.id)}
-                                  className="flex w-full items-start gap-3 px-3.5 pb-3 pt-3.5 text-left"
-                                >
-                                  <span className="estado-icono flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
-                                    <Icon icon="lucide:container" width={24} height={24} aria-hidden />
-                                  </span>
-
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-[17px] font-extrabold leading-tight text-dash-fg">
-                                      {opRef(op)}
-                                    </span>
-                                    <span className="mt-0.5 block truncate text-[13px] font-semibold text-dash-muted">
-                                      {op.cliente || "-"}
-                                    </span>
-
-                                    <span className="mt-2 block truncate text-[13.5px] font-bold tabular-nums text-dash-fg">
-                                      {[op.contenedor, op.booking].filter(Boolean).join(" · ") || "—"}
-                                    </span>
-                                    <span className="mt-1 block truncate text-[12.5px] font-semibold text-dash-muted">
-                                      {[op.naviera, op.pod].filter(Boolean).join(" · ") || "-"}
-                                    </span>
-                                    <span className="mt-1.5 flex items-center gap-1.5 text-[12px] text-dash-muted/80">
-                                      <Icon icon="lucide:calendar" width={12} height={12} aria-hidden />
-                                      {formatDate(op.created_at)}
-                                    </span>
-                                  </span>
-
-                                  {/* Columna derecha: cuánto papeleo hay, cómo va el viaje, y entrar. */}
-                                  <span className="flex shrink-0 flex-col items-end justify-between gap-3 self-stretch">
-                                    <span className="estado-chip rounded-lg px-2 py-0.5 text-[12.5px] font-extrabold tabular-nums">
-                                      {docsRecibidosDe(op.id)}/{docsExigiblesDe(op.id)}
-                                    </span>
-                                    <Icon
-                                      icon="lucide:chevron-right"
-                                      width={18}
-                                      height={18}
-                                      className="text-dash-muted/60"
-                                      aria-hidden
-                                    />
-                                    <span className="estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-bold">
-                                      <Icon icon={viaje.icono} width={12} height={12} aria-hidden />
-                                      {viaje.label}
-                                    </span>
-                                  </span>
-                                </button>
-
-                                {abierto && (
-                                  <dl className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-dash-border/70 bg-dash-control/30 px-4 py-3 text-[12px]">
-                                    {[
-                                      [tr.colRefExterna, op.referencia_externa],
-                                      [tr.colNaviera, op.naviera],
-                                      [tr.colBooking, op.booking],
-                                      [tr.colContenedor, op.contenedor],
-                                      [tr.colRuta, [op.pol, op.pod].filter(Boolean).join(" → ")],
-                                      [tr.colEtd, op.etd ? formatDate(op.etd) : null],
-                                    ].map(([etiqueta, valor]) => (
-                                      <div key={String(etiqueta)} className="min-w-0">
-                                        <dt className="text-[10.5px] font-semibold text-dash-muted/70">{etiqueta}</dt>
-                                        <dd className="truncate font-semibold text-dash-fg/90">{valor || "—"}</dd>
-                                      </div>
-                                    ))}
-                                  </dl>
-                                )}
-
-                                <div className="flex items-stretch border-t border-dash-border/70 text-[12px] font-semibold">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSelectOperacion(op.id)}
-                                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-dash-fg/85 transition-colors active:bg-dash-neon/15"
-                                  >
-                                    <Icon icon="lucide:file-text" width={14} height={14} aria-hidden />
-                                    {tr.accionDocumentos}
-                                    <span className="rounded-md bg-dash-control px-1.5 py-0.5 text-[11px] font-bold tabular-nums text-dash-muted">
-                                      {docsExigiblesDe(op.id)}
-                                    </span>
-                                  </button>
-                                  <span className="my-2 w-px bg-dash-border" aria-hidden />
-                                  <a
-                                    href={`${withBase("/navitrack")}?op=${encodeURIComponent(opRef(op))}`}
-                                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-dash-fg/85 transition-colors active:bg-dash-neon/15"
-                                  >
-                                    <Icon icon="lucide:line-chart" width={14} height={14} aria-hidden />
-                                    {tr.accionTracking}
-                                  </a>
-                                  <span className="my-2 w-px bg-dash-border" aria-hidden />
-                                  <button
-                                    type="button"
-                                    aria-expanded={abierto}
-                                    onClick={() => setDetalleAbierto(abierto ? null : op.id)}
-                                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-dash-fg/85 transition-colors active:bg-dash-neon/15"
-                                  >
-                                    <Icon
-                                      icon={abierto ? "lucide:chevron-up" : "lucide:info"}
-                                      width={14}
-                                      height={14}
-                                      aria-hidden
-                                    />
-                                    {tr.accionDetalles}
-                                  </button>
-                                </div>
-                              </article>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      {/* Tabla completa desktop — ancho completo */}
-                      <div className="hidden md:block w-full overflow-x-auto">
-                        <table className="w-full table-fixed text-left text-base">
-                          <colgroup>
-                            <col className="w-[7%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[10%]" />
-                            <col className="w-[10%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[17%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[4%]" />
-                          </colgroup>
-                          <thead>
-                            <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] border-b border-dash-border">
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colRef}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colCliente}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colNaviera}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colBooking}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colContenedor}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colPod}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colEtd}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colDocs}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colDate}</th>
-                              <th className="px-3 py-2.5 text-sm font-bold text-dash-muted">{tr.colEstado}</th>
-                              <th className="px-3 py-2.5 text-right text-sm font-bold text-dash-muted">{tr.acciones}</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-dash-border">
-                            {pagedOperaciones.length === 0 ? (
-                              <tr>
-                                <td colSpan={11} className="px-4 py-12 text-center text-dash-muted text-base">
-                                  {tr.noOperations}
-                                </td>
-                              </tr>
-                            ) : (
-                              pagedOperaciones.map((op, idx) => (
-                                <tr
-                                  key={op.id}
-                                  onClick={() => handleSelectOperacion(op.id)}
-                                  className={`cursor-pointer transition-colors ${
-                                    idx % 2 === 0
-                                      ? "bg-transparent hover:bg-dash-neon/10"
-                                      : "bg-dash-control/30 hover:bg-dash-neon/10"
-                                  }`}
-                                >
-                                  <td className="truncate px-3 py-2.5 text-[15px] font-bold text-dash-fg">{opRef(op)}</td>
-                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-fg/80">{op.cliente || "-"}</td>
-                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-muted">{op.naviera || "-"}</td>
-                                  <td className="truncate px-3 py-2.5 text-[14px] tabular-nums text-dash-muted">{op.booking || "-"}</td>
-                                  <td className="truncate px-3 py-2.5 text-[14px] tabular-nums text-dash-muted">{op.contenedor || "—"}</td>
-                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-muted">{op.pod || "-"}</td>
-                                  <td className="truncate px-3 py-2.5 text-[14px] text-dash-muted">{formatDate(op.etd)}</td>
-                                  {/*
-                                    * Documentos: fracción, barra y porcentaje.
-                                    *
-                                    * La fracción dice cuántos faltan y la barra
-                                    * deja comparar filas de un vistazo, que es
-                                    * lo que una tabla larga necesita.
-                                    */}
-                                  <td className="px-3 py-2.5">
-                                    {(() => {
-                                      const total = docsExigiblesDe(op.id);
-                                      const hechos = Math.min(docsRecibidosDe(op.id), total);
-                                      const pct = total === 0 ? 0 : Math.round((hechos / total) * 100);
-                                      const tono =
-                                        pct === 100 ? "estado--transito" : hechos > 0 ? "estado--curso" : "estado--espera";
-                                      return (
-                                        <span className={`flex items-center gap-2 ${tono}`}>
-                                          <span className="shrink-0 text-[13px] font-bold tabular-nums text-dash-fg">
-                                            {hechos}/{total}
-                                          </span>
-                                          <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-dash-control">
-                                            <span
-                                              className="estado-barra block h-full rounded-full"
-                                              style={{ width: `${pct}%` }}
-                                            />
-                                          </span>
-                                          <span className="shrink-0 text-[12px] font-semibold tabular-nums text-dash-muted">
-                                            {pct}%
-                                          </span>
-                                        </span>
-                                      );
-                                    })()}
-                                  </td>
-                                  <td className="truncate px-3 py-2.5 text-[13.5px] text-dash-muted">{formatDate(op.created_at)}</td>
-                                  <td className="px-3 py-2.5">
-                                    {(() => {
-                                      const e = estadoDocsDe(op.id);
-                                      const meta =
-                                        e === "completo"
-                                          ? { clase: "estado--transito", label: tr.estadoCompleto, icon: "lucide:check-circle" }
-                                          : e === "curso"
-                                            ? { clase: "estado--curso", label: tr.estadoEnCurso, icon: "lucide:clock" }
-                                            : { clase: "estado--atencion", label: tr.estadoPendiente, icon: "lucide:clock" };
-                                      return (
-                                        <span
-                                          className={`estado-chip inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-bold ${meta.clase}`}
-                                        >
-                                          <Icon icon={meta.icon} width={13} height={13} aria-hidden />
-                                          {meta.label}
-                                        </span>
-                                      );
-                                    })()}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-right">
-                                    <span
-                                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                                      title={tr.acciones}
-                                    >
-                                      <Icon icon="lucide:more-vertical" width={16} height={16} aria-hidden />
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="shrink-0">{paginationBar}</div>
-              </div>
+        <div className="relative z-10 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] backdrop-blur-md">
+          <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 sm:px-4">
+            <div className="relative min-w-0 flex-1">
+              <Icon icon="lucide:search" className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dash-muted" />
+              <input
+                type="text"
+                placeholder={tr.searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-lg border border-dash-border bg-dash-control py-2 pl-8 pr-8 text-sm text-dash-fg transition-all placeholder:text-dash-muted focus:border-dash-neon/50 focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-dash-muted transition-colors hover:text-dash-fg"
+                >
+                  <Icon icon="lucide:x" width={14} height={14} />
+                </button>
               )}
             </div>
+            {/* Teléfono: los indicadores no caben, el filtro va en chips. */}
+            <div className="-mx-1 flex w-full items-center gap-1.5 overflow-x-auto px-1 py-1 md:hidden">
+              {kpis.map((k) => {
+                const activo = filtroDocs === k.clave;
+                return (
+                  <button
+                    key={k.clave}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => setFiltroDocs(k.clave)}
+                    className={`${k.tono} inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold ${
+                      activo ? "estado-chip" : "border-dash-border bg-dash-control text-dash-muted"
+                    }`}
+                  >
+                    {k.clave === "todos" ? tr.filtroTodos : k.label}
+                    <span className="tabular-nums opacity-70">{k.valor}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        </div>
+        </div>
 
-            {/* Columna documentos — solo visible con selección */}
-            {hasSelection && (
-              <div className="flex-1 min-w-0 min-h-0 overflow-auto w-full">
-                {docsPanel}
+        <div className="relative z-10 min-h-0 flex-1 overflow-auto p-2 sm:p-3">
+          <div
+            className="dash-card-static flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]"
+            style={{ minHeight: 300 }}
+          >
+            <div {...fila.scrollProps} className={`min-h-0 flex-1 ${fila.scrollProps.className}`}>
+              <table className="w-full text-[13.5px]">
+                <thead>
+                  <tr>
+                    <th className={`${TH} text-left`}>{tr.colOperacion}</th>
+                    <th className={`${TH} hidden sm:table-cell`}>{tr.colBooking}</th>
+                    <th className={`${TH} hidden text-left md:table-cell`}>{tr.colNaviera}</th>
+                    <th className={`${TH} hidden text-left lg:table-cell`}>{tr.colNaveViaje}</th>
+                    <th className={`${TH} hidden text-left xl:table-cell`}>{tr.colOrigen}</th>
+                    <th className={`${TH} hidden text-left lg:table-cell`}>{tr.colDestino}</th>
+                    <th className={`${TH} hidden md:table-cell`}>{tr.colEtd}</th>
+                    <th className={`${TH} hidden xl:table-cell`}>{tr.colEta}</th>
+                    <th className={`${TH} hidden sm:table-cell`}>{tr.colEstado}</th>
+                    <th className={TH}>{tr.colDocs}</th>
+                    <th className={`${TH} w-12`}>
+                      <span className="sr-only">{tr.acciones}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOperaciones.length === 0 ? (
+                    <tr>
+                      <td colSpan={COLUMNAS} className="px-4 py-14 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
+                            <Icon icon="lucide:folder-open" width={20} height={20} className="text-dash-muted" />
+                          </span>
+                          <p className="text-sm font-medium text-dash-muted">{tr.noOperations}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOperaciones.map((op, idx) => {
+                      const abierta = fila.abiertaId === op.id;
+                      const cfg = getEstadoOperacionStyle(op.estado_operacion);
+                      const estadoTxt = etiquetaEstado(op.estado_operacion);
+                      const total = docsExigiblesDe(op.id);
+                      const hechos = Math.min(docsRecibidosDe(op.id), total);
+                      const papeleo = metaPapeleo(estadoDocsDe(op.id));
+                      const fuera = motivoFueraDeNavitrack(op);
+                      const menuAbierto = menuFila === op.id;
+                      return (
+                        <Fragment key={op.id}>
+                          <tr
+                            {...propsFilaDesplegable(op.id, abierta, fila.toggle)}
+                            style={abierta ? undefined : ROW_CV}
+                            className={`cursor-pointer border-b outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dash-neon/50 ${
+                              abierta
+                                ? "border-transparent bg-[color-mix(in_srgb,var(--estado-curso)_14%,transparent)]"
+                                : idx % 2 === 0
+                                  ? "border-dash-border bg-transparent hover:bg-dash-neon/10"
+                                  : "border-dash-border bg-dash-control/30 hover:bg-dash-neon/10"
+                            }`}
+                          >
+                            <td className="whitespace-nowrap px-3 py-3">
+                              <span className="inline-flex items-center gap-2">
+                                <Icon
+                                  icon="lucide:chevron-right"
+                                  width={15}
+                                  height={15}
+                                  className={`shrink-0 text-dash-muted transition-transform duration-150 ${abierta ? "rotate-90 text-[var(--estado-curso)]" : ""}`}
+                                  aria-hidden
+                                />
+                                <span className="min-w-0">
+                                  <span className="block text-[14px] font-bold tabular-nums tracking-tight text-dash-fg">{opRef(op)}</span>
+                                  <span className="block max-w-[11rem] truncate text-[11.5px] text-dash-muted">{op.cliente || "—"}</span>
+                                </span>
+                              </span>
+                            </td>
+                            <td className="hidden whitespace-nowrap px-3 py-3 text-center font-mono text-[12.5px] font-bold uppercase tracking-[0.04em] text-dash-fg sm:table-cell">
+                              {op.booking || <span className="font-sans font-normal text-dash-muted">—</span>}
+                            </td>
+                            <td className="hidden px-3 py-2 md:table-cell">
+                              <span className="flex items-center gap-2">
+                                {op.naviera ? (
+                                  <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={28} />
+                                ) : null}
+                                <span className="truncate text-[13px] font-medium text-dash-muted">{op.naviera || "—"}</span>
+                              </span>
+                            </td>
+                            <td className="hidden px-3 py-3 lg:table-cell">
+                              <span className="block max-w-[12rem] truncate text-[13px] font-bold text-dash-fg">{op.nave || "—"}</span>
+                              <span className="block text-[11.5px] tabular-nums text-dash-muted">{op.viaje || "—"}</span>
+                            </td>
+                            <td className="hidden px-3 py-3 xl:table-cell">
+                              <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-dash-fg">
+                                <Bandera puerto={op.pol} />
+                                <span className="truncate">{op.pol || "—"}</span>
+                              </span>
+                            </td>
+                            <td className="hidden px-3 py-3 lg:table-cell">
+                              <span className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium text-dash-fg">
+                                <Bandera puerto={op.pod} />
+                                <span className="truncate">{op.pod || "—"}</span>
+                              </span>
+                            </td>
+                            <td className="hidden whitespace-nowrap px-3 py-3 text-center text-[13px] font-semibold tabular-nums text-dash-fg md:table-cell">
+                              {op.etd ? fmtFecha(op.etd) : "—"}
+                            </td>
+                            <td className="hidden whitespace-nowrap px-3 py-3 text-center text-[13px] font-semibold tabular-nums text-dash-fg xl:table-cell">
+                              {op.eta ? fmtFecha(op.eta) : "—"}
+                            </td>
+                            <td className="hidden px-3 py-3 text-center sm:table-cell">
+                              {estadoTxt ? (
+                                <span
+                                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11.5px] font-bold ${
+                                    cfg ? `${cfg.bg} ${cfg.text} ${cfg.border}` : "border-dash-border text-dash-muted"
+                                  }`}
+                                >
+                                  <span className={`h-1.5 w-1.5 rounded-full ${cfg?.dot ?? "bg-dash-muted"}`} aria-hidden />
+                                  {estadoTxt}
+                                </span>
+                              ) : (
+                                <span className="text-dash-muted">—</span>
+                              )}
+                            </td>
+                            {/* El papeleo: el ícono toma el color de su estado; la fracción, sin adornos. */}
+                            <td className="whitespace-nowrap px-3 py-3 text-center" title={papeleo.label}>
+                              <span className={`${papeleo.clase} inline-flex items-center gap-1.5`}>
+                                <Icon icon="lucide:file-text" width={16} height={16} className="text-[var(--estado)]" aria-hidden />
+                                <span className="text-[13px] font-bold tabular-nums text-dash-fg">
+                                  {hechos} / {total}
+                                </span>
+                              </span>
+                            </td>
+                            <td className="relative px-2 py-3 text-center" data-row-action>
+                              <button
+                                type="button"
+                                onClick={() => setMenuFila(menuAbierto ? null : op.id)}
+                                className="motion-interactive inline-flex h-8 w-8 items-center justify-center rounded-lg text-dash-muted hover:bg-dash-control hover:text-dash-fg"
+                                aria-label={tr.acciones}
+                                aria-expanded={menuAbierto}
+                              >
+                                <Icon icon="lucide:more-vertical" width={16} height={16} />
+                              </button>
+                              {menuAbierto && (
+                                <>
+                                  <button type="button" aria-hidden tabIndex={-1} onClick={() => setMenuFila(null)} className="fixed inset-0 z-[60] cursor-default" />
+                                  <div className="absolute right-2 top-full z-[61] mt-1 w-52 overflow-hidden rounded-xl border border-dash-border bg-dash-surface py-1 text-left shadow-xl">
+                                    <button
+                                      type="button"
+                                      className="flex w-full items-center gap-2.5 px-3 py-2 text-[12.5px] font-semibold text-dash-fg hover:bg-[color-mix(in_srgb,var(--estado-curso)_12%,transparent)]"
+                                      onClick={() => {
+                                        setMenuFila(null);
+                                        fila.toggle(op.id);
+                                      }}
+                                    >
+                                      <Icon icon={abierta ? "lucide:chevrons-up" : "lucide:folder-open"} width={14} height={14} />
+                                      {abierta ? trR.detalleReplegar : tr.abrirFicha}
+                                    </button>
+                                    {fuera ? (
+                                      <span
+                                        className="flex w-full cursor-not-allowed items-center gap-2.5 px-3 py-2 text-[12.5px] font-semibold text-dash-muted opacity-60"
+                                        title={trR[`detalleNavitrack_${fuera}`]}
+                                      >
+                                        <Icon icon="lucide:radar" width={14} height={14} />
+                                        {tr.verNavitrack}
+                                      </span>
+                                    ) : (
+                                      <a
+                                        href={`${withBase("/navitrack")}?op=${encodeURIComponent(op.id)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={() => setMenuFila(null)}
+                                        className="flex w-full items-center gap-2.5 px-3 py-2 text-[12.5px] font-semibold text-dash-fg hover:bg-[color-mix(in_srgb,var(--estado-curso)_12%,transparent)]"
+                                      >
+                                        <Icon icon="lucide:radar" width={14} height={14} />
+                                        {tr.verNavitrack}
+                                        <Icon icon="lucide:arrow-up-right" width={12} height={12} className="ml-auto opacity-60" />
+                                      </a>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                          {abierta && (
+                            <tr className="bg-[color-mix(in_srgb,var(--estado-curso)_5%,transparent)]">
+                              <td colSpan={COLUMNAS} className="p-0">
+                                {renderFicha(op)}
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {filteredOperaciones.length > 0 && (
+              <div className="flex shrink-0 items-center justify-between border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_90%,transparent)] px-3 py-2">
+                <span className="text-xs font-medium tabular-nums text-dash-muted">
+                  {filteredOperaciones.length} {tr.registros}
+                  {filteredOperaciones.length !== operaciones.length && ` / ${operaciones.length}`}
+                </span>
+                <span className="hidden text-xs text-dash-muted sm:inline">{tr.selectOperationPrompt}</span>
               </div>
             )}
           </div>
         </div>
 
+        {/* Subir múltiples: cada archivo con el documento al que corresponde. */}
+        {subida && (
+          <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" data-theme={theme}>
+            <div className="dash-card motion-enter-lift flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl">
+              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-dash-border px-5 py-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="rd-icono flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                    <Icon icon="lucide:upload" width={18} height={18} aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-[16px] font-bold text-dash-fg">{tr.multiTitulo}</h3>
+                    <p className="text-[12.5px] text-dash-muted">{tr.multiAyuda}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !subiendoVarios && setSubida(null)}
+                  className="motion-interactive flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-dash-muted hover:bg-dash-control hover:text-dash-fg"
+                  aria-label={tr.cancelar}
+                >
+                  <Icon icon="lucide:x" width={16} height={16} />
+                </button>
+              </div>
+              <ul className="min-h-0 flex-1 divide-y divide-dash-border overflow-y-auto">
+                {subida.map((item, idx) => {
+                  const repetido = !!item.tipo && subida.some((o, j) => j !== idx && o.tipo === item.tipo);
+                  const existe = !!item.tipo && !!documentosPorTipo.get(item.tipo as TipoDocumento);
+                  const pdf = item.file.name.toLowerCase().endsWith(".pdf");
+                  return (
+                    <li key={idx} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                      <span className={`${pdf ? "estado--error" : "estado--ok"} shrink-0 text-[var(--estado)]`}>
+                        <Icon icon={pdf ? "mdi:file-pdf-box" : "mdi:file-excel-box"} width={28} height={28} aria-hidden />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-dash-fg" title={item.file.name}>{item.file.name}</p>
+                        <p className="text-[11px] text-dash-muted">
+                          {formatFileSize(item.file.size)}
+                          {repetido ? <span className="estado--error ml-2 font-semibold text-[var(--estado)]">{tr.multiDuplicado}</span> : null}
+                          {!repetido && existe ? <span className="estado--atencion ml-2 font-semibold text-[var(--estado)]">{tr.multiReemplaza}</span> : null}
+                        </p>
+                      </div>
+                      <select
+                        value={item.tipo}
+                        disabled={subiendoVarios}
+                        onChange={(e) =>
+                          setSubida((prev) => prev && prev.map((o, j) => (j === idx ? { ...o, tipo: e.target.value } : o)))
+                        }
+                        className="dash-control w-full rounded-lg px-2.5 py-2 text-[12.5px] sm:w-60"
+                        aria-label={tr.multiTipo}
+                      >
+                        <option value="">{tr.multiSinAsignar}</option>
+                        {tiposOrdenados
+                          .filter((t) => !isTipoMarcadoNoAplica(operacionActual, t))
+                          .map((t) => (
+                            <option key={t} value={t}>
+                              {tr.tipoLabels[t as keyof typeof tr.tipoLabels] ?? TIPO_META[t].label}
+                            </option>
+                          ))}
+                      </select>
+                    </li>
+                  );
+                })}
+              </ul>
+              {(() => {
+                const asignados = subida.filter((o) => o.tipo).length;
+                const hayRepetidos = subida.some((o, i) => o.tipo && subida.some((x, j) => j !== i && x.tipo === o.tipo));
+                return (
+                  <div className="flex shrink-0 items-center justify-end gap-2 border-t border-dash-border px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setSubida(null)}
+                      disabled={subiendoVarios}
+                      className="motion-interactive rounded-lg border border-dash-border bg-dash-control px-3.5 py-2 text-[12.5px] font-semibold text-dash-muted hover:text-dash-fg disabled:opacity-40"
+                    >
+                      {tr.cancelar}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void confirmarSubida()}
+                      disabled={subiendoVarios || asignados === 0 || hayRepetidos}
+                      className="btn-marca motion-interactive inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold disabled:pointer-events-none disabled:opacity-40"
+                    >
+                      <Icon
+                        icon={subiendoVarios ? "lucide:loader-2" : "lucide:upload"}
+                        width={15}
+                        height={15}
+                        className={subiendoVarios ? "animate-spin" : ""}
+                        aria-hidden
+                      />
+                      {subiendoVarios ? tr.uploading : tr.multiSubir.replace("{n}", String(asignados))}
+                    </button>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
         {previewDoc && (
           <div
-            className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
             data-theme={theme}
             onClick={closePreview}
           >
             <div
-              className="dash-card motion-enter-lift rounded-2xl w-full h-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden"
+              className="dash-card motion-enter-lift flex h-full max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot flex-shrink-0" />
-              <div className="flex items-center justify-between px-5 py-3 border-b border-dash-border flex-shrink-0 gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-9 h-9 rounded-lg bg-dash-neon/15 border border-dash-neon/35 flex items-center justify-center flex-shrink-0">
+              <div className="rd-hero flex shrink-0 items-center justify-between gap-3 px-5 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="rd-vidrio flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
                     <Icon
                       icon={isPdf(previewDoc.mime_type) ? "lucide:file-text" : "lucide:file-spreadsheet"}
-                      className={`w-4 h-4 ${isPdf(previewDoc.mime_type) ? "text-red-400" : "text-emerald-300"}`}
+                      className="rd-acento h-4 w-4"
                     />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-dash-fg text-base truncate">{previewDoc.nombre_archivo}</p>
-                    <p className="text-base text-dash-muted">
+                    <p className="truncate text-base font-semibold">{previewDoc.nombre_archivo}</p>
+                    <p className="rd-muted text-sm">
                       {formatFileSize(previewDoc.tamano)} · {formatDate(previewDoc.created_at)}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleDownload(previewDoc)}
-                    className="dash-cta inline-flex items-center gap-1.5 px-3.5 py-2.5 text-sm"
+                    className="rd-btn-primario motion-interactive inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-bold"
                   >
-                    <Icon icon="lucide:download" className="w-3.5 h-3.5" />
+                    <Icon icon="lucide:download" className="h-3.5 w-3.5" />
                     {tr.download}
                   </button>
                   <button
                     type="button"
                     onClick={closePreview}
-                    className="p-2 text-dash-muted hover:text-dash-fg hover:bg-dash-neon/15 rounded-lg transition-colors"
+                    className="rd-btn motion-interactive inline-flex h-8 w-8 items-center justify-center rounded-full"
+                    aria-label={tr.closeSelection}
                   >
-                    <Icon icon="lucide:x" className="w-4 h-4" />
+                    <Icon icon="lucide:x" className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -2146,22 +1775,22 @@ export function MisDocumentosContent() {
                 {isPdf(previewDoc.mime_type) ? (
                   <iframe
                     src={`${previewDoc.url}#toolbar=1&navpanes=0`}
-                    className="w-full h-full border-0"
+                    className="h-full w-full border-0"
                     title={previewDoc.nombre_archivo}
                   />
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full gap-4">
-                    <span className="w-16 h-16 rounded-lg bg-dash-control border border-dash-border flex items-center justify-center">
-                      <Icon icon="lucide:file-spreadsheet" className="w-8 h-8 text-dash-muted" />
+                  <div className="flex h-full flex-col items-center justify-center gap-4">
+                    <span className="rd-icono flex h-16 w-16 items-center justify-center rounded-xl">
+                      <Icon icon="lucide:file-spreadsheet" className="h-8 w-8" />
                     </span>
-                    <p className="text-dash-fg font-medium text-base">{tr.excelPreviewNotAvailable}</p>
-                    <p className="text-dash-muted text-base">{tr.downloadToView}</p>
+                    <p className="text-base font-medium text-dash-fg">{tr.excelPreviewNotAvailable}</p>
+                    <p className="text-base text-dash-muted">{tr.downloadToView}</p>
                     <button
                       type="button"
                       onClick={() => handleDownload(previewDoc)}
                       className="dash-cta inline-flex items-center gap-2 px-5 py-2.5 text-sm"
                     >
-                      <Icon icon="lucide:download" className="w-4 h-4" />
+                      <Icon icon="lucide:download" className="h-4 w-4" />
                       {tr.downloadFile}
                     </button>
                   </div>
