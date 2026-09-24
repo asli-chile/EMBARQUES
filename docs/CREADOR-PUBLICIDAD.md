@@ -488,22 +488,37 @@ pasaba nada y el modo parecía trabado.
 Ahora arrastrar la foto corre el encuadre, que es lo único que tiene sentido
 mover en un fondo. El cursor cambia a `grab` para que se note.
 
-### La cuenta
+### Por qué corre en px y no en porcentaje del recorte
 
-El encuadre es un porcentaje del **sobrante**: cuánto sobresale la foto de su
-marco. Para que la foto siga al puntero hay que convertir los px arrastrados a
-ese porcentaje, y para eso hace falta el tamaño real de la imagen, que se
-precarga al elegirla.
+El primer intento movió el encuadre (`fotoPosicion`), que es un porcentaje del
+**sobrante**: cuánto sobresale la foto de su marco. Funcionaba en horizontal y
+no en vertical, y el motivo no es un error de cuenta sino geometría: una foto
+apaisada en una pieza vertical, con `llenar`, se agranda hasta cubrir el alto
+justo. Le sobra ancho y **no le sobra nada de alto**, así que en vertical no
+había a dónde ir. No estaba trabada: no tenía recorrido.
+
+Es un síntoma engañoso, porque el eje que sí anda hace pensar que el arrastre
+funciona y que el problema está en el otro eje.
+
+Ahora la foto se corre en **px de la pieza**, con un `translate` propio
+(`fotoDesplazaX` / `fotoDesplazaY`), y siempre hay a dónde ir. Si se pasa del
+borde se ve el fondo de la pieza, que es lo que hace cualquier editor.
 
 ```
-sobra  = ancho_natural * f - ancho_marco     (f = cover ? max : min de las razones)
-nuevo% = anterior% - (px_arrastrados / escala / zoom) * 100 / sobra
+nuevo = anterior + px_arrastrados / escala        (acotado a ±3/4 del marco)
 ```
 
-La escala divide porque la vista previa está encogida, y el zoom divide porque
-agranda lo que se ve. Con `completa` el sobrante es negativo y la misma cuenta
-sigue dando bien, así que el arrastre sirve en los dos modos. Si el sobrante
-es cero no hay recorrido y no se mueve nada.
+La escala divide porque la vista previa está encogida. El tope existe para que
+la foto no se pueda perder de vista, y cuando está corrida aparece un botón
+**Volver la foto a su lugar**.
+
+El `translate` va **antes** del `scale` en la lista de transformaciones: el
+navegador aplica la última primero, así que puesto delante corre px de la
+pieza de verdad y el acercamiento no le cambia la medida. Es lo que hace que
+la foto siga al puntero con cualquier zoom.
+
+Los deslizadores de encuadre siguen ahí y siguen significando lo mismo: qué
+parte se ve de una foto que sobresale. El arrastre es otra cosa, y se suman.
 
 ## El arrastre nativo de imágenes
 

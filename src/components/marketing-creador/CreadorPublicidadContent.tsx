@@ -272,31 +272,9 @@ export function CreadorPublicidadContent() {
   const panFoto = useRef<{
     puntero: { x: number; y: number };
     desde: { x: number; y: number };
-    /** Cuanto sobresale la foto de su marco, en px de la pieza: todo el
-        recorrido que tiene el encuadre. Si es 0 no hay nada que correr. */
-    sobra: { x: number; y: number };
-    zoom: number;
+    /** Hasta donde se la deja correr, para que no se pueda perder de vista. */
+    tope: { x: number; y: number };
   } | null>(null);
-
-  /* El tamano real de la foto hace falta para que el arrastre siga al puntero:
-     sin el no se sabe cuanto sobresale. Se precarga al elegirla. */
-  const [fotoNatural, setFotoNatural] = useState<{ ancho: number; alto: number } | null>(null);
-
-  useEffect(() => {
-    if (!pieza.foto) {
-      setFotoNatural(null);
-      return;
-    }
-    let vivo = true;
-    const img = new Image();
-    img.onload = () => {
-      if (vivo) setFotoNatural({ ancho: img.naturalWidth, alto: img.naturalHeight });
-    };
-    img.src = pieza.foto;
-    return () => {
-      vivo = false;
-    };
-  }, [pieza.foto]);
 
   const [subiendo, setSubiendo] = useState<null | "foto" | "logo">(null);
   const [categoriaSubida, setCategoriaSubida] = useState("puerto");
@@ -524,29 +502,19 @@ export function CreadorPublicidadContent() {
       e.preventDefault();
       e.stopPropagation();
       setSeleccion(null);
-      if (!fotoNatural) return;
 
       const marco = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const ancho = marco.width / escala;
       const alto = marco.height / escala;
       if (!ancho || !alto) return;
 
-      // "llenar" agranda la foto hasta cubrir el marco y sobra por un lado;
-      // "completa" la achica hasta entrar y sobra el marco. Es la misma cuenta
-      // con el signo cambiado, asi que el arrastre sirve para los dos.
-      const cubre = pieza.fotoAjuste !== "completa";
-      const f = cubre
-        ? Math.max(ancho / fotoNatural.ancho, alto / fotoNatural.alto)
-        : Math.min(ancho / fotoNatural.ancho, alto / fotoNatural.alto);
-
       panFoto.current = {
         puntero: { x: e.clientX, y: e.clientY },
-        desde: { x: pieza.fotoPosicionX, y: pieza.fotoPosicion },
-        sobra: { x: fotoNatural.ancho * f - ancho, y: fotoNatural.alto * f - alto },
-        zoom: (pieza.fotoZoom || 100) / 100,
+        desde: { x: pieza.fotoDesplazaX ?? 0, y: pieza.fotoDesplazaY ?? 0 },
+        tope: { x: ancho * 0.75, y: alto * 0.75 },
       };
     },
-    [escala, fotoNatural, pieza.fotoAjuste, pieza.fotoPosicion, pieza.fotoPosicionX, pieza.fotoZoom],
+    [escala, pieza.fotoDesplazaX, pieza.fotoDesplazaY],
   );
 
   /* El puntero se sigue en la ventana y no en el elemento: si se mueve rapido,
@@ -555,20 +523,20 @@ export function CreadorPublicidadContent() {
     const alMover = (e: PointerEvent) => {
       const f = panFoto.current;
       if (f) {
-        // El encuadre es un porcentaje del sobrante, asi que para que la foto
-        // siga al puntero hay que convertir los px arrastrados a ese
-        // porcentaje. El zoom divide porque agranda lo que se ve.
+        /* El arrastre corre la foto en px y no en porcentaje del recorte. Con
+           el porcentaje, una foto apaisada en una pieza vertical se movia solo
+           en horizontal: al cubrir el alto justo no le sobraba nada arriba ni
+           abajo, asi que en vertical no habia a donde ir y parecia trabada.
+           En px siempre hay a donde ir; si se pasa del borde se ve el fondo,
+           que es lo mismo que hace cualquier editor. */
         const corrido = (eje: "x" | "y", d: number) => {
-          const sobra = f.sobra[eje];
-          const desde = f.desde[eje];
-          if (!sobra) return desde;
-          const p = desde - ((d / escala / f.zoom) * 100) / sobra;
-          return Math.max(0, Math.min(100, Math.round(p)));
+          const tope = f.tope[eje];
+          return Math.round(Math.max(-tope, Math.min(tope, f.desde[eje] + d / escala)));
         };
         setPieza((p) => ({
           ...p,
-          fotoPosicionX: corrido("x", e.clientX - f.puntero.x),
-          fotoPosicion: corrido("y", e.clientY - f.puntero.y),
+          fotoDesplazaX: corrido("x", e.clientX - f.puntero.x),
+          fotoDesplazaY: corrido("y", e.clientY - f.puntero.y),
         }));
         return;
       }
@@ -1837,6 +1805,17 @@ export function CreadorPublicidadContent() {
                   </p>
                 ) : null}
               </div>
+
+              {(pieza.fotoDesplazaX ?? 0) || (pieza.fotoDesplazaY ?? 0) ? (
+                <button
+                  type="button"
+                  onClick={() => setPieza((p) => ({ ...p, fotoDesplazaX: 0, fotoDesplazaY: 0 }))}
+                  className="inline-flex items-center gap-1.5 self-start rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
+                >
+                  <Icon icon="mdi:image-filter-center-focus" className="h-4 w-4" />
+                  Volver la foto a su lugar
+                </button>
+              ) : null}
 
               <Deslizador
                 id="c-redondeo"

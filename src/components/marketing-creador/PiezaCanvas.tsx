@@ -264,6 +264,23 @@ function BloqueExtra({
   }
 }
 
+/**
+ * Corrimiento y acercamiento de la foto.
+ *
+ * El translate va primero a proposito: en una lista de transformaciones el
+ * navegador aplica la ultima antes, asi que puesto delante corre px de la
+ * pieza de verdad y el acercamiento no le cambia la medida. Es lo que hace
+ * que la foto siga al puntero con cualquier zoom.
+ */
+function transformarFoto(pieza: Pieza): string | undefined {
+  const partes: string[] = [];
+  const x = pieza.fotoDesplazaX ?? 0;
+  const y = pieza.fotoDesplazaY ?? 0;
+  if (x || y) partes.push(`translate(${x}px, ${y}px)`);
+  if (pieza.fotoZoom !== 100) partes.push(`scale(${pieza.fotoZoom / 100})`);
+  return partes.length ? partes.join(" ") : undefined;
+}
+
 /** Fondos cuyo recorte es parte del diseno y no se deben redondear. */
 const SILUETA = ["split", "medallon", "arco"];
 
@@ -342,7 +359,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         // apagar la repeticion, que con contain llenaria el hueco con copias.
         backgroundSize: completa ? "contain" : "cover",
         backgroundRepeat: "no-repeat",
-        transform: pieza.fotoZoom !== 100 ? `scale(${pieza.fotoZoom / 100})` : undefined,
+        transform: transformarFoto(pieza),
       }
     : { background: "#0d1b38" };
 

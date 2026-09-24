@@ -579,6 +579,9 @@ export type Pieza = {
   fotoAjuste: "llenar" | "completa";
   /** Radio de las esquinas de la foto, en px de la pieza (1080 de ancho). */
   fotoRedondeo: number;
+  /** Corrimiento libre de la foto al arrastrarla, en px de la pieza. */
+  fotoDesplazaX: number;
+  fotoDesplazaY: number;
   flechaColor: string;
   /** Posiciones movidas a mano. Vacio = todo como lo pone la plantilla. */
   ajustes: Ajustes;
@@ -639,6 +642,8 @@ export const PIEZA_INICIAL: Pieza = {
   fotoZoom: 100,
   fotoAjuste: "llenar",
   fotoRedondeo: 0,
+  fotoDesplazaX: 0,
+  fotoDesplazaY: 0,
   flechaColor: BLANCO,
   ajustes: {},
 };
