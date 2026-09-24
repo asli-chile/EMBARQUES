@@ -268,3 +268,31 @@ envoltorio es el que posiciona y el hijo pasa a estático. Sin eso, el
 `translateX(-50%)` que centra el logo lo descolocaba apenas se movía. El pie
 además va con z-index por encima: es el dato de contacto y no puede quedar
 tapado por algo que alguien arrastró encima.
+
+## El panel de herramientas
+
+Está dividido en cuatro pestañas, en el orden real de trabajo: **Plantilla**,
+**Contenido**, **Imagen** y **Estilo**. Antes iba todo apilado y había que
+scrollear media pantalla para llegar a la foto.
+
+- **Plantilla**: formato y elección de plantilla.
+- **Contenido**: los campos de texto que declara la plantilla.
+- **Imagen**: banco de fotos, subida y encuadre.
+- **Estilo**: color de la flecha y ajuste manual de posiciones.
+
+### Las plantillas se eligen viéndolas
+
+La grilla dibuja **la pieza de verdad** en miniatura, con el contenido que hay
+cargado en ese momento, no una muestra genérica: así se ve cómo va a quedar el
+texto propio en esa composición. Antes era un desplegable y solo se leía el
+nombre, que con 92 plantillas no dice nada.
+
+Se muestra **una familia por vez** (los chips de arriba). Con las 92 a la vez
+habría 92 lienzos vivos en el DOM, cada uno con sus capas y su foto.
+
+La miniatura se dibuja con `ajustes: {}`: muestra la plantilla limpia, sin los
+movimientos a mano de la pieza en curso, que no tendrían sentido en otra
+composición.
+
+El selector de formato dibuja la silueta de cada proporción, que se entiende
+antes que el texto.

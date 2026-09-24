@@ -233,6 +233,14 @@ export function CreadorPublicidadContent() {
   const [theme] = useNeonTheme();
 
   /* ---- ajuste manual ---- */
+  /* El panel se organiza en pestanas: con todo apilado habia que scrollear
+     media pantalla para llegar a la foto, y el orden de trabajo real es
+     elegir plantilla, escribir, poner imagen y recien ahi afinar el estilo. */
+  const [pestana, setPestana] = useState<"plantilla" | "contenido" | "imagen" | "estilo">(
+    "plantilla",
+  );
+  const [familiaVista, setFamiliaVista] = useState<string>("comercial");
+
   const [ajustando, setAjustando] = useState(false);
   const [seleccion, setSeleccion] = useState<string | null>(null);
   const [guias, setGuias] = useState<Guia[]>([]);
@@ -588,50 +596,6 @@ export function CreadorPublicidadContent() {
               JPG 600 correo
             </button>
           </div>
-
-          <div className="flex w-full flex-wrap items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={alternarAjuste}
-              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold transition ${
-                ajustando
-                  ? "border-dash-neon bg-dash-neon/15 text-dash-fg"
-                  : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/50"
-              }`}
-            >
-              <Icon icon={ajustando ? "mdi:cursor-move" : "mdi:tune-variant"} className="h-4 w-4" />
-              {ajustando ? "Ajustando posiciones" : "Ajustar posiciones"}
-            </button>
-
-            {ajustando && seleccion ? (
-              <button
-                type="button"
-                onClick={() => restablecer(seleccion)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
-              >
-                <Icon icon="mdi:restore" className="h-4 w-4" />
-                Devolver este
-              </button>
-            ) : null}
-
-            {Object.keys(pieza.ajustes).length > 0 ? (
-              <button
-                type="button"
-                onClick={() => restablecer()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
-              >
-                <Icon icon="mdi:backup-restore" className="h-4 w-4" />
-                Devolver todo a la plantilla
-              </button>
-            ) : null}
-          </div>
-
-          {ajustando ? (
-            <p className="max-w-[420px] text-center text-xs text-dash-muted">
-              Arrastrá cualquier elemento. Las líneas marcan cuándo queda alineado al centro o a los
-              márgenes. Las manijas de la derecha cambian el ancho y el tamaño.
-            </p>
-          ) : null}
         </div>
 
         {/* ---------------- Herramientas (lo único que scrollea) ---------------- */}
@@ -639,14 +603,12 @@ export function CreadorPublicidadContent() {
             linea se vuelven incomodos de leer y de completar. */}
         <div className="min-h-0 flex-1 overflow-y-auto border-dash-border p-5 lg:border-l">
           <div className="mx-auto w-full max-w-[860px] space-y-5">
-          <header>
-            <h1 className="flex items-center gap-2.5 text-xl font-bold text-dash-fg">
-              <Icon icon="mdi:image-edit-outline" className="h-6 w-6 text-dash-neon" />
+          <header className="flex items-center justify-between gap-3">
+            <h1 className="flex items-center gap-2 text-base font-bold text-dash-fg">
+              <Icon icon="mdi:image-edit-outline" className="h-5 w-5 text-dash-neon" />
               Creador de publicidad
             </h1>
-            <p className="mt-1 text-sm text-dash-muted">
-              Elegí una plantilla, escribí los textos y descargá la pieza.
-            </p>
+            <span className="text-xs text-dash-muted">{plantilla.nombre}</span>
           </header>
 
           {aviso ? (
@@ -655,58 +617,136 @@ export function CreadorPublicidadContent() {
             </div>
           ) : null}
 
-          {/* ---- Plantilla ----
-               Desplegable y no grilla de botones: con 67 opciones los botones
-               se comian la pantalla y obligaban a scrollear para ver el resto
-               de las herramientas. Los optgroup mantienen la agrupacion. */}
-          <div className={bloque}>
-            <span className={label}>Formato</span>
-            <div className="grid grid-cols-3 gap-2">
-              {FORMATOS.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => set("formato", f.id)}
-                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
-                    (pieza.formato ?? "post") === f.id
-                      ? "border-dash-neon bg-dash-neon/10 text-dash-fg"
-                      : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
-                  }`}
-                >
-                  {f.nombre}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-dash-muted">
-              Las plantillas se adaptan al alto del formato. Si moviste algo a mano, conviene
-              revisarlo al cambiar.
-            </p>
+          {/* ---- Pestañas ---- */}
+          <div className="flex gap-1 rounded-xl border border-dash-border bg-dash-surface/70 p-1">
+            {[
+              { id: "plantilla", nombre: "Plantilla", icono: "mdi:view-dashboard-outline" },
+              { id: "contenido", nombre: "Contenido", icono: "mdi:format-text" },
+              { id: "imagen", nombre: "Imagen", icono: "mdi:image-outline" },
+              { id: "estilo", nombre: "Estilo", icono: "mdi:palette-outline" },
+            ].map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setPestana(t.id as typeof pestana)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-bold transition ${
+                  pestana === t.id
+                    ? "bg-dash-neon/15 text-dash-fg shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--dash-neon)_45%,transparent)]"
+                    : "text-dash-muted hover:bg-dash-control hover:text-dash-fg"
+                }`}
+              >
+                <Icon icon={t.icono} className="h-4 w-4" />
+                {t.nombre}
+              </button>
+            ))}
           </div>
 
-          <div className={bloque}>
-            <label className={label} htmlFor="c-plantilla">
-              Plantilla · {PLANTILLAS.length} disponibles
-            </label>
-            <select
-              id="c-plantilla"
-              className={input}
-              value={pieza.plantilla}
-              onChange={(e) => cambiarPlantilla(e.target.value)}
-            >
-              {FAMILIAS.map((fam) => (
-                <optgroup key={fam.id} label={`${fam.nombre} — ${fam.descripcion}`}>
-                  {PLANTILLAS.filter((p) => p.familia === fam.id).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
+          {/* ---- Pestaña: plantilla ---- */}
+          {pestana === "plantilla" ? (
+            <>
+              <div className={bloque}>
+                <span className={label}>Formato</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {FORMATOS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => set("formato", f.id)}
+                      className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-xs font-semibold transition ${
+                        (pieza.formato ?? "post") === f.id
+                          ? "border-dash-neon bg-dash-neon/10 text-dash-fg"
+                          : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
+                      }`}
+                    >
+                      {/* Silueta del formato: se entiende antes que el texto */}
+                      <span
+                        className="border-2 border-current"
+                        style={{ width: 22, height: Math.round((22 * f.alto) / f.ancho) }}
+                      />
+                      {f.nombre}
+                    </button>
                   ))}
-                </optgroup>
-              ))}
-            </select>
-            <p className="text-xs text-dash-muted">{plantilla.descripcion}</p>
-          </div>
+                </div>
+              </div>
 
-          {/* ---- Textos ---- */}
+              <div className={bloque}>
+                <div className="flex items-center justify-between">
+                  <span className={`${label} mb-0`}>Plantilla</span>
+                  <span className="text-xs text-dash-muted">{PLANTILLAS.length} disponibles</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {FAMILIAS.map((fam) => (
+                    <button
+                      key={fam.id}
+                      type="button"
+                      onClick={() => setFamiliaVista(fam.id)}
+                      title={fam.descripcion}
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                        familiaVista === fam.id
+                          ? "bg-dash-neon/20 text-dash-fg"
+                          : "bg-dash-control text-dash-muted hover:text-dash-fg"
+                      }`}
+                    >
+                      {fam.nombre}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Miniaturas de verdad: se dibuja la misma pieza con el
+                    contenido actual, asi se ve como va a quedar y no solo
+                    un nombre. Se muestra una familia por vez para no tener
+                    92 lienzos vivos a la vez. */}
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
+                  {PLANTILLAS.filter((p) => p.familia === familiaVista).map((p) => {
+                    const e = 150 / fmt.ancho;
+                    const previa: Pieza = {
+                      ...pieza,
+                      plantilla: p.id,
+                      l2Tamano: p.l2TamanoPorDefecto,
+                      flechaColor: p.flechaPorDefecto ?? pieza.flechaColor,
+                      // La miniatura muestra la plantilla limpia, sin los
+                      // movimientos a mano de la pieza en curso.
+                      ajustes: {},
+                    };
+                    const activa = pieza.plantilla === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => cambiarPlantilla(p.id)}
+                        title={p.descripcion}
+                        className={`group flex flex-col gap-1.5 rounded-lg border-2 p-1.5 text-left transition ${
+                          activa
+                            ? "border-dash-neon bg-dash-neon/10"
+                            : "border-transparent hover:border-dash-neon/40"
+                        }`}
+                      >
+                        <span
+                          className="block overflow-hidden rounded bg-black/40"
+                          style={{ width: "100%", height: fmt.alto * e }}
+                        >
+                          <PiezaCanvas pieza={previa} escala={e} />
+                        </span>
+                        <span
+                          className={`truncate text-[11px] font-semibold ${
+                            activa ? "text-dash-fg" : "text-dash-muted"
+                          }`}
+                        >
+                          {p.nombre}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="text-xs text-dash-muted">{plantilla.descripcion}</p>
+              </div>
+            </>
+          ) : null}
+
+          {/* ---- Pestaña: contenido ---- */}
+          {pestana === "contenido" ? (
           <div className={bloque}>
             <span className={label}>Textos</span>
 
@@ -1066,6 +1106,11 @@ export function CreadorPublicidadContent() {
             )}
           </div>
 
+          ) : null}
+
+          {/* ---- Pestaña: estilo ---- */}
+          {pestana === "estilo" ? (
+            <>
           {/* ---- Color de la flecha ---- */}
           <div className={bloque}>
             <span className={label}>Color de la flecha superior</span>
@@ -1092,6 +1137,66 @@ export function CreadorPublicidadContent() {
             </div>
           </div>
 
+          <div className={bloque}>
+            <div className="flex items-center justify-between">
+              <span className={`${label} mb-0`}>Posición de los elementos</span>
+              {Object.keys(pieza.ajustes).length > 0 ? (
+                <span className="text-xs text-dash-neon">
+                  {Object.keys(pieza.ajustes).length} movidos
+                </span>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={alternarAjuste}
+              className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-bold transition ${
+                ajustando
+                  ? "border-dash-neon bg-dash-neon/15 text-dash-fg"
+                  : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/50"
+              }`}
+            >
+              <Icon icon={ajustando ? "mdi:cursor-move" : "mdi:tune-variant"} className="h-5 w-5" />
+              {ajustando ? "Ajustando: arrastrá en la pieza" : "Ajustar posiciones"}
+            </button>
+
+            {ajustando ? (
+              <p className="text-xs text-dash-muted">
+                Arrastrá cualquier elemento sobre la pieza. Las líneas marcan cuándo queda alineado
+                al centro o a los márgenes; las manijas de la derecha cambian el ancho y el tamaño.
+              </p>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              {ajustando && seleccion ? (
+                <button
+                  type="button"
+                  onClick={() => restablecer(seleccion)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
+                >
+                  <Icon icon="mdi:restore" className="h-4 w-4" />
+                  Devolver el seleccionado
+                </button>
+              ) : null}
+
+              {Object.keys(pieza.ajustes).length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => restablecer()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
+                >
+                  <Icon icon="mdi:backup-restore" className="h-4 w-4" />
+                  Devolver todo a la plantilla
+                </button>
+              ) : null}
+            </div>
+          </div>
+            </>
+          ) : null}
+
+          {/* ---- Pestaña: imagen ---- */}
+          {pestana === "imagen" ? (
+            <>
           {/* ---- Logo del evento o del cliente ---- */}
           {usaCampo(pieza.plantilla, "logo2") ? (
             <div className={bloque}>
@@ -1297,6 +1402,8 @@ export function CreadorPublicidadContent() {
               </p>
             </div>
           )}
+            </>
+          ) : null}
           </div>
         </div>
       </main>
