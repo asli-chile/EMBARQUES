@@ -40,6 +40,7 @@ export type CampoId =
   | "evento";
 
 export type Familia =
+  | "libre"
   | "comercial"
   | "informativa"
   | "datos"
@@ -49,6 +50,7 @@ export type Familia =
   | "eventos";
 
 export const FAMILIAS: { id: Familia; nombre: string; descripcion: string }[] = [
+  { id: "libre", nombre: "En blanco", descripcion: "Solo la identidad: vos agregás los bloques" },
   { id: "comercial", nombre: "Comercial", descripcion: "Captación y venta" },
   { id: "informativa", nombre: "Informativa", descripcion: "Explicar y enumerar" },
   { id: "datos", nombre: "Datos y gráficos", descripcion: "Cifras, barras y tablas" },
@@ -106,6 +108,8 @@ export type Maqueta = {
   titularPlano?: boolean;
   /** Filete rojo bajo el titular, para las que no llevan cinta. */
   filete?: boolean;
+  /** Arranca sin el pie: la hoja en blanco lo agrega solo si se quiere. */
+  sinPie?: boolean;
 
   /** Ubicacion suelta del logo invitado, cuando no va en dupla. */
   logo2Top?: number;
@@ -219,6 +223,13 @@ const mk = ({ id, familia, nombre, descripcion, campos, l2 = 110, maqueta, flech
 });
 
 export const PLANTILLAS: Plantilla[] = [
+  /* =============== En blanco ===============
+     Sin foto, sin pie y sin contenido: quedan la media flecha, la cuna y el
+     logo. Todo lo demas se agrega desde "Elementos". */
+  mk({ id: "blanco", familia: "libre", nombre: "Hoja en blanco", descripcion: "Solo la identidad. Agregá los bloques que necesites.", campos: [], maqueta: { fondo: "solido", logoTop: 90, logoAncho: 320, bloqueTop: 300, sinPie: true } }),
+  mk({ id: "blanco-claro", familia: "libre", nombre: "Hoja en blanco · clara", descripcion: "La hoja en blanco en tono crema.", campos: [], maqueta: { fondo: "claro", logoTop: 90, logoAncho: 320, bloqueTop: 300, sinPie: true }, flecha: AZUL }),
+  mk({ id: "blanco-foto", familia: "libre", nombre: "Hoja en blanco · con foto", descripcion: "Fondo de foto y nada más. Los bloques se agregan encima.", campos: ["foto"], maqueta: { fondo: "foto", logoTop: 90, logoAncho: 320, bloqueTop: 300, sinPie: true, velos: ["full"] } }),
+
   /* =============== Comercial ===============
      Doce composiciones que no se pisan entre si. Las cuatro primeras son las
      clasicas de la marca; el resto usa un recurso distinto cada una (caja
@@ -387,6 +398,123 @@ export const ALINEACIONES: { id: Alineacion; nombre: string; icono: string }[] =
   { id: "der", nombre: "Derecha", icono: "mdi:format-align-right" },
 ];
 
+/* ------------------------------------------------------------------ */
+/* Elementos sueltos                                                    */
+/* ------------------------------------------------------------------ */
+/* La hoja en blanco no trae contenido: se le van agregando bloques. Cada
+   uno lleva id propio, asi hereda el arrastre y el marcador de edicion que
+   ya funcionan para los elementos de plantilla. */
+
+export type TipoExtra =
+  | "titulo"
+  | "subtitulo"
+  | "parrafo"
+  | "cinta"
+  | "cita"
+  | "lista"
+  | "checklist"
+  | "pasos"
+  | "metricas"
+  | "barras"
+  | "tabla"
+  | "tarjetas"
+  | "hitos"
+  | "dato"
+  | "imagen"
+  | "pie";
+
+/** Como se edita cada tipo. El formulario se arma con esto. */
+export type FormaExtra = "simple" | "doble" | "lineas" | "pares" | "imagen" | "vacio";
+
+export const EXTRAS: {
+  tipo: TipoExtra;
+  nombre: string;
+  icono: string;
+  forma: FormaExtra;
+  /** Pista de formato para los que llevan dos partes por linea. */
+  ayuda?: string;
+}[] = [
+  { tipo: "titulo", nombre: "Título", icono: "mdi:format-header-1", forma: "simple" },
+  { tipo: "subtitulo", nombre: "Subtítulo", icono: "mdi:format-header-3", forma: "simple" },
+  { tipo: "parrafo", nombre: "Párrafo", icono: "mdi:text", forma: "simple" },
+  { tipo: "cinta", nombre: "Cinta roja", icono: "mdi:label", forma: "simple" },
+  { tipo: "cita", nombre: "Cita", icono: "mdi:format-quote-close", forma: "doble", ayuda: "Frase y firma" },
+  { tipo: "dato", nombre: "Cifra gigante", icono: "mdi:numeric", forma: "doble", ayuda: "Cifra y qué significa" },
+  { tipo: "lista", nombre: "Lista", icono: "mdi:format-list-bulleted", forma: "lineas" },
+  { tipo: "checklist", nombre: "Checklist", icono: "mdi:format-list-checks", forma: "lineas" },
+  { tipo: "pasos", nombre: "Pasos", icono: "mdi:format-list-numbered", forma: "lineas" },
+  { tipo: "metricas", nombre: "Cifras en fila", icono: "mdi:counter", forma: "pares", ayuda: "número | etiqueta" },
+  { tipo: "barras", nombre: "Barras", icono: "mdi:chart-bar", forma: "pares", ayuda: "etiqueta | 0 a 100" },
+  { tipo: "tabla", nombre: "Tabla", icono: "mdi:table", forma: "pares", ayuda: "concepto | valor" },
+  { tipo: "tarjetas", nombre: "Tarjetas", icono: "mdi:card-text-outline", forma: "pares", ayuda: "título | texto" },
+  { tipo: "hitos", nombre: "Línea de tiempo", icono: "mdi:timeline-outline", forma: "pares", ayuda: "fecha | qué pasó" },
+  { tipo: "imagen", nombre: "Imagen", icono: "mdi:image-outline", forma: "imagen" },
+  { tipo: "pie", nombre: "Pie con dirección", icono: "mdi:card-account-details-outline", forma: "vacio" },
+];
+
+export function getExtra(tipo: TipoExtra) {
+  return EXTRAS.find((e) => e.tipo === tipo) ?? EXTRAS[0];
+}
+
+export type Extra = {
+  /** Unico y estable: es la clave del ajuste de posicion. */
+  id: string;
+  tipo: TipoExtra;
+  /** Texto de una linea, o primera parte de los de dos. */
+  texto: string;
+  /** Segunda parte: firma de la cita, etiqueta de la cifra. */
+  texto2: string;
+  /** Contenido de los de varias lineas. */
+  lineas: string[];
+  /** URL de la foto, para el tipo imagen. */
+  url: string;
+  /** Tamano en px, para titulo y cifra. */
+  tam: number;
+};
+
+export function nuevoExtra(tipo: TipoExtra): Extra {
+  const base: Extra = {
+    id: `x${Math.random().toString(36).slice(2, 8)}`,
+    tipo,
+    texto: "",
+    texto2: "",
+    lineas: [],
+    url: "",
+    tam: 110,
+  };
+  switch (tipo) {
+    case "titulo":
+      return { ...base, texto: "Título de la pieza", tam: 116 };
+    case "subtitulo":
+      return { ...base, texto: "Subtítulo", tam: 58 };
+    case "parrafo":
+      return { ...base, texto: "Un párrafo de apoyo. Se puede destacar con <b>negrita</b>." };
+    case "cinta":
+      return { ...base, texto: "Llamado a la acción" };
+    case "cita":
+      return { ...base, texto: "La frase que se quiere destacar.", texto2: "Equipo ASLI" };
+    case "dato":
+      return { ...base, texto: "90%", texto2: "de lo que se mueve por mar", tam: 250 };
+    case "lista":
+    case "checklist":
+      return { ...base, lineas: ["Primer punto", "Segundo punto", "Tercer punto"] };
+    case "pasos":
+      return { ...base, lineas: ["Primer paso", "Segundo paso", "Tercer paso"] };
+    case "metricas":
+      return { ...base, lineas: ["15+ | Años", "150+ | Clientes", "30+ | Países"] };
+    case "barras":
+      return { ...base, lineas: ["Marítimo | 72", "Terrestre | 46", "Aéreo | 28"] };
+    case "tabla":
+      return { ...base, lineas: ["Concepto | Valor", "Otro concepto | Otro valor"] };
+    case "tarjetas":
+      return { ...base, lineas: ["Título | Texto corto", "Título | Texto corto"] };
+    case "hitos":
+      return { ...base, lineas: ["2009 | Lo que pasó", "2026 | Lo que pasó"] };
+    default:
+      return base;
+  }
+}
+
 export type Ajuste = {
   x: number;
   y: number;
@@ -405,6 +533,10 @@ export type Pieza = {
   formato: FormatoId;
   /** Alineacion elegida a mano. null = la que trae la plantilla. */
   alineacion: Alineacion | null;
+  /** Bloques agregados a mano, en orden de lectura. */
+  extras: Extra[];
+  /** El pie se puede apagar: la hoja en blanco arranca sin el. */
+  mostrarPie: boolean;
   eyebrow: string;
   l1: string;
   lm: string;
@@ -452,6 +584,8 @@ export const PIEZA_INICIAL: Pieza = {
   plantilla: "panel-inferior",
   formato: "post",
   alineacion: null,
+  extras: [],
+  mostrarPie: true,
   eyebrow: "Exportación marítima",
   l1: "Llevamos tu carga",
   lm: "",

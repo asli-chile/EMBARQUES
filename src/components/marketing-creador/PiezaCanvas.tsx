@@ -2,7 +2,15 @@
 
 import { forwardRef, type ReactNode } from "react";
 import { withBase } from "@/lib/basePath";
-import { getFormato, getPlantilla, partir, type Ajustes, type CampoId, type Pieza } from "./plantillas";
+import {
+  getFormato,
+  getPlantilla,
+  partir,
+  type Ajustes,
+  type CampoId,
+  type Extra,
+  type Pieza,
+} from "./plantillas";
 
 /**
  * La pieza tal cual se exporta: 1080x1350 px reales.
@@ -72,6 +80,171 @@ function Dona({ valor, texto }: { valor: number; texto: string }) {
       {texto ? <div className="dato-etiqueta">{texto}</div> : null}
     </div>
   );
+}
+
+/**
+ * Dibuja un bloque agregado a mano.
+ *
+ * Reutiliza las mismas clases que los elementos de plantilla: un parrafo
+ * agregado y la bajada de una plantilla tienen que verse igual, si no la hoja
+ * en blanco pareceria de otra marca.
+ */
+function BloqueExtra({ extra, alineacion }: { extra: Extra; alineacion: string }) {
+  const limpio = extra.lineas.filter((x) => x.trim());
+  const pares = limpio.map(partir);
+
+  switch (extra.tipo) {
+    case "titulo":
+      return (
+        <h1>
+          <span className="l2" style={{ fontSize: `${extra.tam}px` }}>
+            {extra.texto}
+          </span>
+        </h1>
+      );
+    case "subtitulo":
+      return (
+        <h1>
+          <span className="l1" style={{ fontSize: `${extra.tam}px` }}>
+            {extra.texto}
+          </span>
+        </h1>
+      );
+    case "parrafo":
+      return <p className="support" dangerouslySetInnerHTML={{ __html: bajadaHtml(extra.texto) }} />;
+    case "cinta":
+      return <div className="ribbon">{extra.texto}</div>;
+    case "cita":
+      return (
+        <>
+          <blockquote className="cita">{extra.texto}</blockquote>
+          {extra.texto2 ? <div className="firma">— {extra.texto2}</div> : null}
+        </>
+      );
+    case "dato":
+      return (
+        <div className="dato-bloque">
+          <div className="dato" style={{ fontSize: `${extra.tam}px` }}>
+            {extra.texto}
+          </div>
+          {extra.texto2 ? <div className="dato-etiqueta">{extra.texto2}</div> : null}
+        </div>
+      );
+    case "lista":
+      return (
+        <ul className="list">
+          {limpio.map((t, i) => (
+            <li key={i}>{t}</li>
+          ))}
+        </ul>
+      );
+    case "checklist":
+      return (
+        <ul className="checklist">
+          {limpio.map((t, i) => (
+            <li key={i}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 12.5 L9.5 18 L20 6"
+                  fill="none"
+                  stroke="#C8102E"
+                  strokeWidth="3.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    case "pasos":
+      return (
+        <ol className="pasos">
+          {limpio.map((t, i) => (
+            <li key={i}>{t}</li>
+          ))}
+        </ol>
+      );
+    case "metricas":
+      return (
+        <div className="metricas">
+          {pares.map(([n, et], i) => (
+            <div key={i}>
+              <div className="m-num">{n}</div>
+              <div className="m-et">{et}</div>
+            </div>
+          ))}
+        </div>
+      );
+    case "barras":
+      return (
+        <div className="barras">
+          {pares.map(([et, v], i) => {
+            const n = Math.max(0, Math.min(100, parseInt(v, 10) || 0));
+            return (
+              <div className="barra" key={i}>
+                <div className="b-cab">
+                  <span>{et}</span>
+                  <span className="b-val">{n}%</span>
+                </div>
+                <div className="b-riel">
+                  <div className="b-relleno" style={{ width: `${n}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    case "tabla":
+      return (
+        <div className="tabla">
+          {pares.map(([a2, b2], i) => (
+            <div className="fila" key={i}>
+              <span>{a2}</span>
+              <span className="valor">{b2}</span>
+            </div>
+          ))}
+        </div>
+      );
+    case "tarjetas":
+      return (
+        <div className={`tarjetas${pares.length >= 4 ? " cuatro" : ""}`}>
+          {pares.map(([t, d], i) => (
+            <div className="tarjeta" key={i}>
+              <h3>{t}</h3>
+              {d ? <p>{d}</p> : null}
+            </div>
+          ))}
+        </div>
+      );
+    case "hitos":
+      return (
+        <div className="hitos">
+          {pares.map(([f, t], i) => (
+            <div className="hito" key={i}>
+              <div className="h-fecha">{f}</div>
+              <div className="h-texto">{t}</div>
+            </div>
+          ))}
+        </div>
+      );
+    case "imagen":
+      return extra.url ? (
+        <img
+          className="imagen-bloque"
+          src={extra.url}
+          alt=""
+          style={{ marginLeft: alineacion === "izq" ? 0 : undefined }}
+        />
+      ) : (
+        <div className="imagen-vacia">Elegí una foto</div>
+      );
+    case "pie":
+      return <Pie />;
+    default:
+      return null;
+  }
 }
 
 export type TipoArrastre = "mover" | "ancho" | "esquina";
@@ -523,6 +696,12 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
   if (!maqueta.soporteAbajo) sumar("support", bajada);
 
+  /* Los bloques agregados van al final, en su orden. Al llevar id propio
+     entran al mismo sistema de posicionado, arrastre y marcador. */
+  for (const extra of pieza.extras ?? []) {
+    sumar(extra.id, <BloqueExtra extra={extra} alineacion={alineacion} />);
+  }
+
   /* ---------- Envoltorio de cada elemento ---------- */
   const envolver = ({ id, nodo }: { id: string; nodo: ReactNode }) => {
     const ajuste = ajustes[id];
@@ -731,7 +910,11 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
       {maqueta.soporteAbajo && bajada ? <div className="support-low">{bajada}</div> : null}
 
-      {envolverFijo("pie", <Pie />, { left: 0, right: 0, bottom: "44px" })}
+      {/* El pie es opcional: la hoja en blanco arranca sin el y se agrega
+          como bloque si se quiere. */}
+      {(pieza.mostrarPie ?? true) && !maqueta.sinPie
+        ? envolverFijo("pie", <Pie />, { left: 0, right: 0, bottom: "44px" })
+        : null}
     </div>
   );
 });

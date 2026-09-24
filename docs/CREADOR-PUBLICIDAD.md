@@ -362,3 +362,37 @@ Detalles que importan:
   o `lista`, según cuál use la plantilla en curso.
 - Igual que el editor, **no se pasa durante la exportación**, así que no puede
   colarse en la imagen.
+
+## Hoja en blanco
+
+Familia **En blanco**, con tres variantes: azul, crema y con foto de fondo.
+Quedan solo la media flecha, la cuña y el logo; sin foto de contenido, sin pie
+y sin textos. Todo lo demás se agrega desde **Elementos**, al final de la
+pestaña Contenido.
+
+### Los bloques agregados son elementos como cualquier otro
+
+Cada bloque lleva un id propio y entra al mismo `contenidos` que los elementos
+de plantilla. Eso no es un detalle de implementación: es lo que hace que
+hereden **gratis** el apilado, el arrastre con guías, el marcador de edición y
+la exportación. No hay un segundo sistema que mantener.
+
+Tipos disponibles: título, subtítulo, párrafo, cinta, cita, cifra gigante,
+lista, checklist, pasos, cifras en fila, barras, tabla, tarjetas, línea de
+tiempo, imagen y pie con dirección.
+
+Cada tipo declara su **forma** de edición (`simple`, `doble`, `lineas`,
+`pares`, `imagen`, `vacio`) y el formulario se arma con eso: no hay un editor
+escrito a mano por tipo.
+
+### Detalles que importan
+
+- Los bloques **reutilizan las clases de los elementos de plantilla**. Un
+  párrafo agregado y la bajada de una plantilla se ven igual; si no, la hoja en
+  blanco parecería de otra marca.
+- Al agregar un bloque se marca en la vista previa al toque. Con varios del
+  mismo tipo, si no, no se sabe cuál se acaba de agregar.
+- Al borrar un bloque **se borra también su posición**. Si quedara, un bloque
+  nuevo podría heredar las coordenadas de uno borrado.
+- El pie es opcional en cualquier plantilla, con un interruptor en Estilo. Las
+  hojas en blanco arrancan sin él.

@@ -11,14 +11,19 @@ import {
   COLORES_FLECHA,
   FAMILIAS,
   ALINEACIONES,
+  EXTRAS,
   FORMATOS,
+  getExtra,
+  nuevoExtra,
   getFormato,
   PIEZA_INICIAL,
   PLANTILLAS,
   getPlantilla,
   usaCampo,
+  type Extra,
   type FotoBanco,
   type Pieza,
+  type TipoExtra,
   type PlantillaId,
 } from "./plantillas";
 import "@/styles/marketing-fuentes.css";
@@ -534,6 +539,43 @@ export function CreadorPublicidadContent() {
     onBlur: () => setCampoActivo((actual) => (actual === id ? null : actual)),
   });
 
+  /* ---- bloques agregados a mano ---- */
+  const agregarExtra = useCallback((tipo: TipoExtra) => {
+    const extra = nuevoExtra(tipo);
+    setPieza((p) => ({ ...p, extras: [...p.extras, extra] }));
+    // Se marca al toque: sin esto no se sabe cual de los bloques se acaba
+    // de agregar cuando ya hay varios del mismo tipo.
+    setCampoActivo(extra.id);
+  }, []);
+
+  const cambiarExtra = useCallback((id: string, campos: Partial<Extra>) => {
+    setPieza((p) => ({
+      ...p,
+      extras: p.extras.map((e) => (e.id === id ? { ...e, ...campos } : e)),
+    }));
+  }, []);
+
+  const borrarExtra = useCallback((id: string) => {
+    setPieza((p) => {
+      // Se limpia tambien su posicion: si no, un bloque nuevo podria heredar
+      // las coordenadas de uno borrado que tuviera el mismo id.
+      const ajustes = { ...p.ajustes };
+      delete ajustes[id];
+      return { ...p, extras: p.extras.filter((e) => e.id !== id), ajustes };
+    });
+  }, []);
+
+  const moverExtra = useCallback((id: string, dir: -1 | 1) => {
+    setPieza((p) => {
+      const i = p.extras.findIndex((e) => e.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= p.extras.length) return p;
+      const extras = [...p.extras];
+      [extras[i], extras[j]] = [extras[j], extras[i]];
+      return { ...p, extras };
+    });
+  }, []);
+
   const porLineas = (
     campo: "lista" | "pasos" | "colA" | "colB" | "tarjetas" | "barras" | "metricas" | "hitos" | "tabla",
   ) => ({
@@ -766,6 +808,7 @@ export function CreadorPublicidadContent() {
 
           {/* ---- Pestaña: contenido ---- */}
           {pestana === "contenido" ? (
+            <>
           <div className={bloque}>
             <span className={label}>Textos</span>
 
@@ -1190,6 +1233,165 @@ export function CreadorPublicidadContent() {
             )}
           </div>
 
+
+          <div className={bloque}>
+            <div className="flex items-center justify-between">
+              <span className={`${label} mb-0`}>Elementos</span>
+              {pieza.extras.length > 0 ? (
+                <span className="text-xs text-dash-muted">{pieza.extras.length} agregados</span>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-1.5">
+              {EXTRAS.map((e) => (
+                <button
+                  key={e.tipo}
+                  type="button"
+                  onClick={() => agregarExtra(e.tipo)}
+                  className="flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-2 py-2 text-[11px] font-semibold text-dash-muted transition hover:border-dash-neon/50 hover:text-dash-fg"
+                >
+                  <Icon icon={e.icono} className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{e.nombre}</span>
+                </button>
+              ))}
+            </div>
+
+            {pieza.extras.map((ex, i) => {
+              const def = getExtra(ex.tipo);
+              return (
+                <div key={ex.id} className="rounded-lg border border-dash-border bg-dash-control/60 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-dash-fg">
+                      <Icon icon={def.icono} className="h-4 w-4 text-dash-neon" />
+                      {def.nombre}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moverExtra(ex.id, -1)}
+                        disabled={i === 0}
+                        title="Subir"
+                        className="rounded p-1 text-dash-muted transition hover:text-dash-fg disabled:opacity-30"
+                      >
+                        <Icon icon="mdi:chevron-up" className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moverExtra(ex.id, 1)}
+                        disabled={i === pieza.extras.length - 1}
+                        title="Bajar"
+                        className="rounded p-1 text-dash-muted transition hover:text-dash-fg disabled:opacity-30"
+                      >
+                        <Icon icon="mdi:chevron-down" className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => borrarExtra(ex.id)}
+                        title="Quitar"
+                        className="rounded p-1 text-dash-muted transition hover:text-[#ff6b8a]"
+                      >
+                        <Icon icon="mdi:trash-can-outline" className="h-4 w-4" />
+                      </button>
+                    </span>
+                  </div>
+
+                  {def.forma === "simple" || def.forma === "doble" ? (
+                    <input
+                      className={input}
+                      value={ex.texto}
+                      onChange={(e) => cambiarExtra(ex.id, { texto: e.target.value })}
+                      {...foco(ex.id)}
+                    />
+                  ) : null}
+
+                  {def.forma === "doble" ? (
+                    <input
+                      className={`${input} mt-2`}
+                      value={ex.texto2}
+                      placeholder={def.ayuda}
+                      onChange={(e) => cambiarExtra(ex.id, { texto2: e.target.value })}
+                      {...foco(ex.id)}
+                    />
+                  ) : null}
+
+                  {def.forma === "lineas" || def.forma === "pares" ? (
+                    <textarea
+                      className={`${input} min-h-[90px] resize-y`}
+                      value={ex.lineas.join("\n")}
+                      onChange={(e) => cambiarExtra(ex.id, { lineas: e.target.value.split("\n") })}
+                      {...foco(ex.id)}
+                    />
+                  ) : null}
+
+                  {def.forma === "imagen" ? (
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {banco
+                        .filter((f) => f.estado !== "vetada")
+                        .slice(0, 18)
+                        .map((f) => {
+                          const url = `${BUCKET_BASE}/fotos/${f.archivo}`;
+                          return (
+                            <button
+                              key={f.archivo}
+                              type="button"
+                              onClick={() => cambiarExtra(ex.id, { url })}
+                              className={`aspect-square overflow-hidden rounded border-2 transition ${
+                                ex.url === url ? "border-dash-neon" : "border-transparent hover:border-white/30"
+                              }`}
+                            >
+                              <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                            </button>
+                          );
+                        })}
+                    </div>
+                  ) : null}
+
+                  {def.ayuda && def.forma === "pares" ? (
+                    <p className="mt-1 text-[11px] text-dash-muted">Una por línea: {def.ayuda}</p>
+                  ) : null}
+
+                  {def.forma === "simple" && (ex.tipo === "titulo" || ex.tipo === "subtitulo") ? (
+                    <div className="mt-2">
+                      <Deslizador
+                        id={`tam-${ex.id}`}
+                        titulo="Tamaño"
+                        valor={ex.tam}
+                        min={30}
+                        max={180}
+                        paso={2}
+                        sufijo="px"
+                        foco={foco(ex.id)}
+                        onChange={(v) => cambiarExtra(ex.id, { tam: v })}
+                      />
+                    </div>
+                  ) : null}
+
+                  {ex.tipo === "dato" ? (
+                    <div className="mt-2">
+                      <Deslizador
+                        id={`tam-${ex.id}`}
+                        titulo="Tamaño de la cifra"
+                        valor={ex.tam}
+                        min={80}
+                        max={320}
+                        paso={4}
+                        sufijo="px"
+                        foco={foco(ex.id)}
+                        onChange={(v) => cambiarExtra(ex.id, { tam: v })}
+                      />
+                    </div>
+                  ) : null}
+
+                  {def.forma === "vacio" ? (
+                    <p className="text-xs text-dash-muted">
+                      Sin contenido que editar: son los datos de contacto de ASLI.
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+            </>
           ) : null}
 
           {/* ---- Pestaña: estilo ---- */}
@@ -1219,6 +1421,21 @@ export function CreadorPublicidadContent() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className={bloque}>
+            <label className="flex cursor-pointer items-center justify-between gap-3">
+              <span className={`${label} mb-0`}>Mostrar el pie con la dirección</span>
+              <input
+                type="checkbox"
+                checked={pieza.mostrarPie ?? true}
+                onChange={(e) => set("mostrarPie", e.target.checked)}
+                className="h-4 w-4 accent-[#C8102E]"
+              />
+            </label>
+            <p className="text-xs text-dash-muted">
+              Las hojas en blanco arrancan sin pie. Se puede agregar como bloque desde Contenido.
+            </p>
           </div>
 
           <div className={bloque}>
