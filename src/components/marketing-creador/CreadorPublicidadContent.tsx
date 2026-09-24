@@ -10,6 +10,8 @@ import {
   CATEGORIAS,
   COLORES_FLECHA,
   FAMILIAS,
+  FORMATOS,
+  getFormato,
   PIEZA_INICIAL,
   PLANTILLAS,
   getPlantilla,
@@ -101,11 +103,13 @@ function aJpegCorreo(pngDataUrl: string): Promise<string> {
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = 600;
-      canvas.height = 750;
+      // El alto sale de la proporcion real de la pieza: con formatos distintos
+      // un alto fijo de 750 deformaba la imagen.
+      canvas.height = Math.round((600 * img.naturalHeight) / img.naturalWidth);
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject(new Error("sin contexto 2d"));
       ctx.imageSmoothingQuality = "high";
-      ctx.drawImage(img, 0, 0, 600, 750);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL("image/jpeg", 0.82));
     };
     img.onerror = () => reject(new Error("no se pudo leer el PNG"));
@@ -247,6 +251,8 @@ export function CreadorPublicidadContent() {
   const colPrevia = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(0.38);
   const plantilla = getPlantilla(pieza.plantilla);
+  const fmt = getFormato(pieza.formato ?? "post");
+  const dims = { ancho: fmt.ancho, alto: fmt.alto };
   const usaFoto = plantilla.campos.includes("foto");
 
   /* ---- la vista previa se ajusta al hueco disponible ----
@@ -263,10 +269,10 @@ export function CreadorPublicidadContent() {
       if (width < 80) return;
       const anchoUtil = width - 48; // padding lateral
       const anchoPantalla = window.matchMedia("(min-width: 1024px)").matches;
-      const altoUtil = height - 116; // botones de descarga y separacion
+      const altoUtil = height - 150; // botones de descarga y separacion
       const s = anchoPantalla
-        ? Math.min(anchoUtil / 1080, altoUtil / 1350)
-        : anchoUtil / 1080;
+        ? Math.min(anchoUtil / fmt.ancho, altoUtil / fmt.alto)
+        : anchoUtil / fmt.ancho;
       setEscala(Math.max(0.22, Math.min(0.8, s)));
     };
 
@@ -274,7 +280,7 @@ export function CreadorPublicidadContent() {
     const ro = new ResizeObserver(medir);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [fmt.ancho, fmt.alto]);
 
   /* ---- banco de imágenes ---- */
   useEffect(() => {
@@ -432,7 +438,7 @@ export function CreadorPublicidadContent() {
     const alMover = (e: PointerEvent) => {
       const a = arrastre.current;
       if (!a) return;
-      const r = mover(a.arrastre, a.inicio, { x: e.clientX, y: e.clientY }, escala);
+      const r = mover(a.arrastre, a.inicio, { x: e.clientX, y: e.clientY }, escala, dims);
       setGuias(r.guias);
       setPieza((p) => ({ ...p, ajustes: { ...p.ajustes, [a.arrastre.id]: r.ajuste } }));
     };
@@ -449,7 +455,7 @@ export function CreadorPublicidadContent() {
       window.removeEventListener("pointerup", alSoltar);
       window.removeEventListener("pointercancel", alSoltar);
     };
-  }, [escala]);
+  }, [dims.alto, dims.ancho, escala]);
 
   /* ---- exportar ---- */
   const exportar = useCallback(
@@ -468,8 +474,8 @@ export function CreadorPublicidadContent() {
         await new Promise((r) => requestAnimationFrame(() => r(null)));
 
         const opciones = {
-          width: 1080,
-          height: 1350,
+          width: fmt.ancho,
+          height: fmt.alto,
           pixelRatio: 1,
           cacheBust: true,
           fontEmbedCSS,
@@ -530,7 +536,7 @@ export function CreadorPublicidadContent() {
         >
           <div
             className="relative overflow-hidden rounded-xl border border-dash-border bg-dash-surface shadow-2xl"
-            style={{ width: 1080 * escala, height: 1350 * escala }}
+            style={{ width: fmt.ancho * escala, height: fmt.alto * escala }}
           >
             <PiezaCanvas
               ref={canvasRef}
@@ -567,7 +573,7 @@ export function CreadorPublicidadContent() {
                 icon={exportando === "png" ? "mdi:loading" : "mdi:download"}
                 className={`h-5 w-5 ${exportando === "png" ? "animate-spin" : ""}`}
               />
-              PNG 1080×1350
+              PNG {fmt.ancho}×{fmt.alto}
             </button>
             <button
               type="button"
@@ -653,6 +659,30 @@ export function CreadorPublicidadContent() {
                Desplegable y no grilla de botones: con 67 opciones los botones
                se comian la pantalla y obligaban a scrollear para ver el resto
                de las herramientas. Los optgroup mantienen la agrupacion. */}
+          <div className={bloque}>
+            <span className={label}>Formato</span>
+            <div className="grid grid-cols-3 gap-2">
+              {FORMATOS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => set("formato", f.id)}
+                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
+                    (pieza.formato ?? "post") === f.id
+                      ? "border-dash-neon bg-dash-neon/10 text-dash-fg"
+                      : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
+                  }`}
+                >
+                  {f.nombre}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-dash-muted">
+              Las plantillas se adaptan al alto del formato. Si moviste algo a mano, conviene
+              revisarlo al cambiar.
+            </p>
+          </div>
+
           <div className={bloque}>
             <label className={label} htmlFor="c-plantilla">
               Plantilla · {PLANTILLAS.length} disponibles

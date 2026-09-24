@@ -2,7 +2,7 @@
 
 import { forwardRef, type ReactNode } from "react";
 import { withBase } from "@/lib/basePath";
-import { getPlantilla, partir, type Ajustes, type CampoId, type Pieza } from "./plantillas";
+import { getFormato, getPlantilla, partir, type Ajustes, type CampoId, type Pieza } from "./plantillas";
 
 /**
  * La pieza tal cual se exporta: 1080x1350 px reales.
@@ -97,6 +97,14 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   const usa = (c: CampoId) => campos.includes(c);
   const claro = maqueta.fondo === "claro" || maqueta.fondo === "marco";
   const ajustes: Ajustes = pieza.ajustes ?? {};
+
+  /* Las maquetas estan escritas para 1080x1350. En los otros formatos toda
+     coordenada vertical se multiplica por este factor, asi la composicion se
+     mantiene proporcional en vez de amontonarse arriba. El CSS hace lo mismo
+     con --k para las bandas y los velos. */
+  const fmt = getFormato(pieza.formato ?? "post");
+  const k = fmt.alto / 1350;
+  const v = (n: number) => Math.round(n * k);
 
   /* ---------- Foto ---------- */
   // El acercamiento va por transform y no por background-size: así el encuadre
@@ -193,22 +201,22 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   if (maqueta.panelTop !== undefined) {
     panel = (
       <>
-        <div className="panel" style={{ top: `${maqueta.panelTop}px` }} />
+        <div className="panel" style={{ top: `${v(maqueta.panelTop)}px` }} />
         <div
           className="stripes"
-          style={{ top: `${maqueta.panelTop}px`, clipPath: "polygon(0 16%, 100% 0, 100% 100%, 0 100%)" }}
+          style={{ top: `${v(maqueta.panelTop)}px`, clipPath: "polygon(0 16%, 100% 0, 100% 100%, 0 100%)" }}
         />
       </>
     );
   } else if (maqueta.panelArriba !== undefined) {
     panel = (
       <>
-        <div className="panel up" style={{ top: 0, height: `${maqueta.panelArriba}px`, bottom: "auto" }} />
+        <div className="panel up" style={{ top: 0, height: `${v(maqueta.panelArriba)}px`, bottom: "auto" }} />
         <div
           className="stripes"
           style={{
             top: 0,
-            height: `${maqueta.panelArriba}px`,
+            height: `${v(maqueta.panelArriba)}px`,
             bottom: "auto",
             clipPath: "polygon(0 0, 100% 0, 100% 86%, 0 100%)",
           }}
@@ -219,10 +227,21 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
   /* ---------- Bloque ---------- */
   const estiloBloque: React.CSSProperties = {};
-  if (maqueta.bloqueTop !== undefined) estiloBloque.top = `${maqueta.bloqueTop}px`;
-  if (maqueta.bloqueBottom !== undefined) estiloBloque.bottom = `${maqueta.bloqueBottom}px`;
+  if (maqueta.bloqueTop !== undefined) estiloBloque.top = `${v(maqueta.bloqueTop)}px`;
+  if (maqueta.bloqueBottom !== undefined) estiloBloque.bottom = `${v(maqueta.bloqueBottom)}px`;
   if (maqueta.bloqueIzq !== undefined) estiloBloque.left = `${maqueta.bloqueIzq}px`;
   if (maqueta.bloqueDer !== undefined) estiloBloque.right = `${maqueta.bloqueDer}px`;
+
+  /* En un formato mas bajo que 4:5 las posiciones se comprimen pero el texto
+     no, asi que el bloque terminaba montandose sobre el pie. Se achica en la
+     misma proporcion. Nunca se agranda: en historia sobra alto, y agrandar la
+     letra solo la haria desproporcionada. */
+  const kt = Math.min(1, k);
+  if (kt < 1) {
+    estiloBloque.transform = `scale(${kt})`;
+    estiloBloque.transformOrigin =
+      maqueta.bloqueBottom !== undefined ? "bottom center" : "top center";
+  }
 
   const limpio = (xs: string[]) => xs.filter((x) => x.trim());
   const pares = (xs: string[]) => limpio(xs).map(partir);
@@ -237,9 +256,13 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   const tabla = pares(pieza.tabla);
 
   /* ---------- Logo ---------- */
+  // El envoltorio es el que posiciona, asi que el centrado va aca y no en la
+  // clase .logo, que dentro del envoltorio se dibuja estatica.
   const estiloLogo: React.CSSProperties = {
-    top: `${maqueta.logoTop}px`,
+    top: `${v(maqueta.logoTop)}px`,
     width: `${maqueta.logoAncho}px`,
+    left: "50%",
+    transform: "translateX(-50%)",
   };
   if (maqueta.logoIzq !== undefined) {
     estiloLogo.left = `${maqueta.logoIzq}px`;
@@ -533,11 +556,76 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
     );
   };
 
+  /* Logo y pie no viven en el flujo: ya nacen con posicion propia. Para que
+     tambien se puedan mover, el envoltorio es el que posiciona y el hijo pasa a
+     estatico; asi el contorno de seleccion tiene donde dibujarse (un <img> no
+     admite ::after) y el ajuste solo cambia las coordenadas del envoltorio. */
+  const envolverFijo = (id: string, nodo: ReactNode, base: React.CSSProperties) => {
+    const ajuste = ajustes[id];
+    const editable = editor?.activo ?? false;
+    const seleccionado = editor?.seleccion === id;
+
+    const estilo: React.CSSProperties = ajuste
+      ? {
+          position: "absolute",
+          left: `${ajuste.x}px`,
+          top: `${ajuste.y}px`,
+          width: `${ajuste.w}px`,
+          right: "auto",
+          bottom: "auto",
+          transform: ajuste.escala && ajuste.escala !== 1 ? `scale(${ajuste.escala})` : undefined,
+          transformOrigin: "top left",
+        }
+      : { position: "absolute", ...base };
+
+    return (
+      <div
+        data-elemento={id}
+        className={`elemento fijo${id === "pie" ? " pie" : ""}${ajuste ? " suelto" : ""}${editable ? " editable" : ""}${
+          seleccionado ? " sel" : ""
+        }`}
+        style={estilo}
+        onPointerDown={editable ? (e) => editor?.onTomar(id, "mover", e) : undefined}
+      >
+        {nodo}
+        {editable && seleccionado ? (
+          <>
+            <span
+              className="editor-ui manija lado"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                editor?.onTomar(id, "ancho", e);
+              }}
+            />
+            <span
+              className="editor-ui manija esquina"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                editor?.onTomar(id, "esquina", e);
+              }}
+            />
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
   const enFlujo = contenidos.filter((c) => !ajustes[c.id]);
   const sueltos = contenidos.filter((c) => ajustes[c.id]);
 
   return (
-    <div ref={ref} className={`pieza${claro ? " claro" : ""}`} style={{ transform: `scale(${escala})` }}>
+    <div
+      ref={ref}
+      className={`pieza${claro ? " claro" : ""}`}
+      style={
+        {
+          width: `${fmt.ancho}px`,
+          height: `${fmt.alto}px`,
+          transform: `scale(${escala})`,
+          "--k": k,
+        } as React.CSSProperties
+      }
+    >
       {fondo}
       {maqueta.velos?.includes("full") ? <div className="veil-full" /> : null}
       {maqueta.velos?.includes("top") ? <div className="veil-top" /> : null}
@@ -548,40 +636,48 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       <div className="wedge" />
       <div className="wedge-line" />
 
-      {maqueta.dupla && usa("logo2") ? (
-        /* Los dos logos como una sola unidad centrada: si se posicionaran por
-           separado, cambiar el ancho de uno descentraria al otro. */
-        <div className="logos-dupla" style={{ top: `${maqueta.logoTop}px` }}>
-          <img src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" style={{ width: `${maqueta.logoAncho}px` }} />
-          {pieza.logo2 ? (
-            <>
-              <span className="divisor" />
-              {/* El invitado va dentro de una caja de tamano fijo y se ajusta
-                  con object-fit. Los logos ajenos vienen cuadrados, apaisados o
-                  verticales: fijarle ancho o alto a la imagen deformaba unos y
-                  recortaba otros. Con la caja, cualquiera entra centrado y con
-                  su proporcion intacta. */}
-              <span
-                className="invitado-caja"
-                style={{
-                  height: `${Math.round(maqueta.logoAncho * 0.5)}px`,
-                  width: `${Math.round(maqueta.logoAncho * 1.1)}px`,
-                }}
-              >
-                <img src={pieza.logo2} alt="" />
-              </span>
-            </>
-          ) : null}
-        </div>
-      ) : (
-        <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" style={estiloLogo} />
+      {envolverFijo(
+        "logo",
+        maqueta.dupla && usa("logo2") ? (
+          /* Los dos logos como una sola unidad centrada: si se posicionaran por
+             separado, cambiar el ancho de uno descentraria al otro. */
+          <div className="logos-dupla">
+            <img
+              src={claro ? LOGO_OSCURO : LOGO_CLARO}
+              alt="ASLI"
+              style={{ width: `${maqueta.logoAncho}px` }}
+            />
+            {pieza.logo2 ? (
+              <>
+                <span className="divisor" />
+                {/* El invitado va dentro de una caja de tamano fijo y se ajusta
+                    con object-fit. Los logos ajenos vienen cuadrados, apaisados
+                    o verticales: fijarle ancho o alto a la imagen deformaba unos
+                    y recortaba otros. Con la caja, cualquiera entra centrado y
+                    con su proporcion intacta. */}
+                <span
+                  className="invitado-caja"
+                  style={{
+                    height: `${Math.round(maqueta.logoAncho * 0.5)}px`,
+                    width: `${Math.round(maqueta.logoAncho * 1.1)}px`,
+                  }}
+                >
+                  <img src={pieza.logo2} alt="" />
+                </span>
+              </>
+            ) : null}
+          </div>
+        ) : (
+          <img className="logo" src={claro ? LOGO_OSCURO : LOGO_CLARO} alt="ASLI" />
+        ),
+        estiloLogo,
       )}
 
       {!maqueta.dupla && usa("logo2") && pieza.logo2 && maqueta.logo2Top !== undefined ? (
         <span
           className="logo invitado-caja suelta"
           style={{
-            top: `${maqueta.logo2Top}px`,
+            top: `${v(maqueta.logo2Top)}px`,
             height: `${Math.round((maqueta.logo2Ancho ?? 200) * 0.55)}px`,
             width: `${maqueta.logo2Ancho ?? 200}px`,
             ...(maqueta.logo2Izq !== undefined ? { left: `${maqueta.logo2Izq}px`, transform: "none" } : {}),
@@ -601,7 +697,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
       {maqueta.soporteAbajo && bajada ? <div className="support-low">{bajada}</div> : null}
 
-      <Pie />
+      {envolverFijo("pie", <Pie />, { left: 0, right: 0, bottom: "44px" })}
     </div>
   );
 });

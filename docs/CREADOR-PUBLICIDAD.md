@@ -234,3 +234,37 @@ prueba automatizada que apaga el modo y cuenta que no quede nada.
   se activaba pero no congelaba nada.
 - **El puntero se sigue en `window`, no en el elemento.** Si se arrastra rápido
   el cursor se sale del elemento y los eventos dejarían de llegar.
+
+## Formatos de salida
+
+Tres relaciones de aspecto: publicación 4:5 (1080×1350), historia 9:16
+(1080×1920) y cuadrada 1:1 (1080×1080).
+
+Las 92 maquetas están escritas para 1080×1350. Para los otros formatos se
+multiplica **toda coordenada vertical** por `alto / 1350`, tanto en el canvas
+(logo, bloque, paneles) como en el CSS, que usa la variable `--k` en las
+bandas, los velos y las franjas. Así la composición se mantiene proporcional en
+vez de amontonarse arriba.
+
+**En los formatos más bajos que 4:5 el bloque de texto también se achica.** Al
+comprimir solo las posiciones, el texto conservaba su tamaño y terminaba
+montándose sobre el pie en el formato cuadrado. Nunca se agranda: en historia
+sobra alto, y agrandar la letra la dejaría desproporcionada.
+
+El JPG de correo calcula su alto desde la proporción real de la pieza; antes
+tenía 750 fijo y habría deformado los otros formatos.
+
+Al cambiar de formato, los ajustes manuales quedan con las coordenadas del
+formato anterior. La página lo avisa, y con "Devolver todo a la plantilla" se
+recalcula.
+
+## Qué se puede mover
+
+Los elementos de contenido, el logo de ASLI y el pie con la dirección. La media
+flecha es lo único fijo: es el ancla de identidad de la pieza.
+
+El logo y el pie no viven en el flujo —nacen con posición propia— así que su
+envoltorio es el que posiciona y el hijo pasa a estático. Sin eso, el
+`translateX(-50%)` que centra el logo lo descolocaba apenas se movía. El pie
+además va con z-index por encima: es el dato de contacto y no puede quedar
+tapado por algo que alguien arrastró encima.

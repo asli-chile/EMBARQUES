@@ -43,15 +43,15 @@
 }
 .pieza .photo.top {
   bottom: auto;
-  height: 720px;
+  height: calc(720px * var(--k));
 }
 .pieza .photo.bottom {
   top: auto;
-  height: 790px;
+  height: calc(790px * var(--k));
 }
 .pieza .photo.band {
   top: 0;
-  height: 430px;
+  height: calc(430px * var(--k));
   bottom: auto;
 }
 
@@ -60,7 +60,7 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 380px;
+  height: calc(380px * var(--k));
   background: linear-gradient(180deg, rgba(13, 27, 56, 0.88) 0%, rgba(13, 27, 56, 0.35) 55%, rgba(13, 27, 56, 0) 100%);
 }
 .pieza .veil-bottom {
@@ -68,7 +68,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 900px;
+  height: calc(900px * var(--k));
   background: linear-gradient(
     180deg,
     rgba(13, 27, 56, 0) 0%,
@@ -241,7 +241,7 @@
   position: absolute;
   left: 120px;
   right: 120px;
-  bottom: 126px;
+  bottom: calc(126px * var(--k));
   text-align: center;
 }
 
@@ -383,14 +383,14 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 250px;
+  height: calc(250px * var(--k));
   background: linear-gradient(180deg, #16305c 0%, #14294f 100%);
 }
 .pieza .franja-bottom {
   position: absolute;
   left: 0;
   right: 0;
-  top: 788px;
+  top: calc(788px * var(--k));
   bottom: 0;
   background: linear-gradient(180deg, #14294f 0%, #0d1b38 100%);
   clip-path: polygon(0 4%, 100% 0, 100% 100%, 0 100%);
@@ -597,7 +597,7 @@
 .pieza .photo.band-baja {
   top: auto;
   bottom: 0;
-  height: 430px;
+  height: calc(430px * var(--k));
 }
 .pieza .photo.split.der {
   left: auto;
@@ -607,7 +607,7 @@
 /* El medallón recorta la foto en círculo. border-radius no sirve: el
    exportador lo pierde al serializar el fondo. */
 .pieza .photo.medallon {
-  top: 300px;
+  top: calc(300px * var(--k));
   left: 50%;
   width: 620px;
   height: 620px;
@@ -616,10 +616,10 @@
   clip-path: circle(50% at 50% 50%);
 }
 .pieza .photo.marco {
-  top: 250px;
+  top: calc(250px * var(--k));
   left: 90px;
   right: 90px;
-  height: 560px;
+  height: calc(560px * var(--k));
   bottom: auto;
 }
 
@@ -1083,4 +1083,24 @@
 .guia.centro {
   background: #00e8ff;
   box-shadow: 0 0 10px rgba(0, 232, 255, 0.8);
+}
+
+/* ---------- Logo y pie movibles ----------
+   Su envoltorio es el que posiciona; el hijo pasa a estático para no pelear
+   con él. Sin esto, el translateX(-50%) del logo lo descentraba al moverlo. */
+.pieza .elemento.fijo > .logo,
+.pieza .elemento.fijo > .logos-dupla,
+.pieza .elemento.fijo > .footer {
+  position: static;
+  transform: none;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  width: 100%;
+}
+/* El pie va por encima: es el dato de contacto y no puede quedar tapado por
+   algo que se arrastró encima. */
+.pieza .elemento.fijo.pie {
+  z-index: 3;
 }

@@ -327,6 +327,25 @@ export function usaCampo(plantilla: PlantillaId, campo: CampoId): boolean {
  * apilado en el flujo. Cuando se entra al modo de ajuste se miden todos y se
  * congelan aca, asi pasar a posicion libre no mueve nada de lugar.
  */
+/**
+ * Formatos de salida.
+ *
+ * Las maquetas estan escritas para 1080x1350. Para los otros formatos se
+ * multiplica toda coordenada vertical por `alto / 1350`, asi la composicion se
+ * mantiene proporcional en vez de quedar con la mitad de la pieza vacia.
+ */
+export type FormatoId = "post" | "historia" | "cuadrada";
+
+export const FORMATOS: { id: FormatoId; nombre: string; ancho: number; alto: number }[] = [
+  { id: "post", nombre: "Publicación · 4:5", ancho: 1080, alto: 1350 },
+  { id: "historia", nombre: "Historia · 9:16", ancho: 1080, alto: 1920 },
+  { id: "cuadrada", nombre: "Cuadrada · 1:1", ancho: 1080, alto: 1080 },
+];
+
+export function getFormato(id: FormatoId) {
+  return FORMATOS.find((f) => f.id === id) ?? FORMATOS[0];
+}
+
 export type Ajuste = {
   x: number;
   y: number;
@@ -341,6 +360,8 @@ export type Ajustes = Record<string, Ajuste>;
 
 export type Pieza = {
   plantilla: PlantillaId;
+  /** Relacion de aspecto de salida. */
+  formato: FormatoId;
   eyebrow: string;
   l1: string;
   lm: string;
@@ -386,6 +407,7 @@ export type Pieza = {
 
 export const PIEZA_INICIAL: Pieza = {
   plantilla: "panel-inferior",
+  formato: "post",
   eyebrow: "Exportación marítima",
   l1: "Llevamos tu carga",
   lm: "",

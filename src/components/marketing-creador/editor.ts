@@ -9,8 +9,8 @@
 
 import type { Ajuste, Ajustes } from "./plantillas";
 
-export const LIENZO_ANCHO = 1080;
-export const LIENZO_ALTO = 1350;
+/** Medidas del lienzo del formato en curso. */
+export type Dims = { ancho: number; alto: number };
 
 /** A cuántos px del lienzo se activa el imán. */
 const IMAN = 8;
@@ -24,8 +24,8 @@ export type Guia = {
 };
 
 /** Los lugares contra los que vale la pena alinear. */
-function referencias(eje: "x" | "y"): { en: number; tipo: Guia["tipo"] }[] {
-  const largo = eje === "x" ? LIENZO_ANCHO : LIENZO_ALTO;
+function referencias(eje: "x" | "y", dims: Dims): { en: number; tipo: Guia["tipo"] }[] {
+  const largo = eje === "x" ? dims.ancho : dims.alto;
   return [
     { en: largo / 2, tipo: "centro" },
     { en: 56, tipo: "borde" },
@@ -45,6 +45,7 @@ export function imantar(
   y: number,
   ancho: number,
   alto: number,
+  dims: Dims,
 ): { x: number; y: number; guias: Guia[] } {
   const guias: Guia[] = [];
   let rx = x;
@@ -57,7 +58,7 @@ export function imantar(
     const puntos = [0, largo / 2, largo];
 
     let mejor: { delta: number; en: number; tipo: Guia["tipo"] } | null = null;
-    for (const ref of referencias(eje)) {
+    for (const ref of referencias(eje, dims)) {
       for (const p of puntos) {
         const delta = ref.en - (pos + p);
         if (Math.abs(delta) <= IMAN && (!mejor || Math.abs(delta) < Math.abs(mejor.delta))) {
@@ -98,6 +99,7 @@ export function mover(
   inicio: Inicio,
   puntero: { x: number; y: number },
   escala: number,
+  dims: Dims,
 ): { ajuste: Ajuste; guias: Guia[] } {
   const dx = (puntero.x - inicio.puntero.x) / escala;
   const dy = (puntero.y - inicio.puntero.y) / escala;
@@ -108,13 +110,14 @@ export function mover(
       inicio.ajuste.y + dy,
       inicio.ajuste.w,
       inicio.alto,
+      dims,
     );
     return { ajuste: { ...inicio.ajuste, x, y }, guias };
   }
 
   // Redimensionar desde la esquina inferior derecha. El ancho manda: el alto
   // lo decide el contenido, porque el texto reacomoda solo.
-  const w = Math.max(80, Math.min(LIENZO_ANCHO, inicio.ajuste.w + dx));
+  const w = Math.max(80, Math.min(dims.ancho, inicio.ajuste.w + dx));
   if (!arrastre.esquina) {
     return { ajuste: { ...inicio.ajuste, w }, guias: [] };
   }
