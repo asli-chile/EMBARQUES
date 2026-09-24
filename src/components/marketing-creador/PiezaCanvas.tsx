@@ -89,7 +89,15 @@ function Dona({ valor, texto }: { valor: number; texto: string }) {
  * agregado y la bajada de una plantilla tienen que verse igual, si no la hoja
  * en blanco pareceria de otra marca.
  */
-function BloqueExtra({ extra, alineacion }: { extra: Extra; alineacion: string }) {
+function BloqueExtra({
+  extra,
+  alineacion,
+  completa,
+}: {
+  extra: Extra;
+  alineacion: string;
+  completa: boolean;
+}) {
   const limpio = extra.lineas.filter((x) => x.trim());
   const pares = limpio.map(partir);
 
@@ -235,7 +243,10 @@ function BloqueExtra({ extra, alineacion }: { extra: Extra; alineacion: string }
           className="imagen-bloque"
           src={extra.url}
           alt=""
-          style={{ marginLeft: alineacion === "izq" ? 0 : undefined }}
+          style={{
+            marginLeft: alineacion === "izq" ? 0 : undefined,
+            objectFit: completa ? "contain" : "cover",
+          }}
         />
       ) : (
         <div className="imagen-vacia">Elegí una foto</div>
@@ -290,10 +301,15 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   /* ---------- Foto ---------- */
   // El acercamiento va por transform y no por background-size: así el encuadre
   // (background-position) sigue significando lo mismo con y sin zoom.
+  const completa = pieza.fotoAjuste === "completa";
   const estiloFoto: React.CSSProperties = pieza.foto
     ? {
         backgroundImage: `url("${pieza.foto}")`,
         backgroundPosition: `${pieza.fotoPosicionX}% ${pieza.fotoPosicion}%`,
+        // "completa" entra toda la foto y deja ver el fondo alrededor; hay que
+        // apagar la repeticion, que con contain llenaria el hueco con copias.
+        backgroundSize: completa ? "contain" : "cover",
+        backgroundRepeat: "no-repeat",
         transform: pieza.fotoZoom !== 100 ? `scale(${pieza.fotoZoom / 100})` : undefined,
       }
     : { background: "#0d1b38" };
@@ -699,7 +715,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   /* Los bloques agregados van al final, en su orden. Al llevar id propio
      entran al mismo sistema de posicionado, arrastre y marcador. */
   for (const extra of pieza.extras ?? []) {
-    sumar(extra.id, <BloqueExtra extra={extra} alineacion={alineacion} />);
+    sumar(extra.id, <BloqueExtra extra={extra} alineacion={alineacion} completa={completa} />);
   }
 
   /* ---------- Envoltorio de cada elemento ---------- */

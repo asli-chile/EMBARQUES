@@ -396,3 +396,60 @@ escrito a mano por tipo.
   nuevo podría heredar las coordenadas de uno borrado.
 - El pie es opcional en cualquier plantilla, con un interruptor en Estilo. Las
   hojas en blanco arrancan sin él.
+
+## Cómo entra la foto: llenar o completa
+
+Las plantillas con foto la usan de fondo, y el fondo por defecto **recorta**
+(`background-size: cover`): la foto tapa toda la pieza y lo que sobra por el
+lado largo se pierde. Sirve para paisajes, pero se come una foto vertical o
+una en la que importa el borde (un producto, un equipo, un mapa completo).
+
+En la pestaña Imagen hay dos botones:
+
+- **Llenar** — `cover`. El comportamiento de siempre.
+- **Completa** — `contain`. Entra la foto entera y alrededor se ve el fondo de
+  la pieza.
+
+### La trampa
+
+Con `contain` hay que apagar la repetición a mano
+(`background-repeat: no-repeat`). El valor por defecto de CSS es `repeat`, así
+que el hueco que deja la foto se llenaría con copias de ella en vez de mostrar
+el fondo. Se ve raro y cuesta entender de dónde sale.
+
+Los deslizadores de zoom y encuadre siguen funcionando en los dos modos, y el
+bloque **imagen** agregado a mano sigue el mismo ajuste (`object-fit`), para
+que una hoja en blanco no se comporte distinto a una plantilla.
+
+## La pieza se guarda sola
+
+Antes, recargar la página por cualquier motivo borraba todo: textos,
+plantilla, foto, bloques y posiciones. El síntoma con el que apareció fue otro
+—"subí una imagen y al refrescar ya no estaba"— y llevaba a buscar el problema
+en la subida, que estaba bien: la foto sí llegaba al bucket y al manifiesto.
+Lo que se perdía era la pieza entera.
+
+Ahora la pieza en curso se guarda en `localStorage`
+(`creador-publicidad:pieza`) en cada cambio.
+
+### Dos detalles que no son opcionales
+
+- **Restaurar va en un efecto, no en el estado inicial.** En el servidor no
+  hay `localStorage`; si el estado inicial arrancara distinto en cliente y
+  servidor, se rompe la hidratación.
+- **Hasta que corre ese efecto no se guarda nada** (`restaurado` es un ref).
+  Si no, el primer guardado —que ocurre con la pieza vacía, antes de
+  restaurar— pisaría lo guardado.
+
+Lo guardado se mezcla sobre `PIEZA_INICIAL`, así que una versión vieja sin los
+campos nuevos no deja la pieza a medio armar. Si el guardado quedó corrupto se
+arranca limpio, sin romper nada.
+
+En Estilo hay un botón **Empezar una pieza nueva** que limpia el guardado y
+vuelve a la pieza inicial, con confirmación.
+
+### El manifiesto se pide sin caché
+
+`banco.json` se pide con `?t=<ahora>` y `cache: "no-store"`. Al subir una foto
+el archivo cambia, y una copia cacheada dejaría la foto recién subida fuera de
+la grilla —el mismo síntoma que arriba, por otra causa.

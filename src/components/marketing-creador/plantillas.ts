@@ -575,6 +575,8 @@ export type Pieza = {
   fotoPosicion: number;
   fotoPosicionX: number;
   fotoZoom: number;
+  /** "llenar" recorta para cubrir; "completa" muestra toda la foto. */
+  fotoAjuste: "llenar" | "completa";
   flechaColor: string;
   /** Posiciones movidas a mano. Vacio = todo como lo pone la plantilla. */
   ajustes: Ajustes;
@@ -633,6 +635,7 @@ export const PIEZA_INICIAL: Pieza = {
   fotoPosicion: 50,
   fotoPosicionX: 50,
   fotoZoom: 100,
+  fotoAjuste: "llenar",
   flechaColor: BLANCO,
   ajustes: {},
 };

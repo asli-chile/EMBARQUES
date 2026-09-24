@@ -31,6 +31,11 @@ import "@/styles/marketing-pieza.css";
 
 const BUCKET_BASE = `${import.meta.env.PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/marketing-banco`;
 
+/* La pieza en curso se guarda en el navegador: sin esto, recargar por
+   cualquier motivo borraba todo el trabajo (textos, plantilla, foto, bloques y
+   posiciones) y parecia que la foto recien subida se habia perdido. */
+const GUARDADO = "creador-publicidad:pieza";
+
 const input =
   "dash-control w-full px-3 py-2 border border-dash-border rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50";
 const label = "block text-xs font-semibold text-dash-muted mb-1.5 uppercase tracking-wide";
@@ -268,6 +273,27 @@ export function CreadorPublicidadContent() {
 
   const archivoFoto = useRef<HTMLInputElement>(null);
   const archivoLogo = useRef<HTMLInputElement>(null);
+  /* Restaurar no puede hacerse en el estado inicial: en el servidor no hay
+     localStorage, y arrancar distinto en cliente y servidor rompe la
+     hidratacion. Por eso se hace en un efecto, y hasta que corre no se guarda
+     nada: si no, el primer guardado pisaria lo guardado con la pieza vacia. */
+  const restaurado = useRef(false);
+
+  useEffect(() => {
+    try {
+      const crudo = localStorage.getItem(GUARDADO);
+      if (crudo) {
+        const guardada = JSON.parse(crudo) as Partial<Pieza>;
+        // Se mezcla sobre la inicial para que una version vieja sin los campos
+        // nuevos no deje la pieza a medio armar.
+        setPieza((p) => ({ ...p, ...guardada }));
+      }
+    } catch {
+      /* si el guardado quedo corrupto se arranca limpio */
+    }
+    restaurado.current = true;
+  }, []);
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const colPrevia = useRef<HTMLDivElement>(null);
   const [escala, setEscala] = useState(0.38);
@@ -306,7 +332,7 @@ export function CreadorPublicidadContent() {
   /* ---- banco de imágenes ---- */
   useEffect(() => {
     let vivo = true;
-    fetch(`${BUCKET_BASE}/banco.json`)
+    fetch(`${BUCKET_BASE}/banco.json?t=${Date.now()}`, { cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error(`banco.json: ${r.status}`);
         return r.json();
@@ -375,6 +401,15 @@ export function CreadorPublicidadContent() {
     },
     [categoriaSubida],
   );
+
+  useEffect(() => {
+    if (!restaurado.current) return;
+    try {
+      localStorage.setItem(GUARDADO, JSON.stringify(pieza));
+    } catch {
+      /* sin espacio o en modo privado: se sigue trabajando igual */
+    }
+  }, [pieza]);
 
   const fotosVisibles = useMemo(() => {
     return banco.filter((f) => {
@@ -1424,6 +1459,31 @@ export function CreadorPublicidadContent() {
           </div>
 
           <div className={bloque}>
+            <span className={label}>La pieza se guarda sola</span>
+            <p className="text-xs text-dash-muted">
+              Lo que armás queda guardado en este navegador, así que podés cerrar y seguir después.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirm("¿Empezar una pieza nueva? Se pierde lo que hay armado.")) return;
+                try {
+                  localStorage.removeItem(GUARDADO);
+                } catch {
+                  /* nada que limpiar */
+                }
+                setPieza(PIEZA_INICIAL);
+                setSeleccion(null);
+                setCampoActivo(null);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-dash-neon/50"
+            >
+              <Icon icon="mdi:file-outline" className="h-4 w-4" />
+              Empezar una pieza nueva
+            </button>
+          </div>
+
+          <div className={bloque}>
             <label className="flex cursor-pointer items-center justify-between gap-3">
               <span className={`${label} mb-0`}>Mostrar el pie con la dirección</span>
               <input
@@ -1665,6 +1725,36 @@ export function CreadorPublicidadContent() {
                 />
                 Mostrar también las vetadas (tienen marca de otra empresa visible)
               </label>
+
+              <div>
+                <span className={label}>Cómo entra la foto</span>
+                <div className="flex gap-2">
+                  {[
+                    { id: "llenar", nombre: "Llenar", icono: "mdi:crop", pista: "Recorta para cubrir toda la pieza" },
+                    { id: "completa", nombre: "Completa", icono: "mdi:fit-to-screen-outline", pista: "Entra entera, sin recortar" },
+                  ].map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => set("fotoAjuste", o.id as "llenar" | "completa")}
+                      title={o.pista}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                        (pieza.fotoAjuste ?? "llenar") === o.id
+                          ? "border-dash-neon bg-dash-neon/10 text-dash-fg"
+                          : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
+                      }`}
+                    >
+                      <Icon icon={o.icono} className="h-4 w-4" />
+                      {o.nombre}
+                    </button>
+                  ))}
+                </div>
+                {(pieza.fotoAjuste ?? "llenar") === "completa" ? (
+                  <p className="mt-1 text-xs text-dash-muted">
+                    Entra toda la foto; alrededor se ve el fondo de la pieza.
+                  </p>
+                ) : null}
+              </div>
 
               <Deslizador
                 id="c-zoom"
