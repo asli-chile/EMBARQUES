@@ -378,6 +378,15 @@ export function getFormato(id: FormatoId) {
   return FORMATOS.find((f) => f.id === id) ?? FORMATOS[0];
 }
 
+/** Alineacion de los textos dentro del bloque. */
+export type Alineacion = "izq" | "centro" | "der";
+
+export const ALINEACIONES: { id: Alineacion; nombre: string; icono: string }[] = [
+  { id: "izq", nombre: "Izquierda", icono: "mdi:format-align-left" },
+  { id: "centro", nombre: "Centro", icono: "mdi:format-align-center" },
+  { id: "der", nombre: "Derecha", icono: "mdi:format-align-right" },
+];
+
 export type Ajuste = {
   x: number;
   y: number;
@@ -394,6 +403,8 @@ export type Pieza = {
   plantilla: PlantillaId;
   /** Relacion de aspecto de salida. */
   formato: FormatoId;
+  /** Alineacion elegida a mano. null = la que trae la plantilla. */
+  alineacion: Alineacion | null;
   eyebrow: string;
   l1: string;
   lm: string;
@@ -440,6 +451,7 @@ export type Pieza = {
 export const PIEZA_INICIAL: Pieza = {
   plantilla: "panel-inferior",
   formato: "post",
+  alineacion: null,
   eyebrow: "Exportación marítima",
   l1: "Llevamos tu carga",
   lm: "",

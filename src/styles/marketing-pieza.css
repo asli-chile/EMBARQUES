@@ -1216,3 +1216,113 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ============================================================
+   Alineación de los textos
+   Va al final de la hoja a propósito: así le gana a la que pone
+   la maqueta sin tener que subir la especificidad.
+   ============================================================ */
+
+.pieza .block.al-izq,
+.pieza .elemento.suelto.al-izq {
+  text-align: left;
+}
+.pieza .block.al-centro,
+.pieza .elemento.suelto.al-centro {
+  text-align: center;
+}
+.pieza .block.al-der,
+.pieza .elemento.suelto.al-der {
+  text-align: right;
+}
+
+/* Las filas son flex, así que no obedecen text-align: se alinean con
+   justify-content. */
+.pieza .block.al-izq .chips,
+.pieza .block.al-izq .evento,
+.pieza .elemento.suelto.al-izq .chips,
+.pieza .elemento.suelto.al-izq .evento {
+  justify-content: flex-start;
+}
+.pieza .block.al-centro .chips,
+.pieza .block.al-centro .evento,
+.pieza .elemento.suelto.al-centro .chips,
+.pieza .elemento.suelto.al-centro .evento {
+  justify-content: center;
+}
+.pieza .block.al-der .chips,
+.pieza .block.al-der .evento,
+.pieza .elemento.suelto.al-der .chips,
+.pieza .elemento.suelto.al-der .evento {
+  justify-content: flex-end;
+}
+
+/* Los bloques con ancho máximo se centran con `margin: auto`. Para moverlos
+   se cambia el margen, no el text-align: dentro de una lista el texto tiene
+   que seguir leyéndose desde la izquierda aunque la lista esté a la derecha. */
+.pieza .block.al-izq .support,
+.pieza .block.al-izq .list,
+.pieza .block.al-izq .checklist,
+.pieza .block.al-izq .pasos,
+.pieza .block.al-izq .hitos,
+.pieza .block.al-izq .tabla,
+.pieza .block.al-izq .barras,
+.pieza .block.al-izq .dato-etiqueta {
+  margin-left: 0;
+  margin-right: auto;
+}
+.pieza .block.al-centro .support,
+.pieza .block.al-centro .list,
+.pieza .block.al-centro .checklist,
+.pieza .block.al-centro .pasos,
+.pieza .block.al-centro .hitos,
+.pieza .block.al-centro .tabla,
+.pieza .block.al-centro .barras,
+.pieza .block.al-centro .dato-etiqueta {
+  margin-left: auto;
+  margin-right: auto;
+}
+.pieza .block.al-der .support,
+.pieza .block.al-der .list,
+.pieza .block.al-der .checklist,
+.pieza .block.al-der .pasos,
+.pieza .block.al-der .hitos,
+.pieza .block.al-der .tabla,
+.pieza .block.al-der .barras,
+.pieza .block.al-der .dato-etiqueta {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* El filete del titular acompaña la alineación. */
+.pieza .block.al-izq h1.filete::after {
+  margin-left: 0;
+  margin-right: auto;
+}
+.pieza .block.al-centro h1.filete::after {
+  margin-left: auto;
+  margin-right: auto;
+}
+.pieza .block.al-der h1.filete::after {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* Las cifras se reparten el ancho con flex:1, así que alinearlas no hacía
+   nada y parecía que el control estaba roto. Fuera del centro dejan de
+   estirarse y se agrupan hacia el lado elegido. */
+.pieza .block.al-izq .metricas,
+.pieza .elemento.suelto.al-izq .metricas {
+  justify-content: flex-start;
+}
+.pieza .block.al-der .metricas,
+.pieza .elemento.suelto.al-der .metricas {
+  justify-content: flex-end;
+}
+.pieza .block.al-izq .metricas > div,
+.pieza .block.al-der .metricas > div,
+.pieza .elemento.suelto.al-izq .metricas > div,
+.pieza .elemento.suelto.al-der .metricas > div {
+  flex: 0 0 auto;
+  min-width: 200px;
+}

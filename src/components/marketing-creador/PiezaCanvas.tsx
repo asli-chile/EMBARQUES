@@ -102,6 +102,12 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
      coordenada vertical se multiplica por este factor, asi la composicion se
      mantiene proporcional en vez de amontonarse arriba. El CSS hace lo mismo
      con --k para las bandas y los velos. */
+  /* La plantilla propone una alineacion; si la persona eligio otra, manda la
+     suya. Las clases al-* van al final de la hoja para ganarle a la que pone
+     la maqueta sin tener que subir la especificidad. */
+  const alineacion =
+    pieza.alineacion ?? (maqueta.alinear === "izquierda" ? "izq" : "centro");
+
   const fmt = getFormato(pieza.formato ?? "post");
   const k = fmt.alto / 1350;
   const v = (n: number) => Math.round(n * k);
@@ -539,7 +545,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         data-elemento={id}
         className={`elemento${ajuste ? " suelto" : ""}${editable ? " editable" : ""}${
           seleccionado ? " sel" : ""
-        }${maqueta.alinear === "izquierda" ? " izq" : ""}`}
+        }${maqueta.alinear === "izquierda" ? " izq" : ""} al-${alineacion}`}
         style={estilo}
         onPointerDown={editable ? (e) => editor?.onTomar(id, "mover", e) : undefined}
       >
@@ -707,7 +713,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       ) : null}
 
       <div
-        className={`block${maqueta.alinear === "izquierda" ? " izq" : ""}${
+        className={`block${maqueta.alinear === "izquierda" ? " izq" : ""} al-${alineacion}${
           maqueta.cajaTexto ? ` caja ${maqueta.cajaTexto === "navy" ? "" : maqueta.cajaTexto}` : ""
         }`}
         style={estiloBloque}

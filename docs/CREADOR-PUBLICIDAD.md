@@ -322,3 +322,24 @@ Dos detalles que costaron:
   vez de destacar. Por eso `cajaTexto` va casi siempre con `titularPlano`.
 - **El rótulo vertical va con `writing-mode`, no con `rotate`.** Al rotar, la
   caja conserva su tamaño horizontal y un texto largo se salía de la franja.
+
+## Alineación de los textos
+
+Tres botones en la pestaña Contenido: izquierda, centro y derecha. Cada
+plantilla propone una; si se elige otra, manda la elegida, y con "Usar la de la
+plantilla" se vuelve atrás.
+
+Las clases `al-*` van **al final de la hoja** a propósito: así le ganan a la
+alineación que pone la maqueta sin tener que subir la especificidad.
+
+Alinear no es solo `text-align`, porque los elementos no se comportan igual:
+
+- **Filas** (chips, datos del evento, cifras): son flex, así que obedecen a
+  `justify-content`, no a `text-align`.
+- **Bloques con ancho máximo** (bajada, listas, pasos, hitos, tabla, barras):
+  se centran con `margin: auto`, así que se mueven cambiando el margen. El
+  texto adentro sigue leyéndose desde la izquierda aunque la lista esté a la
+  derecha, que es lo correcto.
+- **Las cifras** se repartían el ancho con `flex: 1`, así que alinearlas no
+  hacía nada y parecía que el control estaba roto. Fuera del centro dejan de
+  estirarse y se agrupan hacia el lado elegido.

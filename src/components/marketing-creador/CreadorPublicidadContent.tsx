@@ -10,6 +10,7 @@ import {
   CATEGORIAS,
   COLORES_FLECHA,
   FAMILIAS,
+  ALINEACIONES,
   FORMATOS,
   getFormato,
   PIEZA_INICIAL,
@@ -749,6 +750,44 @@ export function CreadorPublicidadContent() {
           {pestana === "contenido" ? (
           <div className={bloque}>
             <span className={label}>Textos</span>
+
+            <div>
+              <span className={label}>Alineación</span>
+              <div className="flex gap-2">
+                {ALINEACIONES.map((al) => {
+                  // null = la que propone la plantilla; se marca la que está
+                  // rigiendo para que el botón no quede "sin elegir".
+                  const efectiva =
+                    pieza.alineacion ??
+                    (plantilla.maqueta.alinear === "izquierda" ? "izq" : "centro");
+                  return (
+                    <button
+                      key={al.id}
+                      type="button"
+                      onClick={() => set("alineacion", al.id)}
+                      title={al.nombre}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                        efectiva === al.id
+                          ? "border-dash-neon bg-dash-neon/10 text-dash-fg"
+                          : "border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40"
+                      }`}
+                    >
+                      <Icon icon={al.icono} className="h-4 w-4" />
+                      {al.nombre}
+                    </button>
+                  );
+                })}
+              </div>
+              {pieza.alineacion ? (
+                <button
+                  type="button"
+                  onClick={() => set("alineacion", null)}
+                  className="mt-1.5 text-xs text-dash-muted underline hover:text-dash-fg"
+                >
+                  Usar la de la plantilla
+                </button>
+              ) : null}
+            </div>
 
             {usaCampo(pieza.plantilla, "eyebrow") && (
               <div>
