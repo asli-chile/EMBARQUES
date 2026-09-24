@@ -117,7 +117,8 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       }
     : { background: "#0d1b38" };
 
-  const foto = (extra = "") => <div className={`photo ${extra}`.trim()} style={estiloFoto} />;
+  const foto = (extra = "") =>
+    <div className={`photo ${extra}${maqueta.arco ? " arco" : ""}`.trim()} style={estiloFoto} />;
 
   let fondo: ReactNode;
   switch (maqueta.fondo) {
@@ -201,10 +202,21 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   if (maqueta.panelTop !== undefined) {
     panel = (
       <>
-        <div className="panel" style={{ top: `${v(maqueta.panelTop)}px` }} />
+        <div
+          className={`panel${maqueta.panelVariante ? ` ${maqueta.panelVariante}` : ""}`}
+          style={{ top: `${v(maqueta.panelTop)}px` }}
+        />
         <div
           className="stripes"
-          style={{ top: `${v(maqueta.panelTop)}px`, clipPath: "polygon(0 16%, 100% 0, 100% 100%, 0 100%)" }}
+          style={{
+            top: `${v(maqueta.panelTop)}px`,
+            clipPath:
+              maqueta.panelVariante === "recto"
+                ? "none"
+                : maqueta.panelVariante === "invertida"
+                  ? "polygon(0 0, 100% 16%, 100% 100%, 0 100%)"
+                  : "polygon(0 16%, 100% 0, 100% 100%, 0 100%)",
+          }}
         />
       </>
     );
@@ -302,7 +314,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   sumar(
     "titular",
     usa("l1") || usa("lm") || usa("l2") ? (
-      <h1>
+      <h1 className={`${maqueta.titularPlano ? "plano" : ""} ${maqueta.filete ? "filete" : ""}`.trim()}>
         {usa("l1") && pieza.l1 ? <span className="l1">{pieza.l1}</span> : null}
         {usa("lm") && pieza.lm ? <span className="lm">{pieza.lm}</span> : null}
         {usa("l2") && pieza.l2 ? (
@@ -633,6 +645,13 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
       {panel}
 
       <div className="flag" style={{ background: pieza.flechaColor }} />
+      {maqueta.bandaLateral ? (
+        <div className="banda-lat">
+          <span>{pieza.eyebrow}</span>
+        </div>
+      ) : null}
+      {maqueta.marcoInterior ? <div className="marco-int" /> : null}
+
       <div className="wedge" />
       <div className="wedge-line" />
 
@@ -687,7 +706,12 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         </span>
       ) : null}
 
-      <div className={`block${maqueta.alinear === "izquierda" ? " izq" : ""}`} style={estiloBloque}>
+      <div
+        className={`block${maqueta.alinear === "izquierda" ? " izq" : ""}${
+          maqueta.cajaTexto ? ` caja ${maqueta.cajaTexto === "navy" ? "" : maqueta.cajaTexto}` : ""
+        }`}
+        style={estiloBloque}
+      >
         {enFlujo.map(envolver)}
       </div>
 

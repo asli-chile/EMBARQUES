@@ -1104,3 +1104,115 @@
 .pieza .elemento.fijo.pie {
   z-index: 3;
 }
+
+/* ============================================================
+   Recursos de composición
+   Palancas para que dos piezas con la misma receta no se vean
+   iguales: cambian el corte, el encuadre o el peso del texto.
+   ============================================================ */
+
+/* ---------- Cortes del panel ---------- */
+/* Recto: sin diagonal. Se lee más serio y menos "promo". */
+.pieza .panel.recto {
+  clip-path: none;
+}
+/* La diagonal al revés: baja hacia la derecha en vez de subir. */
+.pieza .panel.invertida {
+  clip-path: polygon(0 0, 100% 16%, 100% 100%, 0 100%);
+}
+
+/* ---------- Foto con arco ----------
+   El borde inferior curvo cambia por completo la silueta de la pieza
+   sin tocar nada más. */
+.pieza .photo.arco {
+  clip-path: ellipse(135% 100% at 50% 0%);
+}
+
+/* ---------- Banda lateral ----------
+   Franja de color con el rótulo en vertical. Rompe la simetría
+   centrada que comparten casi todas las composiciones. */
+.pieza .banda-lat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 132px;
+  background: var(--red);
+  z-index: 2;
+}
+.pieza .banda-lat span {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  /* writing-mode en vez de rotate: al rotar, la caja conserva su tamano
+     horizontal y el texto largo se salia de la franja. */
+  writing-mode: vertical-rl;
+  transform: translateX(-50%) rotate(180deg);
+  max-height: calc(100% - 210px);
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: "Barlow Condensed", Arial, sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 36px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* ---------- Marco interior ---------- */
+.pieza .marco-int {
+  position: absolute;
+  inset: 48px;
+  border: 5px solid rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  z-index: 2;
+}
+.pieza.claro .marco-int {
+  border-color: rgba(20, 41, 79, 0.85);
+}
+
+/* ---------- Caja sólida detrás del texto ----------
+   El texto deja de flotar sobre la foto y pasa a tener su propio
+   bloque. Es el cambio que más separa una pieza de otra. */
+.pieza .block.caja {
+  background: rgba(13, 27, 56, 0.93);
+  padding: 36px 38px 40px;
+}
+.pieza .block.caja.roja {
+  background: var(--red);
+}
+.pieza .block.caja.crema {
+  background: #f6eee8;
+}
+.pieza .block.caja.crema h1,
+.pieza .block.caja.crema .support,
+.pieza .block.caja.crema .list li {
+  color: var(--navy);
+}
+.pieza .block.caja.crema .support {
+  text-shadow: none;
+}
+
+/* ---------- Titular sin contorno ----------
+   Sobre una caja sólida el contorno rojo sobra y ensucia; sin él el
+   titular se ve más editorial. */
+.pieza h1.plano {
+  text-shadow: 0 8px 26px rgba(0, 0, 0, 0.45);
+}
+.pieza .block.caja.crema h1.plano {
+  text-shadow: none;
+}
+/* Filete rojo bajo el titular, para las que no llevan cinta. */
+.pieza h1.filete::after {
+  content: "";
+  display: block;
+  width: 120px;
+  height: 8px;
+  margin: 26px 0 0;
+  background: var(--red);
+}
+.pieza .block:not(.izq) h1.filete::after {
+  margin-left: auto;
+  margin-right: auto;
+}

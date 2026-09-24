@@ -90,6 +90,23 @@ export type Maqueta = {
   alinear?: "izquierda";
   /** Los dos logos juntos y centrados, separados por una linea. */
   dupla?: boolean;
+  /* ---- Recursos de composicion ----
+     Palancas para que dos piezas con la misma receta no se vean iguales. */
+  /** Corte del panel: diagonal (por defecto), recto o al reves. */
+  panelVariante?: "recto" | "invertida";
+  /** Borde inferior curvo en la foto. */
+  arco?: boolean;
+  /** Franja de color con el rotulo en vertical. */
+  bandaLateral?: boolean;
+  /** Marco interior. */
+  marcoInterior?: boolean;
+  /** El bloque de texto sobre una caja solida. */
+  cajaTexto?: "navy" | "roja" | "crema";
+  /** Titular sin el contorno rojo: sobre caja solida el contorno ensucia. */
+  titularPlano?: boolean;
+  /** Filete rojo bajo el titular, para las que no llevan cinta. */
+  filete?: boolean;
+
   /** Ubicacion suelta del logo invitado, cuando no va en dupla. */
   logo2Top?: number;
   logo2Ancho?: number;
@@ -202,19 +219,34 @@ const mk = ({ id, familia, nombre, descripcion, campos, l2 = 110, maqueta, flech
 });
 
 export const PLANTILLAS: Plantilla[] = [
-  /* =============== Comercial =============== */
-  mk({ id: "hero", familia: "comercial", nombre: "Hero pleno", descripcion: "Foto a página completa y el texto abajo.", campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"], l2: 116, maqueta: M.heroPleno }),
-  mk({ id: "panel-inferior", familia: "comercial", nombre: "Panel abajo", descripcion: "Foto arriba y panel azul abajo. La más legible.", campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"], l2: 132, maqueta: M.panelAbajo }),
+  /* =============== Comercial ===============
+     Doce composiciones que no se pisan entre si. Las cuatro primeras son las
+     clasicas de la marca; el resto usa un recurso distinto cada una (caja
+     solida, banda lateral, arco, marco, corte recto) para que el feed no se
+     vea repetido aunque el contenido sea parecido. */
+  mk({ id: "hero", familia: "comercial", nombre: "Hero pleno", descripcion: "Foto a página completa y el texto abajo, centrado.", campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"], l2: 116, maqueta: M.heroPleno }),
+  mk({ id: "panel-inferior", familia: "comercial", nombre: "Panel abajo", descripcion: "Foto arriba y panel azul en diagonal. La más legible.", campos: ["foto", "eyebrow", "l1", "lm", "l2", "ribbon", "support"], l2: 132, maqueta: M.panelAbajo }),
   mk({ id: "panel-superior", familia: "comercial", nombre: "Panel arriba", descripcion: "Titular arriba sobre azul y foto abajo.", campos: ["foto", "eyebrow", "l1", "l2", "chips", "support"], l2: 104, maqueta: M.panelArriba }),
   mk({ id: "split-diagonal", familia: "comercial", nombre: "Split diagonal", descripcion: "Foto a la izquierda en diagonal, texto a la derecha.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "support"], l2: 76, maqueta: { fondo: "split", logoTop: 92, logoAncho: 262, logoIzq: 528, bloqueTop: 306, bloqueIzq: 510, alinear: "izquierda" } }),
   mk({ id: "split-derecha", familia: "comercial", nombre: "Split invertido", descripcion: "Foto a la derecha en diagonal, texto a la izquierda.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "support"], l2: 76, maqueta: { fondo: "split-derecha", logoTop: 92, logoAncho: 262, logoIzq: 56, bloqueTop: 306, bloqueIzq: 56, bloqueDer: 560, alinear: "izquierda" } }),
-  mk({ id: "oferta", familia: "comercial", nombre: "Oferta / temporada", descripcion: "Una cifra como gancho sobre la foto, con CTA.", campos: ["foto", "eyebrow", "dato", "l1", "ribbon", "support"], maqueta: { ...M.heroPleno, bloqueBottom: 110 } }),
-  mk({ id: "poster", familia: "comercial", nombre: "Póster sándwich", descripcion: "Franja sólida arriba, foto al medio, franja abajo.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon"], l2: 98, maqueta: { fondo: "poster", logoTop: 62, logoAncho: 320, bloqueTop: 846 } }),
-  mk({ id: "hero-chips", familia: "comercial", nombre: "Hero con etiquetas", descripcion: "Foto completa y una fila de etiquetas bajo el titular.", campos: ["foto", "eyebrow", "l1", "l2", "chips", "ribbon"], l2: 104, maqueta: M.heroAlto }),
-  mk({ id: "hero-metricas", familia: "comercial", nombre: "Hero con cifras", descripcion: "Foto completa y tres cifras de confianza.", campos: ["foto", "eyebrow", "l1", "l2", "metricas", "ribbon"], l2: 96, maqueta: M.heroAlto }),
-  mk({ id: "panel-tarjetas", familia: "comercial", nombre: "Panel con tarjetas", descripcion: "Foto arriba y tarjetas de servicio abajo.", campos: ["foto", "eyebrow", "l2", "tarjetas", "ribbon"], l2: 96, maqueta: M.panelAbajoAlto }),
-  mk({ id: "promo-precio", familia: "comercial", nombre: "Precio destacado", descripcion: "El precio o la tarifa como protagonista.", campos: ["foto", "eyebrow", "dato", "l1", "checklist", "ribbon"], maqueta: { ...M.panelAbajoAlto, bloqueTop: 440 } }),
-  mk({ id: "cta-doble", familia: "comercial", nombre: "Doble llamado", descripcion: "Dos cintas de acción, para dar a elegir.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "ribbon2"], l2: 104, maqueta: M.panelAbajo }),
+  mk({ id: "oferta", familia: "comercial", nombre: "Oferta / temporada", descripcion: "Una cifra enorme como gancho sobre la foto.", campos: ["foto", "eyebrow", "dato", "l1", "ribbon", "support"], maqueta: { ...M.heroPleno, bloqueBottom: 110 } }),
+  mk({ id: "poster", familia: "comercial", nombre: "Póster sándwich", descripcion: "Franja sólida arriba, foto al medio y franja abajo.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon"], l2: 98, maqueta: { fondo: "poster", logoTop: 62, logoAncho: 320, bloqueTop: 846 } }),
+
+  /* Caja sólida: el texto deja de flotar sobre la foto y se alinea a la
+     izquierda. Sin contorno rojo, que sobre un fondo liso ensucia. */
+  mk({ id: "caja-titular", familia: "comercial", nombre: "Titular en caja", descripcion: "El texto en un bloque sólido, alineado a la izquierda. Más editorial.", campos: ["foto", "eyebrow", "l1", "l2", "chips", "ribbon"], l2: 88, maqueta: { fondo: "foto", logoTop: 64, logoAncho: 300, bloqueBottom: 150, bloqueIzq: 64, bloqueDer: 220, alinear: "izquierda", cajaTexto: "navy", titularPlano: true, velos: ["full"] } }),
+
+  /* Banda lateral: rompe la simetría centrada que comparten casi todas. */
+  mk({ id: "banda-lateral", familia: "comercial", nombre: "Banda lateral", descripcion: "Franja roja con el rótulo en vertical y la foto al costado.", campos: ["foto", "l1", "l2", "metricas"], l2: 96, maqueta: { fondo: "foto", logoTop: 64, logoAncho: 290, bloqueBottom: 130, bloqueIzq: 190, bloqueDer: 64, alinear: "izquierda", bandaLateral: true, titularPlano: true, velos: ["full", "bottom"] } }),
+
+  /* Arco: el borde curvo cambia la silueta sin tocar nada más. */
+  mk({ id: "arco", familia: "comercial", nombre: "Arco", descripcion: "Foto con el borde inferior curvo y el texto sobre crema.", campos: ["foto", "eyebrow", "l2", "tarjetas", "ribbon"], l2: 96, maqueta: { fondo: "foto-banda", logoTop: 520, logoAncho: 330, bloqueTop: 660, panelTop: 330, panelVariante: "recto", arco: true } }),
+
+  /* Marco: encuadra la pieza entera, se siente de campaña. */
+  mk({ id: "marco-campana", familia: "comercial", nombre: "Marco", descripcion: "Marco interior sobre la foto, con la cifra al centro.", campos: ["foto", "eyebrow", "dato", "l1", "ribbon"], maqueta: { fondo: "foto", logoTop: 92, logoAncho: 300, bloqueBottom: 190, bloqueIzq: 110, bloqueDer: 110, marcoInterior: true, velos: ["full", "bottom"] } }),
+
+  /* Corte recto y mitades iguales: lo más sobrio de la familia. */
+  mk({ id: "mitades", familia: "comercial", nombre: "Mitades", descripcion: "Foto y color en partes iguales, con corte recto y texto a la izquierda.", campos: ["foto", "eyebrow", "l1", "l2", "ribbon", "ribbon2"], l2: 100, maqueta: { fondo: "foto-arriba", logoTop: 500, logoAncho: 300, bloqueTop: 712, panelTop: 675, panelVariante: "recto", bloqueIzq: 64, bloqueDer: 64, alinear: "izquierda", velos: ["top"] } }),
 
   /* =============== Informativa =============== */
   mk({ id: "banda-lista", familia: "informativa", nombre: "Banda + lista", descripcion: "Franja de foto arriba y lista de viñetas.", campos: ["foto", "eyebrow", "l1", "l2", "lista", "ribbon"], l2: 112, maqueta: M.banda }),

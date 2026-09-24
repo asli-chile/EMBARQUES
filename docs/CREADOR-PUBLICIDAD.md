@@ -296,3 +296,29 @@ composición.
 
 El selector de formato dibuja la silueta de cada proporción, que se entiende
 antes que el texto.
+
+## Recursos de composición
+
+Mover números en la maqueta no alcanza para que dos piezas se vean distintas:
+la familia Comercial tenía siete variantes de "foto arriba, panel azul en
+diagonal, titular centrado con contorno rojo". Se ven todas iguales en el feed.
+
+Por eso hay palancas que cambian el **tipo** de composición, no su medida. Se
+declaran en la maqueta:
+
+| Palanca | Qué hace |
+|---|---|
+| `panelVariante` | Corte del panel: diagonal (por defecto), `recto` o `invertida` |
+| `arco` | Borde inferior curvo en la foto |
+| `bandaLateral` | Franja de color con el rótulo en vertical |
+| `marcoInterior` | Marco que encuadra la pieza |
+| `cajaTexto` | El bloque de texto sobre una caja sólida (`navy`, `roja`, `crema`) |
+| `titularPlano` | Titular sin el contorno rojo |
+| `filete` | Filete rojo bajo el titular, para las que no llevan cinta |
+
+Dos detalles que costaron:
+
+- **El contorno rojo del titular sobra sobre una caja sólida**: ahí ensucia en
+  vez de destacar. Por eso `cajaTexto` va casi siempre con `titularPlano`.
+- **El rótulo vertical va con `writing-mode`, no con `rotate`.** Al rotar, la
+  caja conserva su tamaño horizontal y un texto largo se salía de la franja.
