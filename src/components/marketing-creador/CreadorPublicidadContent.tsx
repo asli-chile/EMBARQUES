@@ -31,6 +31,40 @@ import "@/styles/marketing-pieza.css";
 
 const BUCKET_BASE = `${import.meta.env.PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/marketing-banco`;
 
+/**
+ * Que vaciar para que cada elemento de plantilla desaparezca.
+ *
+ * Un elemento sin contenido no se dibuja, asi que "borrar" es vaciar sus
+ * campos: no hace falta una lista aparte de elementos escondidos, que habria
+ * que mantener en sincronia con la plantilla.
+ *
+ * El logo de ASLI no esta, a proposito: es la marca y no se borra. El pie se
+ * apaga con su interruptor, que es reversible.
+ */
+const VACIAR: Record<string, Partial<Pieza>> = {
+  eyebrow: { eyebrow: "" },
+  titular: { l1: "", lm: "", l2: "" },
+  ribbon: { ribbon: "" },
+  ribbon2: { ribbon2: "" },
+  support: { support: "" },
+  dato: { dato: "", datoEtiqueta: "" },
+  dona: { dato: "", datoEtiqueta: "" },
+  cita: { cita: "", firma: "" },
+  chips: { chips: [] },
+  lista: { lista: [] },
+  checklist: { lista: [] },
+  pasos: { pasos: [] },
+  metricas: { metricas: [] },
+  barras: { barras: [] },
+  tarjetas: { tarjetas: [] },
+  hitos: { hitos: [] },
+  tabla: { tabla: [] },
+  columnas: { colATitulo: "", colA: [], colBTitulo: "", colB: [] },
+  evento: { eventoFecha: "", eventoLugar: "", eventoStand: "" },
+  logo2: { logo2: "" },
+  pie: { mostrarPie: false },
+};
+
 /* La pieza en curso se guarda en el navegador: sin esto, recargar por
    cualquier motivo borraba todo el trabajo (textos, plantilla, foto, bloques y
    posiciones) y parecia que la foto recien subida se habia perdido. */
@@ -507,6 +541,53 @@ export function CreadorPublicidadContent() {
     },
     [escala, pieza.ajustes],
   );
+
+  /**
+   * Borra lo que este seleccionado, sea un bloque agregado o un elemento de
+   * la plantilla. Tambien se lleva su posicion: si quedara, un elemento que
+   * vuelva a aparecer heredaria las coordenadas del que se borro.
+   */
+  const borrarSeleccionado = useCallback(() => {
+    const id = seleccion;
+    if (!id) return;
+    setPieza((p) => {
+      const esBloque = p.extras.some((e) => e.id === id);
+      const vaciar = VACIAR[id];
+      if (!esBloque && !vaciar) return p;
+
+      const ajustes = { ...p.ajustes };
+      delete ajustes[id];
+      return {
+        ...p,
+        ...(vaciar ?? {}),
+        extras: esBloque ? p.extras.filter((e) => e.id !== id) : p.extras,
+        ajustes,
+      };
+    });
+    setSeleccion(null);
+  }, [seleccion]);
+
+  /* Supr y Retroceso borran el seleccionado. Solo en modo ajuste, que es donde
+     hay seleccion, y nunca mientras se escribe: ahi esas teclas son del campo
+     y robarselas seria borrar la pieza en vez de una letra. */
+  useEffect(() => {
+    if (!ajustando || !seleccion) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const donde = e.target as HTMLElement | null;
+      if (
+        donde &&
+        (donde.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(donde.tagName))
+      ) {
+        return;
+      }
+      // Retroceso sin esto vuelve atras en el historial del navegador.
+      e.preventDefault();
+      borrarSeleccionado();
+    };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [ajustando, seleccion, borrarSeleccionado]);
 
   const tomarFoto = useCallback(
     (e: React.PointerEvent) => {
@@ -1590,6 +1671,18 @@ export function CreadorPublicidadContent() {
             ) : null}
 
             <div className="flex flex-wrap gap-2">
+              {ajustando && seleccion ? (
+                <button
+                  type="button"
+                  onClick={borrarSeleccionado}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-xs font-bold text-dash-muted transition hover:border-[#ff6b8a]/60 hover:text-[#ff6b8a]"
+                >
+                  <Icon icon="mdi:trash-can-outline" className="h-4 w-4" />
+                  Borrar el seleccionado
+                  <kbd className="rounded border border-dash-border px-1 text-[10px] font-normal">Supr</kbd>
+                </button>
+              ) : null}
+
               {ajustando && seleccion ? (
                 <button
                   type="button"

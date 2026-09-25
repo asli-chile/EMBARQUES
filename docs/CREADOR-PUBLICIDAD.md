@@ -543,3 +543,37 @@ de importar.
 También se le saca el tope de altura a las imágenes ya colocadas: ahí el
 tamaño lo manda quien la movió, y el tope solo recortaría la foto al
 agrandarla.
+
+## Borrar el elemento seleccionado
+
+En modo ajuste, **Supr** y **Retroceso** borran lo que esté seleccionado, y
+hay un botón que hace lo mismo para quien no use el teclado.
+
+### Borrar es vaciar
+
+Un elemento sin contenido no se dibuja, así que borrar uno de plantilla es
+vaciar sus campos. No hace falta una lista aparte de "elementos escondidos",
+que habría que mantener en sincronía con cada plantilla. El mapa `VACIAR` dice
+qué campos corresponden a cada elemento.
+
+Eso obligó a corregir tres elementos que se dibujaban aunque estuvieran
+vacíos: el titular, la dona y las columnas. Dejaban una caja vacía ocupando
+lugar, con su contorno de edición, y parecía que el borrado no había hecho
+nada.
+
+Los bloques agregados a mano se sacan de la lista, y en los dos casos se borra
+también la posición guardada: si quedara, un elemento que vuelva a aparecer
+heredaría las coordenadas del que se borró.
+
+### Dos cosas que no se borran
+
+- **El logo de ASLI**, a propósito: es la marca y no es un elemento opcional.
+- **El pie** se apaga con su interruptor en Estilo, que es reversible, así que
+  al seleccionarlo y borrarlo se apaga ese interruptor en vez de perder nada.
+
+### Mientras se escribe, esas teclas son del campo
+
+El atajo se ignora si el foco está en un `input`, un `textarea`, un `select` o
+algo editable. Sin ese guardia, corregir una letra en un título borraría el
+elemento entero. Además hay que cancelar el evento: el Retroceso fuera de un
+campo hace que el navegador vuelva atrás en el historial.

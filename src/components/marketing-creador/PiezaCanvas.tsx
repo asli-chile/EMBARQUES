@@ -576,11 +576,16 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
     ) : null,
   );
 
-  sumar("dona", usa("dona") ? <Dona valor={parseInt(pieza.dato, 10) || 0} texto={pieza.datoEtiqueta} /> : null);
+  sumar(
+    "dona",
+    usa("dona") && pieza.dato ? (
+      <Dona valor={parseInt(pieza.dato, 10) || 0} texto={pieza.datoEtiqueta} />
+    ) : null,
+  );
 
   sumar(
     "titular",
-    usa("l1") || usa("lm") || usa("l2") ? (
+    (usa("l1") && pieza.l1) || (usa("lm") && pieza.lm) || (usa("l2") && pieza.l2) ? (
       <h1 className={`${maqueta.titularPlano ? "plano" : ""} ${maqueta.filete ? "filete" : ""}`.trim()}>
         {usa("l1") && pieza.l1 ? <span className="l1">{pieza.l1}</span> : null}
         {usa("lm") && pieza.lm ? <span className="lm">{pieza.lm}</span> : null}
@@ -728,7 +733,8 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
 
   sumar(
     "columnas",
-    usa("columnas") ? (
+    usa("columnas") &&
+    (pieza.colATitulo || pieza.colBTitulo || limpio(pieza.colA).length || limpio(pieza.colB).length) ? (
       <div className="columnas">
         <div>
           <h3>{pieza.colATitulo}</h3>
