@@ -10,7 +10,7 @@
  */
 
 export type RouteChrome =
-  /** Módulo ERP: fondo azul claro, hero navy y barra de herramientas. */
+  /** Módulo ERP (neón): cabecera, barra de filtros y tabla. */
   | "module"
   /** Landing / marketing: superficie neon oscura. */
   | "marketing"
@@ -27,14 +27,16 @@ export function getRouteChrome(pathname: string): RouteChrome {
 }
 
 /**
- * Fondo de cada aspecto. Debe coincidir con el fondo real de la página:
- * `modulePageBg`, `--inicio-cream` (src/styles/inicio.css) y la raíz de
- * DashboardContent.
+ * Fondo de cada aspecto. Debe coincidir con el fondo real de la página.
+ * Módulos y dashboard usan el tema neón, que puede ser oscuro o claro:
+ * `erp-carga` (dashboard-neon.css) toma el color del tema elegido, marcado en
+ * `<html data-erp-neon>` antes del primer pintado. Un hex fijo acá pintaba
+ * la carga del color equivocado para quien usa el tema claro.
  */
 export const routeChromeBg: Record<RouteChrome, string> = {
-  module: "bg-[#D9E3F2]",
+  module: "erp-carga",
   marketing: "bg-[#050914]",
-  dashboard: "bg-[#050914]",
+  dashboard: "erp-carga",
 };
 
 /**

@@ -2,7 +2,8 @@
 import { AppShell } from "@/components/layout";
 import FaviconLinks from "@/components/layout/FaviconLinks.astro";
 import { stripBasePathname, withBase } from "@/lib/basePath";
-import { getRouteChrome, hasSkeletonBones, routeChromeBg } from "@/lib/ui/routeChrome";
+import { getRouteChrome } from "@/lib/ui/routeChrome";
+import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
 import "@/styles/globals.css";
 
 interface Props {
@@ -13,7 +14,6 @@ interface Props {
 const { title = "EMBARQUES - Logística y Comercio Exterior", description = "Logística y Comercio Exterior" } = Astro.props;
 const pathname = stripBasePathname(Astro.url.pathname);
 const chrome = getRouteChrome(pathname);
-const showBones = hasSkeletonBones(chrome);
 ---
 
 <!DOCTYPE html>
@@ -31,6 +31,22 @@ const showBones = hasSkeletonBones(chrome);
       media="(min-width: 768px)"
     />
     <title>{title}</title>
+    <!--
+      Tema neón antes del primer pintado. La preferencia vive en localStorage
+      (src/lib/ui/neonTheme.ts); sin esto, la pantalla de carga no sabe si es
+      oscura o clara hasta que hidrata React, y quien usa el tema claro ve un
+      destello del otro.
+    -->
+    <script is:inline>
+      (function () {
+        var t = "dark";
+        try {
+          var v = localStorage.getItem("erp-neon-theme") || localStorage.getItem("informativos-studio-theme");
+          if (v === "light" || v === "dark") t = v;
+        } catch (e) {}
+        document.documentElement.dataset.erpNeon = t;
+      })();
+    </script>
     <script src={withBase("/erp-busy.js")}></script>
     <style is:global>
       vercel-live-feedback, #vercel-live-feedback, .__vercel_live_token,
@@ -40,7 +56,8 @@ const showBones = hasSkeletonBones(chrome);
   <body class="h-screen max-w-full overflow-hidden font-sans antialiased" style="--font-open-sans: 'Open Sans', system-ui, sans-serif">
     <!--
       Loader pre-hidratación. Coincide con AppChromeFrame: rail 64px + fondo de ruta.
-      El área de contenido sigue a ModuleSoftFallback (huesos solo en módulos).
+      El área de contenido ES ModuleSoftFallback, renderizado en el servidor sin
+      JavaScript: una sola pieza para la carga previa y la de Suspense.
     -->
     <div
       id="app-shell-loading"
@@ -49,34 +66,10 @@ const showBones = hasSkeletonBones(chrome);
       aria-live="polite"
     >
       <div
-        class="z-40 h-full w-[64px] shrink-0 border-r border-black/20 bg-[#0B1A3D] pt-[env(safe-area-inset-top)]"
+        class="z-40 hidden h-full w-[64px] shrink-0 border-r border-black/20 bg-[#0B1A3D] pt-[env(safe-area-inset-top)] md:block"
         aria-hidden="true"
       ></div>
-      <div class:list={["flex min-h-0 min-w-0 flex-1 flex-col", routeChromeBg[chrome]]}>
-        {showBones && (
-          <>
-            <div class="shrink-0 bg-gradient-to-br from-brand-blue via-[#0d1c42] to-brand-dark-teal px-4 sm:px-6 pt-5 pb-4">
-              <div class="flex items-center gap-3.5">
-                <div class="motion-skeleton motion-skeleton-on-dark h-12 w-12 shrink-0 rounded-lg"></div>
-                <div class="min-w-0 flex-1 space-y-2">
-                  <div class="motion-skeleton motion-skeleton-on-dark h-7 w-40 max-w-[55%] rounded-md"></div>
-                  <div class="motion-skeleton motion-skeleton-on-dark h-4 w-28 max-w-[40%] rounded-md"></div>
-                </div>
-              </div>
-            </div>
-            <div class="shrink-0 border-b border-brand-blue/15 bg-[#E8F0FA]/95 px-3 sm:px-4 py-3">
-              <div class="flex flex-wrap gap-2">
-                <div class="motion-skeleton h-10 w-24 rounded-lg"></div>
-                <div class="motion-skeleton h-10 w-28 rounded-lg"></div>
-                <div class="motion-skeleton h-10 w-20 rounded-lg"></div>
-              </div>
-            </div>
-            <div class="min-h-0 flex-1 p-3 sm:p-4">
-              <div class="motion-skeleton motion-skeleton-surface h-full min-h-[200px] rounded-xl border border-brand-blue/15 shadow-sm"></div>
-            </div>
-          </>
-        )}
-      </div>
+      <ModuleSoftFallback chrome={chrome} />
       <p
         id="app-shell-loading-hint"
         class="absolute bottom-4 left-1/2 z-10 hidden max-w-sm -translate-x-1/2 px-4 text-center text-xs leading-snug text-white/45"

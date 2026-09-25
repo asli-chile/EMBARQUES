@@ -613,6 +613,52 @@
   transform: none !important;
 }
 
+/* -- Pantalla de carga (ModuleSoftFallback y loader de BaseLayout) --
+ * Vive fuera de .dash-neon porque se pinta antes de que monte el módulo; por
+ * eso lee el tema de <html data-erp-neon>, que BaseLayout marca en <head>.
+ * Los tonos son los del tema neón (--dash-bg, --dash-header, --dash-surface)
+ * para que la carga y la página que llega tengan el mismo color. */
+html {
+  --carga-bg: #050914;
+  --carga-cabecera: #0a1224;
+  --carga-superficie: #0c1730;
+  --carga-titulos: #101c38;
+  --carga-borde: rgba(0, 232, 255, 0.16);
+  --carga-hueso: rgba(142, 200, 220, 0.11);
+  --carga-brillo: rgba(142, 200, 220, 0.14);
+}
+html[data-erp-neon="light"] {
+  --carga-bg: #dce8f6;
+  --carga-cabecera: #f2f7fd;
+  --carga-superficie: #ffffff;
+  --carga-titulos: #e6eef9;
+  --carga-borde: rgba(0, 150, 184, 0.22);
+  --carga-hueso: rgba(10, 28, 58, 0.07);
+  --carga-brillo: rgba(255, 255, 255, 0.7);
+}
+.erp-carga {
+  background-color: var(--carga-bg);
+}
+.erp-carga .motion-skeleton {
+  --motion-skeleton-base: var(--carga-hueso);
+  --motion-skeleton-sheen: var(--carga-brillo);
+}
+.erp-carga-cabecera {
+  background-color: var(--carga-cabecera);
+  border-bottom: 1px solid var(--carga-borde);
+}
+.erp-carga-card {
+  background-color: var(--carga-superficie);
+  border: 1px solid var(--carga-borde);
+}
+.erp-carga-titulos {
+  background-color: var(--carga-titulos);
+  border-bottom: 1px solid var(--carga-borde);
+}
+.erp-carga-fila + .erp-carga-fila {
+  border-top: 1px solid color-mix(in srgb, var(--carga-borde) 60%, transparent);
+}
+
 /* -- Portales neón (FormSelect / Combobox fuera de .dash-neon) -- */
 html[data-erp-neon="dark"] {
   --erp-neon: #00e8ff;
