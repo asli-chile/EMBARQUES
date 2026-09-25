@@ -14,6 +14,7 @@ import { sileo } from "sileo";
 import { withBase } from "@/lib/basePath";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { formatRefAsli } from "@/lib/refAsli";
+import { semanaIsoDeFecha } from "@/lib/operaciones/semanaEtd";
 import { EstadoOperacionCellRenderer } from "@/components/registros/EstadoOperacionCellRenderer";
 import { arriboLabelsDe } from "@/components/ui/ArriboChip";
 import { ESTADO_INICIAL, estadosEnOrden, etiquetaEstado } from "@/lib/operaciones/estados";
@@ -233,16 +234,6 @@ type DbOperacion = {
   enviado_transporte: boolean | null;
   observaciones: string | null;
 };
-
-function isoWeekFromDate(value: string | null): number | null {
-  if (!value) return null;
-  const d = new Date(Date.UTC(...(value.split("-").map(Number) as [number, number, number])));
-  if (isNaN(d.getTime())) return null;
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-}
 
 function formatDate(value: string | null, _locale: string): string {
   if (!value) return "";
@@ -547,7 +538,7 @@ function createToRow(locale: string) {
       referencia_externa: db.referencia_externa ?? "",
       temporada: db.temporada ?? "",
       ingreso: formatDateTime(db.ingreso, locale),
-      semana: isoWeekFromDate(db.etd),
+      semana: semanaIsoDeFecha(db.etd),
       ejecutivo: db.ejecutivo,
       estado_operacion: db.estado_operacion,
       arribo_confirmado: db.arribo_confirmado,

@@ -11,6 +11,7 @@ import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
 import { withBase } from "@/lib/basePath";
 import { motivoFueraDeNavitrack } from "@/lib/navitrack/alcance";
 import { ComboboxInput, type ComboboxOption } from "@/components/ui/ComboboxInput";
+import { semanaIsoDeFecha } from "@/lib/operaciones/semanaEtd";
 
 /**
  * Detalle de una reserva, desplegado bajo su fila en Mis Reservas.
@@ -65,7 +66,7 @@ const GRUPOS: Grupo[] = [
       { key: "referencia_externa", labelKey: "colRefExterna" },
       { key: "temporada", labelKey: "colTemporada", fijo: true },
       { key: "ingreso", labelKey: "colEntryDate", formato: "fecha", fijo: true },
-      { key: "semana", labelKey: "colWeek", entero: true },
+      { key: "semana", labelKey: "colWeek", fijo: true },
       { key: "ejecutivo", labelKey: "colExecutive" },
       { key: "tipo_operacion", labelKey: "colOperationType" },
       { key: "solicitud_ventana", labelKey: "colVentana", formato: "ventana" },
@@ -799,7 +800,10 @@ export function ReservaDetalle({
   /* `base` es lo que hay en la base; `fila`, lo que se ve: la base con los
      cambios anotados encima, para revisar cómo queda antes de guardar. */
   const base: Fila = { ...(completa ?? {}), ...op, ...editados };
-  const fila: Fila = { ...base, ...pendientes };
+  /* La semana sale del ETD, no de la columna (ver `semanaIsoDeFecha`): así
+     sigue al zarpe, incluso a uno cambiado y todavía sin guardar. */
+  const conPendientes: Fila = { ...base, ...pendientes };
+  const fila: Fila = { ...conPendientes, semana: semanaIsoDeFecha(texto(conPendientes.etd)) };
   const puedeEditar = !!onGuardarCambios && estado === "listo";
   const opciones = useOpcionesCampos(supabase, !!onGuardarCambios);
   const nPendientes = Object.keys(pendientes).length;
@@ -825,6 +829,11 @@ export function ReservaDetalle({
     for (const [key, valor] of Object.entries(pendientes)) {
       cambios[key] = typeof valor === "string" ? valor.trim() || null : valor;
       anteriores[key] = base[key] ?? null;
+    }
+    /* Otras pantallas leen todavía la columna: se deja al día con el ETD. */
+    if ("etd" in cambios) {
+      cambios.semana = semanaIsoDeFecha(typeof cambios.etd === "string" ? cambios.etd : null);
+      anteriores.semana = base.semana ?? null;
     }
     setGuardando(true);
     const ok = await onGuardarCambios(op.id, cambios, anteriores);
