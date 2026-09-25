@@ -1021,6 +1021,23 @@
   margin-top: 0;
 }
 
+/* Fuera del modo ajuste, cada elemento lleva a su campo. Se marca al pasar por
+   encima: sin eso no hay forma de saber que se puede hacer clic, y hay textos
+   parecidos -tres cintas rojas- cuyos campos estan lejos entre si. */
+.pieza .elemento.apuntable {
+  cursor: pointer;
+}
+.pieza .elemento.apuntable::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 2px dashed transparent;
+  pointer-events: none;
+}
+.pieza .elemento.apuntable:hover::after {
+  border-color: rgba(0, 232, 255, 0.55);
+}
+
 /* ---------- Estado de edición ---------- */
 .pieza .elemento.editable {
   cursor: move;

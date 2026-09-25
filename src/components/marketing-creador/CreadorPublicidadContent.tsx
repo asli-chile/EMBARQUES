@@ -32,6 +32,37 @@ import "@/styles/marketing-pieza.css";
 const BUCKET_BASE = `${import.meta.env.PUBLIC_SUPABASE_URL ?? ""}/storage/v1/object/public/marketing-banco`;
 
 /**
+ * Con que campo se escribe cada elemento.
+ *
+ * Hace falta porque el nombre del elemento y el del campo no siempre coinciden:
+ * el titular se escribe en tres campos, la dona sale de la cifra, y la lista y
+ * la checklist comparten uno. Sin este mapa hay que adivinar cual de los campos
+ * del panel escribe lo que se esta mirando, y eso con tres cintas rojas
+ * distintas, cuyos campos estan lejos entre si, no se adivina.
+ */
+const CAMPO_DE: Record<string, string> = {
+  eyebrow: "c-eyebrow",
+  titular: "c-l2",
+  ribbon: "c-ribbon",
+  ribbon2: "c-ribbon2",
+  support: "c-support",
+  dato: "c-dato",
+  dona: "c-dato",
+  cita: "c-cita",
+  chips: "c-chips",
+  lista: "c-lista",
+  checklist: "c-lista",
+  pasos: "c-pasos",
+  metricas: "c-metricas",
+  barras: "c-barras",
+  tarjetas: "c-tarjetas",
+  hitos: "c-hitos",
+  tabla: "c-tabla",
+  columnas: "c-colA-t",
+  evento: "c-ev-fecha",
+};
+
+/**
  * Que vaciar para que cada elemento de plantilla desaparezca.
  *
  * Un elemento sin contenido no se dibuja, asi que "borrar" es vaciar sus
@@ -716,6 +747,39 @@ export function CreadorPublicidadContent() {
     onBlur: () => setCampoActivo((actual) => (actual === id ? null : actual)),
   });
 
+  /**
+   * Clic en un elemento de la vista previa: abre Contenido y deja el cursor en
+   * el campo que lo escribe. Los bloques agregados usan su propio id.
+   */
+  /** Campo al que hay que ir apenas termine el render, y su pedido. */
+  const aEnfocar = useRef<string | null>(null);
+  const [pedidoFoco, setPedidoFoco] = useState(0);
+
+  const irAlCampo = useCallback((id: string) => {
+    setPestana("contenido");
+    setCampoActivo(id);
+    // El foco se pide para despues del render, no aca: el campo puede no
+    // existir todavia -si estaba abierta otra pestaña- y React puede
+    // reemplazar el nodo al pintar, con lo que el foco quedaria puesto en un
+    // elemento que ya no esta en la pagina. Con requestAnimationFrame andaba
+    // una vez si y otra no, justamente por eso.
+    aEnfocar.current = CAMPO_DE[id] ?? `c-${id}`;
+    // El contador asegura que haya un render: si se vuelve a hacer clic en lo
+    // mismo, las dos lineas de arriba no cambian nada, no habria render y el
+    // efecto que mueve el foco no llegaria a correr.
+    setPedidoFoco((n) => n + 1);
+  }, []);
+
+  useEffect(() => {
+    const cual = aEnfocar.current;
+    if (!cual) return;
+    aEnfocar.current = null;
+    const campo = document.getElementById(cual);
+    if (!campo) return;
+    campo.scrollIntoView({ block: "center", behavior: "smooth" });
+    (campo as HTMLInputElement).focus({ preventScroll: true });
+  }, [pedidoFoco]);
+
   /* ---- bloques agregados a mano ---- */
   const agregarExtra = useCallback((tipo: TipoExtra) => {
     const extra = nuevoExtra(tipo);
@@ -792,6 +856,7 @@ export function CreadorPublicidadContent() {
                   ? { activo: true, seleccion, onTomar: tomar, onTomarFoto: tomarFoto }
                   : undefined
               }
+              onElegir={exportando === null ? irAlCampo : undefined}
               /* Igual que el editor: durante la exportacion no se pasa, asi
                  el marcador no puede colarse en la imagen. */
               resaltado={exportando === null ? campoActivo : null}
@@ -1474,6 +1539,7 @@ export function CreadorPublicidadContent() {
 
                   {def.forma === "simple" || def.forma === "doble" ? (
                     <input
+                      id={`c-${ex.id}`}
                       className={input}
                       value={ex.texto}
                       onChange={(e) => cambiarExtra(ex.id, { texto: e.target.value })}
@@ -1493,6 +1559,7 @@ export function CreadorPublicidadContent() {
 
                   {def.forma === "lineas" || def.forma === "pares" ? (
                     <textarea
+                      id={`c-${ex.id}`}
                       className={`${input} min-h-[90px] resize-y`}
                       value={ex.lineas.join("\n")}
                       onChange={(e) => cambiarExtra(ex.id, { lineas: e.target.value.split("\n") })}

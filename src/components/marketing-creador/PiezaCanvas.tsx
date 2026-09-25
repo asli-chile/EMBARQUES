@@ -3,6 +3,7 @@
 import { forwardRef, type ReactNode } from "react";
 import { withBase } from "@/lib/basePath";
 import {
+  getExtra,
   getFormato,
   getPlantilla,
   partir,
@@ -83,6 +84,24 @@ function Dona({ valor, texto }: { valor: number; texto: string }) {
 }
 
 /**
+ * Un bloque sin contenido no se dibuja.
+ *
+ * Si no, al vaciarle el texto queda su caja -una cinta roja vacia, por
+ * ejemplo- y desde la pieza no hay forma de sacarla. Se decide aca afuera y no
+ * dentro del bloque: devolver null adentro deja igual el envoltorio, que sigue
+ * ocupando lugar y mostrando su contorno en modo ajuste.
+ *
+ * La imagen no entra: su marcador de "elegí una foto" es justamente la guia
+ * para llenarla. La ficha del bloque sigue en el panel en todos los casos.
+ */
+function extraVacio(extra: Extra): boolean {
+  const { forma } = getExtra(extra.tipo);
+  if (forma === "simple" || forma === "doble") return !extra.texto.trim() && !extra.texto2.trim();
+  if (forma === "lineas" || forma === "pares") return extra.lineas.every((x) => !x.trim());
+  return false;
+}
+
+/**
  * Dibuja un bloque agregado a mano.
  *
  * Reutiliza las mismas clases que los elementos de plantilla: un parrafo
@@ -102,6 +121,7 @@ function BloqueExtra({
 }) {
   const limpio = extra.lineas.filter((x) => x.trim());
   const pares = limpio.map(partir);
+
 
   switch (extra.tipo) {
     case "titulo":
@@ -317,6 +337,8 @@ export type Editor = {
 
 type Props = {
   pieza: Pieza;
+  /** Clic en un elemento: lleva al campo que lo escribe. */
+  onElegir?: (id: string) => void;
   /** Id del elemento que se está editando: se marca en la vista previa. */
   resaltado?: string | null;
   /** 1 = tamaño real. La vista previa se ajusta al hueco disponible. */
@@ -325,7 +347,7 @@ type Props = {
 };
 
 export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanvas(
-  { pieza, escala = 1, editor, resaltado },
+  { pieza, escala = 1, editor, resaltado, onElegir },
   ref,
 ) {
   const { campos, maqueta } = getPlantilla(pieza.plantilla);
@@ -791,6 +813,7 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
   /* Los bloques agregados van al final, en su orden. Al llevar id propio
      entran al mismo sistema de posicionado, arrastre y marcador. */
   for (const extra of pieza.extras ?? []) {
+    if (extraVacio(extra)) continue;
     sumar(
       extra.id,
       <BloqueExtra extra={extra} alineacion={alineacion} completa={completa} redondeo={redondeo} />,
@@ -820,12 +843,17 @@ export const PiezaCanvas = forwardRef<HTMLDivElement, Props>(function PiezaCanva
         key={id}
         data-elemento={id}
         className={`elemento${ajuste ? " suelto" : ""}${editable ? " editable" : ""}${
-          seleccionado ? " sel" : ""
-        }${maqueta.alinear === "izquierda" ? " izq" : ""} al-${alineacion}${
-          resaltado === id ? " resaltado" : ""
-        }`}
+          !editable && onElegir ? " apuntable" : ""
+        }${seleccionado ? " sel" : ""}${
+          maqueta.alinear === "izquierda" ? " izq" : ""
+        } al-${alineacion}${resaltado === id ? " resaltado" : ""}`}
         style={estilo}
         onPointerDown={editable ? (e) => editor?.onTomar(id, "mover", e) : undefined}
+        /* Fuera del modo ajuste el clic lleva al campo que escribe este
+           elemento. Adentro no: ahi el clic es el final de un arrastre y
+           saltaria de pestaña cada vez que se mueve algo. */
+        onClick={!editable && onElegir ? () => onElegir(id) : undefined}
+        title={!editable && onElegir ? "Clic para editar este texto" : undefined}
       >
         {nodo}
         {editable && seleccionado ? (

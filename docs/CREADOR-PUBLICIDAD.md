@@ -577,3 +577,44 @@ El atajo se ignora si el foco está en un `input`, un `textarea`, un `select` o
 algo editable. Sin ese guardia, corregir una letra en un título borraría el
 elemento entero. Además hay que cancelar el evento: el Retroceso fuera de un
 campo hace que el navegador vuelva atrás en el historial.
+
+## Clic en la vista previa: lleva a su campo
+
+Hay tres cintas rojas distintas —la de arriba (`eyebrow`), la de llamado a la
+acción (`ribbon`) y la segunda con contorno (`ribbon2`)—, todas con texto de
+muestra, y sus campos están a cientos de píxeles de distancia en el panel. El
+síntoma real era: "escribo en el campo de cinta de arriba y aparece **otra**
+barra roja, y la anterior sigue ahí y no la puedo borrar". No había ningún
+error: estaba editando otra cinta.
+
+El marcador ya mostraba, al escribir en un campo, qué elemento se estaba
+tocando. Faltaba el camino inverso. Ahora, fuera del modo ajuste, un clic en
+un elemento de la vista previa abre **Contenido** y deja el cursor en el campo
+que lo escribe, con el elemento marcado al pasar por encima para que se note
+que se puede hacer clic.
+
+Dentro del modo ajuste no, a propósito: ahí el clic es el final de un
+arrastre, y saltaría de pestaña cada vez que se mueve algo.
+
+El mapa `CAMPO_DE` hace falta porque el nombre del elemento y el del campo no
+siempre coinciden: el titular se escribe en tres campos, la dona sale de la
+cifra, y la lista y la checklist comparten uno.
+
+### El foco va en un efecto, no en un requestAnimationFrame
+
+Con `requestAnimationFrame` andaba una vez sí y otra no. El motivo: React
+puede reemplazar el nodo del campo al pintar, y el foco quedaba puesto en un
+elemento que ya no estaba en la página. En un efecto, el DOM ya está
+confirmado.
+
+Y el efecto necesita un **contador** que se incrementa en cada pedido: si se
+hace clic en algo que ya estaba marcado, ningún estado cambia, React no
+repinta y el efecto no llegaría a correr.
+
+## Un bloque vacío no deja envoltorio
+
+Vaciar el texto de un bloque agregado ya no deja su caja. La decisión se toma
+**antes** de armarlo, no devolviendo `null` adentro: devolver `null` adentro
+oculta el contenido pero deja el envoltorio, que sigue ocupando lugar y
+mostrando su contorno en modo ajuste. El bloque de imagen es la excepción:
+su marcador de "elegí una foto" es justamente la guía para llenarlo.
