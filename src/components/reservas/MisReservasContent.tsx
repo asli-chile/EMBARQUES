@@ -384,7 +384,7 @@ type SortableHeaderProps = {
 function SortableHeader({ field, label, sortField, sortDirection, onSort, className }: SortableHeaderProps) {
   const isActive = sortField === field;
   return (
-    <th className={`sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 whitespace-nowrap border-b border-dash-border text-center backdrop-blur-sm ${className ?? ""}`}>
+    <th className={`sticky top-0 z-20 bg-dash-control px-3 py-2.5 whitespace-nowrap border-b border-dash-border text-center ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(field)}
@@ -2572,9 +2572,9 @@ export function MisReservasContent() {
             <div {...fila.scrollProps} className={`flex-1 min-h-0 ${fila.scrollProps.className}`}>
               <table className="w-full text-[13.5px]">
                 <thead>
-                  <tr className="bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
+                  <tr className="bg-dash-control">
                     {!isCliente && (
-                      <th className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 w-10 border-b border-dash-border">
+                      <th className="sticky top-0 z-20 bg-dash-control px-3 py-2.5 w-10 border-b border-dash-border">
                         <input type="checkbox" checked={selectedIds.size === filteredOperaciones.length && filteredOperaciones.length > 0} onChange={handleSelectAll} className="w-4 h-4 rounded border-neutral-300 accent-[var(--dash-neon)]" />
                       </th>
                     )}
@@ -2590,8 +2590,8 @@ export function MisReservasContent() {
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="solicitud_ventana" label={tr.colTipoOperacion} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colTransport}</th>
-                    <th className="sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colActions}</th>
+                    <th className="sticky top-0 z-20 bg-dash-control px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colTransport}</th>
+                    <th className="sticky top-0 z-20 bg-dash-control px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colActions}</th>
                   </tr>
                 </thead>
                 <tbody>

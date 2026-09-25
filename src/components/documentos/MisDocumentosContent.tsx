@@ -24,7 +24,7 @@ const ROW_CV: CSSProperties = { contentVisibility: "auto", containIntrinsicSize:
 
 /** Encabezado de columna: el mismo de Mis Reservas, sin orden. */
 const TH =
-  "sticky top-0 z-20 bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)] px-3 py-2.5 whitespace-nowrap border-b border-dash-border text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted backdrop-blur-sm";
+  "sticky top-0 z-20 bg-dash-control px-3 py-2.5 whitespace-nowrap border-b border-dash-border text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted";
 
 type Operacion = {
   id: string;
