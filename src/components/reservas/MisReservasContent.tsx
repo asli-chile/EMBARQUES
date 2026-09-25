@@ -36,7 +36,7 @@ import {
   ContenedorTransporteModal,
   type ContenedorTransporteSaved,
 } from "@/components/reservas/ContenedorTransporteModal";
-import { ReservaDetalle, type ReservaDetalleLabels } from "@/components/reservas/ReservaDetalle";
+import { ReservaDetalle, type ReservaDetalleLabels, type ValorCampo } from "@/components/reservas/ReservaDetalle";
 import { propsFilaDesplegable, useFilaDesplegable } from "@/components/ui/FilaDesplegable";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
@@ -1424,6 +1424,9 @@ export function MisReservasContent() {
   const canInlineEdit = isEjecutivo || isStaff;
   const canEditContenedor = isEjecutivo || isAdmin || isSuperadmin;
   const canEditEstado = !isCliente && isStaff;
+  /* La ficha desplegada se corrige completa. El ejecutivo solo ve reservas de
+     sus clientes, y RLS le impide escribir en las demás. */
+  const canEditDetalle = isSuperadmin || isAdmin || isEjecutivo;
   const allowAnyEstado = isSuperadmin;
   const tr = t.misReservas;
   /* Las etiquetas del arribo viven en el bloque `navitrack`, que es donde se
@@ -1753,6 +1756,41 @@ export function MisReservasContent() {
     sileo.success({ title: tr.inlineSaved });
     return true;
   }, [supabase, canInlineEdit, user, profile, tr.inlineSaved]);
+
+  /* A diferencia de la celda en línea, la ficha sí sobrescribe: es donde se
+     corrige un dato ya cargado. Cada cambio queda en la auditoría. */
+  const handleDetalleSave = useCallback(async (opId: string, field: string, next: ValorCampo, previous: unknown) => {
+    if (!supabase || !canEditDetalle) return false;
+    const { data, error } = await supabase
+      .from("operaciones")
+      .update({ [field]: next })
+      .eq("id", opId)
+      .select(field)
+      .maybeSingle();
+    if (error || !data) {
+      sileo.error({ title: error?.message || tr.detalleErrorGuardar });
+      return false;
+    }
+
+    const { error: auditError } = await supabase.from("operaciones_cambios").insert({
+      operacion_id: opId,
+      campo: field,
+      valor_anterior: previous == null ? null : String(previous),
+      valor_nuevo: next == null ? null : String(next),
+      usuario_auth_id: user?.id ?? null,
+      usuario_nombre: profile?.nombre ?? user?.name ?? null,
+      usuario_email: profile?.email ?? user?.email ?? null,
+    });
+    if (auditError) {
+      console.error("Auditoría operaciones_cambios:", auditError.message);
+    }
+
+    setOperaciones((prev) =>
+      prev.map((row) => (row.id === opId && field in row ? { ...row, [field]: next } : row))
+    );
+    sileo.success({ title: tr.inlineSaved });
+    return true;
+  }, [supabase, canEditDetalle, user, profile, tr.detalleErrorGuardar, tr.inlineSaved]);
 
   const handleEstadoSave = useCallback(async (op: Operacion, next: EstadoOperacion) => {
     if (!supabase || !canEditEstado) return false;
@@ -2565,6 +2603,7 @@ export function MisReservasContent() {
                               isCliente={isCliente}
                               supabase={supabase}
                               labels={detalleLabels}
+                              onGuardarCampo={canEditDetalle ? handleDetalleSave : undefined}
                               cerrando={fila.cerrando}
                               onClose={fila.cerrar}
                             />

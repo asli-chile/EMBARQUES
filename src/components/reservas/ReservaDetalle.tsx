@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { PanelBajoFila } from "@/components/ui/FilaDesplegable";
 import { Icon } from "@iconify/react";
 import { format } from "date-fns";
@@ -34,6 +34,14 @@ type Campo = {
   sufijo?: string;
   /** Monospace: códigos que se dictan carácter a carácter. */
   mono?: boolean;
+  /** No se edita desde la ficha: lo fija el alta o lo decide otro módulo. */
+  fijo?: boolean;
+  /** Columna `integer`: la edición no acepta decimales. */
+  entero?: boolean;
+  /** Se guarda en mayúsculas: contenedores, sellos y patentes. */
+  mayus?: boolean;
+  /** Se muestra como número pero la columna es `text` (temperatura). */
+  columnaTexto?: boolean;
 };
 
 type Grupo = {
@@ -43,6 +51,8 @@ type Grupo = {
   campos: Campo[];
   /** Costos, márgenes y facturación: el cliente no los ve. */
   interno?: boolean;
+  /** Ningún campo se edita desde la ficha. */
+  fijo?: boolean;
 };
 
 const GRUPOS: Grupo[] = [
@@ -52,9 +62,9 @@ const GRUPOS: Grupo[] = [
     icono: "lucide:hash",
     campos: [
       { key: "referencia_externa", labelKey: "colRefExterna" },
-      { key: "temporada", labelKey: "colTemporada" },
-      { key: "ingreso", labelKey: "colEntryDate", formato: "fecha" },
-      { key: "semana", labelKey: "colWeek" },
+      { key: "temporada", labelKey: "colTemporada", fijo: true },
+      { key: "ingreso", labelKey: "colEntryDate", formato: "fecha", fijo: true },
+      { key: "semana", labelKey: "colWeek", entero: true },
       { key: "ejecutivo", labelKey: "colExecutive" },
       { key: "tipo_operacion", labelKey: "colOperationType" },
       { key: "solicitud_ventana", labelKey: "colVentana", formato: "ventana" },
@@ -65,7 +75,7 @@ const GRUPOS: Grupo[] = [
     tituloKey: "detalleComercial",
     icono: "lucide:briefcase",
     campos: [
-      { key: "cliente", labelKey: "colClient" },
+      { key: "cliente", labelKey: "colClient", fijo: true },
       { key: "consignatario", labelKey: "colConsignee" },
       { key: "contrato", labelKey: "colContrato" },
       { key: "incoterm", labelKey: "colIncoterm" },
@@ -80,13 +90,13 @@ const GRUPOS: Grupo[] = [
     campos: [
       { key: "especie", labelKey: "colSpecies" },
       { key: "tipo_unidad", labelKey: "colUnitType" },
-      { key: "temperatura", labelKey: "colTemperature", formato: "numero", sufijo: " °C" },
-      { key: "ventilacion", labelKey: "colVentilation", formato: "numero" },
+      { key: "temperatura", labelKey: "colTemperature", formato: "numero", sufijo: " °C", columnaTexto: true },
+      { key: "ventilacion", labelKey: "colVentilation", formato: "numero", entero: true },
       { key: "tratamiento_frio", labelKey: "colColdTreatment" },
       { key: "tipo_atmosfera", labelKey: "colAtmosphereType" },
-      { key: "tratamiento_frio_o2", labelKey: "colO2", formato: "numero" },
-      { key: "tratamiento_frio_co2", labelKey: "colCO2", formato: "numero" },
-      { key: "pallets", labelKey: "colPallets", formato: "numero" },
+      { key: "tratamiento_frio_o2", labelKey: "colO2", formato: "numero", entero: true },
+      { key: "tratamiento_frio_co2", labelKey: "colCO2", formato: "numero", entero: true },
+      { key: "pallets", labelKey: "colPallets", formato: "numero", entero: true },
       { key: "peso_bruto", labelKey: "colGrossWeight", formato: "numero" },
       { key: "peso_neto", labelKey: "colNetWeight", formato: "numero" },
     ],
@@ -104,7 +114,7 @@ const GRUPOS: Grupo[] = [
       { key: "etd", labelKey: "colETD", formato: "fecha" },
       { key: "pod", labelKey: "colPOD" },
       { key: "eta", labelKey: "colETA", formato: "fecha" },
-      { key: "tt", labelKey: "colTransitDays", formato: "numero" },
+      { key: "tt", labelKey: "colTransitDays", formato: "numero", entero: true },
     ],
   },
   {
@@ -112,9 +122,9 @@ const GRUPOS: Grupo[] = [
     tituloKey: "detalleContenedor",
     icono: "lucide:container",
     campos: [
-      { key: "contenedor", labelKey: "colContainer", mono: true },
-      { key: "sello", labelKey: "colSeal", mono: true },
-      { key: "sello_planta", labelKey: "colPlantSeal", mono: true },
+      { key: "contenedor", labelKey: "colContainer", mono: true, mayus: true },
+      { key: "sello", labelKey: "colSeal", mono: true, mayus: true },
+      { key: "sello_planta", labelKey: "colPlantSeal", mono: true, mayus: true },
       { key: "tara", labelKey: "colTare", formato: "numero" },
       { key: "deposito", labelKey: "colWarehouse" },
       { key: "agendamiento_retiro", labelKey: "colPickupSchedule", formato: "fecha" },
@@ -149,8 +159,8 @@ const GRUPOS: Grupo[] = [
       { key: "chofer", labelKey: "colDriverName" },
       { key: "rut_chofer", labelKey: "colDriverRUT", mono: true },
       { key: "telefono_chofer", labelKey: "colDriverPhone" },
-      { key: "patente_camion", labelKey: "colTruckPlate", mono: true },
-      { key: "patente_remolque", labelKey: "colTrailerPlate", mono: true },
+      { key: "patente_camion", labelKey: "colTruckPlate", mono: true, mayus: true },
+      { key: "patente_remolque", labelKey: "colTrailerPlate", mono: true, mayus: true },
       { key: "tramo", labelKey: "colSection" },
     ],
   },
@@ -164,7 +174,7 @@ const GRUPOS: Grupo[] = [
       { key: "sps", labelKey: "colSPS", mono: true },
       { key: "numero_guia_despacho", labelKey: "colDispatchGuide", mono: true },
       { key: "swb", labelKey: "colSWB", mono: true },
-      { key: "fob_invoice", labelKey: "colFobInvoice", mono: true },
+      { key: "fob_invoice", labelKey: "colFobInvoice", formato: "numero" },
       { key: "fecha_confirmacion_booking", labelKey: "colBookingConfirmation", formato: "fecha" },
       { key: "fecha_envio_documentacion", labelKey: "colDocSent", formato: "fecha" },
       { key: "fecha_entrega_bl", labelKey: "colBLDelivery", formato: "fecha" },
@@ -175,6 +185,9 @@ const GRUPOS: Grupo[] = [
     tituloKey: "detalleFacturacion",
     icono: "lucide:receipt",
     interno: true,
+    /* Lo escribe Facturación, que reserva el correlativo TRA y suma la
+       proforma; editarlo suelto acá descuadraría esa cuenta. */
+    fijo: true,
     campos: [
       { key: "numero_factura_asli", labelKey: "colASLIInvoice", mono: true },
       { key: "factura_transporte", labelKey: "colTransportInvoice", mono: true },
@@ -259,6 +272,183 @@ function fmtValor(campo: Campo, v: unknown, fila: Fila, si: string, no: string):
   }
 }
 
+/** `etd` y `eta` son columnas `date`; el resto de las fechas, `timestamptz`. */
+const SOLO_FECHA = new Set(["etd", "eta"]);
+
+/** Valor que se guarda en la base; `undefined` si lo escrito no es válido. */
+export type ValorCampo = string | number | null;
+
+/**
+ * Guarda un campo de la operación. Lo resuelve quien monta la ficha (escribe
+ * en la base, deja la auditoría y actualiza su lista) y devuelve si quedó.
+ */
+export type GuardarCampo = (key: string, valor: ValorCampo) => Promise<boolean>;
+
+function editable(g: Grupo, c: Campo): boolean {
+  return !g.fijo && !c.fijo && c.formato !== "monto" && c.formato !== "bool";
+}
+
+function valorParaInput(campo: Campo, v: unknown): string {
+  if (vacio(v)) return "";
+  const s = String(v).trim();
+  if (campo.formato !== "fecha") return s;
+  if (SOLO_FECHA.has(campo.key)) return s.slice(0, 10);
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : format(d, "yyyy-MM-dd'T'HH:mm");
+}
+
+function valorParaGuardar(campo: Campo, raw: string): ValorCampo | undefined {
+  const s = raw.trim();
+  if (s === "") return null;
+  if (campo.formato === "fecha") {
+    if (SOLO_FECHA.has(campo.key)) return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined;
+    /* `datetime-local` viene sin zona: se interpreta en la hora local, que es
+       como se mostró, y se guarda en UTC. */
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+  }
+  if (campo.formato === "numero" && !campo.columnaTexto) {
+    const n = Number(s.replace(",", "."));
+    if (!Number.isFinite(n)) return undefined;
+    if (campo.entero && !Number.isInteger(n)) return undefined;
+    return n;
+  }
+  return campo.mayus ? s.toUpperCase() : s;
+}
+
+function iguales(a: unknown, b: ValorCampo): boolean {
+  if (vacio(a) && b == null) return true;
+  if (vacio(a) || b == null) return false;
+  if (typeof b === "number") return Number(a) === b;
+  return String(a).trim() === b;
+}
+
+/**
+ * Un valor de la ficha que se edita en el lugar: clic para escribir, Enter o
+ * salir del campo guarda, Escape descarta. No se abre un formulario aparte
+ * porque lo que se corrige casi siempre es un dato suelto.
+ */
+function ValorEditable({
+  campo,
+  valor,
+  fila,
+  guardar,
+  si,
+  no,
+  labels,
+}: {
+  campo: Campo;
+  valor: unknown;
+  fila: Fila;
+  guardar: GuardarCampo;
+  si: string;
+  no: string;
+  labels: { editar: string; invalido: string };
+}) {
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(false);
+  const sinDato = vacio(valor);
+
+  const abrir = () => {
+    setBorrador(valorParaInput(campo, valor));
+    setError(false);
+    setEditando(true);
+  };
+
+  const confirmar = async () => {
+    if (guardando) return;
+    const nuevo = valorParaGuardar(campo, borrador);
+    if (nuevo === undefined) {
+      setError(true);
+      return;
+    }
+    if (iguales(valor, nuevo)) {
+      setEditando(false);
+      return;
+    }
+    setGuardando(true);
+    const ok = await guardar(campo.key, nuevo);
+    setGuardando(false);
+    if (ok) setEditando(false);
+    else setError(true);
+  };
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void confirmar();
+    } else if (e.key === "Escape") {
+      setEditando(false);
+    }
+  };
+
+  if (editando) {
+    const clase = `mt-0.5 w-full rounded-md border bg-dash-bg px-1.5 py-1 text-[13px] font-semibold text-dash-fg outline-none focus:ring-2 focus:ring-[var(--estado-curso)] ${
+      error ? "border-[var(--estado-error)]" : "border-dash-border"
+    } ${campo.mono ? "font-mono tracking-tight" : ""}`;
+    if (campo.formato === "ventana") {
+      return (
+        <select
+          autoFocus
+          value={borrador || "NORMAL"}
+          disabled={guardando}
+          onChange={(e) => setBorrador(e.target.value)}
+          onBlur={() => void confirmar()}
+          onKeyDown={onKeyDown}
+          className={clase}
+        >
+          <option value="NORMAL">Normal</option>
+          <option value="LATE">Late</option>
+          <option value="EXTRA_LATE">Extra late</option>
+        </select>
+      );
+    }
+    const esFecha = campo.formato === "fecha";
+    const esNumero = campo.formato === "numero" && !campo.columnaTexto;
+    return (
+      <input
+        autoFocus
+        type={esFecha ? (SOLO_FECHA.has(campo.key) ? "date" : "datetime-local") : esNumero ? "number" : "text"}
+        step={esNumero ? (campo.entero ? 1 : "any") : undefined}
+        inputMode={esNumero ? (campo.entero ? "numeric" : "decimal") : undefined}
+        value={borrador}
+        disabled={guardando}
+        aria-invalid={error || undefined}
+        title={error ? labels.invalido : undefined}
+        onChange={(e) => {
+          setBorrador(e.target.value);
+          setError(false);
+        }}
+        onBlur={() => void confirmar()}
+        onKeyDown={onKeyDown}
+        className={`${clase} ${campo.mayus ? "uppercase" : ""}`}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={abrir}
+      title={labels.editar}
+      className={`group/editar -mx-1 mt-0.5 flex w-[calc(100%+0.5rem)] items-start gap-1 rounded-md px-1 text-left text-[13px] leading-snug outline-none hover:bg-dash-control focus-visible:ring-2 focus-visible:ring-[var(--estado-curso)] ${
+        sinDato ? "text-dash-muted/45" : "font-semibold text-dash-fg"
+      } ${campo.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
+    >
+      <span className="min-w-0 flex-1 break-words">{fmtValor(campo, valor, fila, si, no)}</span>
+      <Icon
+        icon="lucide:pencil"
+        width={11}
+        height={11}
+        className="mt-1 shrink-0 text-dash-muted opacity-0 transition-opacity group-hover/editar:opacity-100 group-focus-visible/editar:opacity-100"
+        aria-hidden
+      />
+    </button>
+  );
+}
+
 export function Bandera({ puerto }: { puerto: string | null }) {
   const iso = isoDePuerto(puerto);
   if (!iso) return null;
@@ -320,13 +510,17 @@ export function SeccionesOperacion({
   grupos,
   soloConDatos,
   labels,
+  guardar,
 }: {
   fila: Fila;
   grupos: Grupo[];
   soloConDatos: boolean;
   labels: ReservaDetalleLabels;
+  /** Si viene, los campos editables se corrigen en el lugar. */
+  guardar?: GuardarCampo;
 }) {
   const { tr, campos } = labels;
+  const labelsEdicion = { editar: tr.detalleEditarCampo, invalido: tr.detalleValorInvalido };
   const si = campos.yes ?? "Sí";
   const no = campos.no ?? "No";
   const etiqueta = (key: string) => campos[key] ?? tr[key] ?? key;
@@ -375,13 +569,27 @@ export function SeccionesOperacion({
                       <dt className="truncate text-[10px] font-semibold uppercase tracking-wide text-dash-muted">
                         {etiqueta(c.labelKey)}
                       </dt>
-                      <dd
-                        className={`mt-0.5 break-words text-[13px] leading-snug ${
-                          sinDato ? "text-dash-muted/45" : "font-semibold text-dash-fg"
-                        } ${c.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
-                      >
-                        {fmtValor(c, v, fila, si, no)}
-                      </dd>
+                      {guardar && editable(g, c) ? (
+                        <dd>
+                          <ValorEditable
+                            campo={c}
+                            valor={v}
+                            fila={fila}
+                            guardar={guardar}
+                            si={si}
+                            no={no}
+                            labels={labelsEdicion}
+                          />
+                        </dd>
+                      ) : (
+                        <dd
+                          className={`mt-0.5 break-words text-[13px] leading-snug ${
+                            sinDato ? "text-dash-muted/45" : "font-semibold text-dash-fg"
+                          } ${c.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
+                        >
+                          {fmtValor(c, v, fila, si, no)}
+                        </dd>
+                      )}
                     </div>
                   );
                 })}
@@ -401,18 +609,30 @@ type Props = {
   isCliente: boolean;
   supabase: SupabaseClient | null;
   labels: ReservaDetalleLabels;
+  /** Guarda un campo. Sin él la ficha es de solo lectura (cliente, operador). */
+  onGuardarCampo?: (id: string, key: string, valor: ValorCampo, anterior: unknown) => Promise<boolean>;
   /** El padre lo pone en `true` al replegar y desmonta al terminar la salida. */
   cerrando: boolean;
   onClose: () => void;
 };
 
-export function ReservaDetalle({ op, isCliente, supabase, labels, cerrando, onClose }: Props) {
+export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo, cerrando, onClose }: Props) {
   const { completa, estado } = useOperacionCompleta(supabase, op.id);
   const [soloConDatos, setSoloConDatos] = useState(false);
+  /* Lo guardado desde la ficha. La lista solo trae sus columnas: sin esto, un
+     campo que la tabla no pinta volvería a mostrar el valor viejo. */
+  const [editados, setEditados] = useState<Fila>({});
   const cuerpoRef = useRef<HTMLDivElement>(null);
   const { tr, campos } = labels;
 
-  const fila: Fila = { ...(completa ?? {}), ...op };
+  const fila: Fila = { ...(completa ?? {}), ...op, ...editados };
+  const guardar: GuardarCampo | undefined = onGuardarCampo
+    ? async (key, valor) => {
+        const ok = await onGuardarCampo(op.id, key, valor, fila[key]);
+        if (ok) setEditados((prev) => ({ ...prev, [key]: valor }));
+        return ok;
+      }
+    : undefined;
   const grupos = GRUPOS.filter((g) => !(g.interno && isCliente));
   const observaciones = texto(fila.observaciones);
   const bookingDoc = texto(fila.booking_doc_url);
@@ -618,9 +838,15 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, cerrando, onCl
           </div>
 
           <div className="px-4 py-4">
-            <SeccionesOperacion fila={fila} grupos={grupos} soloConDatos={soloConDatos} labels={labels} />
+            <SeccionesOperacion
+              fila={fila}
+              grupos={grupos}
+              soloConDatos={soloConDatos}
+              labels={labels}
+              guardar={estado === "listo" ? guardar : undefined}
+            />
 
-            {observaciones && (
+            {(observaciones || (guardar && estado === "listo")) && (
               <section
                 style={staggerStyle(grupos.length)}
                 className="rd-card motion-view-section flex gap-3 rounded-2xl px-4 py-3.5"
@@ -628,15 +854,95 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, cerrando, onCl
                 <span className="rd-icono flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
                   <Icon icon="lucide:message-square-text" width={17} height={17} aria-hidden />
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-bold text-dash-fg">{etiqueta("colObservations")}</p>
-                  <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-dash-fg/90">{observaciones}</p>
+                  {guardar && estado === "listo" ? (
+                    <ObservacionesEditables
+                      valor={observaciones}
+                      guardar={guardar}
+                      placeholder={tr.detalleObservacionesVacias}
+                      guardarLabel={tr.detalleGuardar}
+                      cancelarLabel={tr.detalleCancelar}
+                    />
+                  ) : (
+                    <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-dash-fg/90">{observaciones}</p>
+                  )}
                 </div>
               </section>
             )}
           </div>
         </div>
     </PanelBajoFila>
+  );
+}
+
+/**
+ * Las observaciones son texto largo: Enter es salto de línea, así que se
+ * guardan con botón (o Ctrl+Enter) y no al salir del campo, para que un clic
+ * fuera no publique una nota a medio escribir.
+ */
+function ObservacionesEditables({
+  valor,
+  guardar,
+  placeholder,
+  guardarLabel,
+  cancelarLabel,
+}: {
+  valor: string | null;
+  guardar: GuardarCampo;
+  placeholder: string;
+  guardarLabel: string;
+  cancelarLabel: string;
+}) {
+  const [borrador, setBorrador] = useState(valor ?? "");
+  const [guardando, setGuardando] = useState(false);
+  const cambiado = borrador.trim() !== (valor ?? "").trim();
+
+  const confirmar = async () => {
+    if (!cambiado || guardando) return;
+    setGuardando(true);
+    await guardar("observaciones", borrador.trim() || null);
+    setGuardando(false);
+  };
+
+  return (
+    <div className="mt-1.5">
+      <textarea
+        value={borrador}
+        rows={Math.min(8, Math.max(2, borrador.split("\n").length))}
+        placeholder={placeholder}
+        disabled={guardando}
+        onChange={(e) => setBorrador(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            void confirmar();
+          }
+        }}
+        className="w-full resize-y rounded-lg border border-dash-border bg-dash-bg px-2.5 py-2 text-[13px] leading-relaxed text-dash-fg outline-none placeholder:text-dash-muted/60 focus:ring-2 focus:ring-[var(--estado-curso)]"
+      />
+      {cambiado && (
+        <div className="mt-1.5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setBorrador(valor ?? "")}
+            disabled={guardando}
+            className="rd-chip motion-interactive rounded-full px-3 py-1 text-[11px] font-semibold"
+          >
+            {cancelarLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => void confirmar()}
+            disabled={guardando}
+            className="estado--curso estado-chip motion-interactive inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold"
+          >
+            {guardando && <Icon icon="lucide:loader-2" width={12} height={12} className="animate-spin" aria-hidden />}
+            {guardarLabel}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
