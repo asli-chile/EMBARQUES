@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 import { toPng } from "html-to-image";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { PiezaCanvas, type TipoArrastre } from "./PiezaCanvas";
-import { medirElementos, mover, type Arrastre, type Guia } from "./editor";
+import { medirElemento, medirElementos, mover, type Arrastre, type Guia } from "./editor";
 import {
   CATEGORIAS,
   COLORES_FLECHA,
@@ -479,11 +479,22 @@ export function CreadorPublicidadContent() {
       e.stopPropagation();
       setSeleccion(id);
 
-      const ajuste = pieza.ajustes[id];
+      const lienzo = canvasRef.current;
+      const el = lienzo?.querySelector<HTMLElement>(`[data-elemento="${id}"]`);
+
+      /* Un bloque agregado estando ya en modo ajuste no pasó por la medición
+         de entrada, asi que no tiene coordenadas y antes el arrastre cortaba
+         aca: no se movia ni se redimensionaba, sin ninguna señal de por que.
+         Se le miden ahora, en el lugar donde esta. */
+      let ajuste = pieza.ajustes[id];
+      if (!ajuste && el && lienzo) {
+        ajuste = medirElemento(el, lienzo, escala);
+        const nacido = ajuste;
+        setPieza((p) => ({ ...p, ajustes: { ...p.ajustes, [id]: nacido } }));
+      }
       if (!ajuste) return;
 
       // El alto lo decide el contenido, asi que se mide en vez de guardarlo.
-      const el = canvasRef.current?.querySelector<HTMLElement>(`[data-elemento="${id}"]`);
       const alto = el ? el.getBoundingClientRect().height / escala : 0;
 
       arrastre.current = {

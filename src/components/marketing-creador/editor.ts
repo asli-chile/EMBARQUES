@@ -138,19 +138,30 @@ export type Medida = { id: string; x: number; y: number; w: number };
  * las coordenadas queden en px de la pieza y no de la pantalla.
  */
 export function medirElementos(lienzo: HTMLElement, escala: number): Ajustes {
-  const base = lienzo.getBoundingClientRect();
   const ajustes: Ajustes = {};
 
   for (const el of Array.from(lienzo.querySelectorAll<HTMLElement>("[data-elemento]"))) {
     const id = el.dataset.elemento;
     if (!id) continue;
-    const r = el.getBoundingClientRect();
-    ajustes[id] = {
-      x: Math.round((r.left - base.left) / escala),
-      y: Math.round((r.top - base.top) / escala),
-      w: Math.round(r.width / escala),
-    };
+    ajustes[id] = medirElemento(el, lienzo, escala);
   }
 
   return ajustes;
+}
+
+/**
+ * Mide un solo elemento, en px de la pieza.
+ *
+ * Hace falta suelto porque los bloques que se agregan estando ya en modo
+ * ajuste no pasaron por la medición de entrada: sin coordenadas propias el
+ * arrastre no tiene de dónde partir y el bloque queda inmóvil.
+ */
+export function medirElemento(el: HTMLElement, lienzo: HTMLElement, escala: number): Ajuste {
+  const base = lienzo.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  return {
+    x: Math.round((r.left - base.left) / escala),
+    y: Math.round((r.top - base.top) / escala),
+    w: Math.round(r.width / escala),
+  };
 }

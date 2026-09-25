@@ -1386,6 +1386,11 @@
   object-fit: cover;
   margin: 26px auto 0;
 }
+/* Ya colocada a mano, el tamaño lo manda quien la movió: el tope de altura
+   ahí solo recortaría la foto al agrandarla. */
+.pieza .elemento.suelto > .imagen-bloque {
+  max-height: none;
+}
 .pieza .imagen-vacia {
   margin: 26px auto 0;
   padding: 60px 20px;

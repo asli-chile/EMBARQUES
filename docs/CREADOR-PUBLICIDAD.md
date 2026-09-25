@@ -526,3 +526,20 @@ Un `<img>` lo arrastra el navegador por su cuenta, y ese gesto se come el
 nuestro: el elemento queda inmóvil sin ningún error a la vista. Todas las
 imágenes de la pieza llevan `draggable={false}`, y la hoja agrega
 `-webkit-user-drag: none`.
+
+## Un bloque agregado ya estando en modo ajuste
+
+Al entrar en **Ajustar posiciones** se miden todos los elementos y se les
+congela su posición. Un bloque agregado **después** de ese momento no pasó por
+esa medición, así que no tenía coordenadas, y el arrastre cortaba en seco al
+no encontrarlas: el bloque no se movía ni se redimensionaba, sin ninguna señal
+de por qué. Se notaba sobre todo con las imágenes, que es lo que uno agrega
+con ganas de acomodar.
+
+Ahora, si un elemento no tiene coordenadas cuando se lo toma, se le miden en
+ese mismo momento, en el lugar donde está. Así el orden en que se trabaja deja
+de importar.
+
+También se le saca el tope de altura a las imágenes ya colocadas: ahí el
+tamaño lo manda quien la movió, y el tope solo recortaría la foto al
+agrandarla.
