@@ -625,20 +625,6 @@ Revoca los `GRANT ALL ... TO anon` que las migraciones iniciales dejaron sobre `
 
 `authenticated` y `service_role` conservan sus privilegios, así que **aplicarla no cambia nada en el funcionamiento del ERP**. Para verificar que quedó aplicada, la propia migración incluye la consulta al final: no debe devolver filas.
 
-NaviTrack (solo datos, sin cambio de esquema):
-
-```
-supabase/migrations/20260925000001_navitrack_itinerario_datos.sql
-```
-
-Ordena lo que dejó el flujo anterior de "verificar recalada" al pasar al
-itinerario por embarque (directo o con transbordo): marca A00042 con
-transbordo, deja Rodman como transbordo de A00051 y retira Cristóbal y Thames
-(los anunció MSC SERENA después de soltar la carga), retira San Antonio y
-Callao de A00052 (ruta de entrada del buque) y devuelve a estado neutro lo que
-seguía `por_verificar`. **Mientras no se aplique**, esas filas se ven como
-puertos anunciados sin decidir; nada falla.
-
 Se pueden aplicar de tres formas:
 
 - **CLI de Supabase** (el proyecto BDASLI ya está linkeado):
