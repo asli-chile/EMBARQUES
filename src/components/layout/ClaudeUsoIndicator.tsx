@@ -17,13 +17,13 @@ import { createClient } from "@/lib/supabase/client";
  * "ver como" no debe esconderlo ni mostrárselo a otro. La barrera real es RLS.
  */
 const CORREO = "rodrigo.caceres@asli.cl";
-const REFRESCO_MS = 60_000;
+const REFRESCO_MS = 30_000;
 /**
  * Pasado esto sin noticias del widget, el dato se muestra como viejo. El widget
- * sube cada 5 min (el endpoint de Claude limita la frecuencia), así que 12 min
- * son dos envíos perdidos.
+ * sube cada minuto; si Claude le pide esperar (429) espacia los intentos, y
+ * durante esa espera el indicador lo dice en vez de fingir que está al día.
  */
-const VIEJO_SEG = 12 * 60;
+const VIEJO_SEG = 5 * 60;
 
 type Uso = {
   sesion_pct: number | null;
