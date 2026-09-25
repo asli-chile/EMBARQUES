@@ -36,7 +36,8 @@ import {
   ContenedorTransporteModal,
   type ContenedorTransporteSaved,
 } from "@/components/reservas/ContenedorTransporteModal";
-import { ReservaDetalle, type ReservaDetalleLabels, type ValorCampo } from "@/components/reservas/ReservaDetalle";
+import { ReservaDetalle, type Cambios, type ReservaDetalleLabels } from "@/components/reservas/ReservaDetalle";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { propsFilaDesplegable, useFilaDesplegable } from "@/components/ui/FilaDesplegable";
 
 /** Evita pintar filas fuera de viewport (~1000 filas). */
@@ -1677,13 +1678,48 @@ export function MisReservasContent() {
    * otra: el panel tapa al resto y el único camino es replegar primero.
    */
   const visiblesIds = useMemo(() => filteredOperaciones.map((op) => op.id), [filteredOperaciones]);
+  /* Cambios anotados en la ficha abierta y aún sin guardar. Mientras haya,
+     replegar pide confirmación: si no, se perderían sin aviso. */
+  const [pendientesDetalle, setPendientesDetalle] = useState(0);
+  const [confirmarDescarte, setConfirmarDescarte] = useState(false);
   const fila = useFilaDesplegable({
     visibles: visiblesIds,
     habilitado: viewMode === "table",
-    bloqueoEscape: !!(emailModal || bookingModal || contenedorModal),
+    bloqueoEscape: !!(emailModal || bookingModal || contenedorModal) || pendientesDetalle > 0,
   });
   const expandedId = fila.abiertaId;
-  const handleToggleExpand = fila.toggle;
+  const cerrarDetalle = useCallback(() => {
+    if (pendientesDetalle > 0) setConfirmarDescarte(true);
+    else fila.cerrar();
+  }, [pendientesDetalle, fila.cerrar]);
+  const handleToggleExpand = useCallback(
+    (id: string) => {
+      if (id === fila.abiertaId && pendientesDetalle > 0) setConfirmarDescarte(true);
+      else fila.toggle(id);
+    },
+    [fila.abiertaId, fila.toggle, pendientesDetalle],
+  );
+
+  /* Con cambios pendientes, Escape pregunta en vez de replegar (el hook no lo
+     escucha mientras tanto), y salir de la página avisa el navegador. */
+  useEffect(() => {
+    if (pendientesDetalle === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || confirmarDescarte) return;
+      if ((e.target as HTMLElement | null)?.closest("input, select, textarea")) return;
+      setConfirmarDescarte(true);
+    };
+    const onUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("beforeunload", onUnload);
+    };
+  }, [pendientesDetalle, confirmarDescarte]);
 
   const detalleLabels = useMemo<ReservaDetalleLabels>(
     () => ({
@@ -1758,39 +1794,52 @@ export function MisReservasContent() {
   }, [supabase, canInlineEdit, user, profile, tr.inlineSaved]);
 
   /* A diferencia de la celda en línea, la ficha sí sobrescribe: es donde se
-     corrige un dato ya cargado. Cada cambio queda en la auditoría. */
-  const handleDetalleSave = useCallback(async (opId: string, field: string, next: ValorCampo, previous: unknown) => {
+     corrige un dato ya cargado. Los cambios llegan juntos y se escriben en un
+     solo UPDATE, así una corrección de varios campos queda entera o no queda.
+     Cada campo deja su fila en la auditoría. */
+  const handleDetalleGuardar = useCallback(async (opId: string, cambios: Cambios, anteriores: Record<string, unknown>) => {
     if (!supabase || !canEditDetalle) return false;
+    const campos = Object.keys(cambios);
+    if (campos.length === 0) return true;
+    /* El `select` confirma que se escribió una fila: si RLS la rechaza, el
+       UPDATE no falla, solo no toca nada. */
     const { data, error } = await supabase
       .from("operaciones")
-      .update({ [field]: next })
+      .update(cambios)
       .eq("id", opId)
-      .select(field)
+      .select("id")
       .maybeSingle();
     if (error || !data) {
       sileo.error({ title: error?.message || tr.detalleErrorGuardar });
       return false;
     }
 
-    const { error: auditError } = await supabase.from("operaciones_cambios").insert({
-      operacion_id: opId,
-      campo: field,
-      valor_anterior: previous == null ? null : String(previous),
-      valor_nuevo: next == null ? null : String(next),
-      usuario_auth_id: user?.id ?? null,
-      usuario_nombre: profile?.nombre ?? user?.name ?? null,
-      usuario_email: profile?.email ?? user?.email ?? null,
-    });
+    const { error: auditError } = await supabase.from("operaciones_cambios").insert(
+      campos.map((campo) => ({
+        operacion_id: opId,
+        campo,
+        valor_anterior: anteriores[campo] == null ? null : String(anteriores[campo]),
+        valor_nuevo: cambios[campo] == null ? null : String(cambios[campo]),
+        usuario_auth_id: user?.id ?? null,
+        usuario_nombre: profile?.nombre ?? user?.name ?? null,
+        usuario_email: profile?.email ?? user?.email ?? null,
+      })),
+    );
     if (auditError) {
       console.error("Auditoría operaciones_cambios:", auditError.message);
     }
 
     setOperaciones((prev) =>
-      prev.map((row) => (row.id === opId && field in row ? { ...row, [field]: next } : row))
+      prev.map((row) => {
+        if (row.id !== opId) return row;
+        const next = { ...row } as Record<string, unknown>;
+        for (const campo of campos) if (campo in row) next[campo] = cambios[campo];
+        return next as Operacion;
+      })
     );
-    sileo.success({ title: tr.inlineSaved });
+    sileo.success({ title: tr.detalleCambiosGuardados });
     return true;
-  }, [supabase, canEditDetalle, user, profile, tr.detalleErrorGuardar, tr.inlineSaved]);
+  }, [supabase, canEditDetalle, user, profile, tr.detalleErrorGuardar, tr.detalleCambiosGuardados]);
 
   const handleEstadoSave = useCallback(async (op: Operacion, next: EstadoOperacion) => {
     if (!supabase || !canEditEstado) return false;
@@ -2603,9 +2652,10 @@ export function MisReservasContent() {
                               isCliente={isCliente}
                               supabase={supabase}
                               labels={detalleLabels}
-                              onGuardarCampo={canEditDetalle ? handleDetalleSave : undefined}
+                              onGuardarCambios={canEditDetalle ? handleDetalleGuardar : undefined}
+                              onPendientesChange={setPendientesDetalle}
                               cerrando={fila.cerrando}
-                              onClose={fila.cerrar}
+                              onClose={cerrarDetalle}
                             />
                           </td>
                         </tr>
@@ -2842,6 +2892,22 @@ export function MisReservasContent() {
           supabase={supabase}
           onClose={() => setBookingModal(null)}
           onSaved={(updated) => handleBookingSaved(bookingModal.id, updated)}
+        />,
+        document.body
+      )}
+      {confirmarDescarte && createPortal(
+        <ConfirmDialog
+          variant="warning"
+          title={tr.detalleDescartarTitulo}
+          message={tr.detalleDescartarMensaje}
+          confirmLabel={tr.detalleDescartarConfirmar}
+          cancelLabel={tr.detalleSeguirEditando}
+          onConfirm={() => {
+            setConfirmarDescarte(false);
+            setPendientesDetalle(0);
+            fila.cerrar();
+          }}
+          onCancel={() => setConfirmarDescarte(false)}
         />,
         document.body
       )}

@@ -356,7 +356,9 @@ necesita lo mismo, usar esa pieza en vez de copiarla.
 En Mis Reservas la ficha se **edita en el lugar** para `superadmin`, `admin` y
 `ejecutivo` (este último solo ve —y RLS solo le deja escribir— las reservas de
 sus clientes). A diferencia de la celda en línea de la tabla, que solo llena
-vacíos, la ficha sobrescribe; cada cambio queda en `operaciones_cambios`. No se
+vacíos, la ficha sobrescribe. Editar un campo solo lo **anota**: los cambios
+se guardan juntos con "Guardar cambios", en un solo UPDATE, y cada uno deja su
+fila en `operaciones_cambios`. Replegar con cambios pendientes pide confirmación. No se
 editan ahí `temporada`, `ingreso`, `cliente` ni el grupo de facturación: los
 fija el alta o los escribe el módulo de Facturación. Los campos con maestro (naviera,
 nave, POL, POD, especie, depósito, planta, consignatario, transporte,

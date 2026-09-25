@@ -379,10 +379,15 @@ const SOLO_FECHA = new Set(["etd", "eta"]);
 export type ValorCampo = string | number | null;
 
 /**
- * Guarda un campo de la operación. Lo resuelve quien monta la ficha (escribe
- * en la base, deja la auditoría y actualiza su lista) y devuelve si quedó.
+ * Anota un cambio en un campo. No escribe en la base: los cambios quedan
+ * pendientes hasta que se confirman juntos con "Guardar cambios", para que un
+ * clic equivocado no quede grabado y una corrección de varios campos no quede
+ * a medias.
  */
-export type GuardarCampo = (key: string, valor: ValorCampo) => Promise<boolean>;
+export type ProponerCampo = (key: string, valor: ValorCampo) => void;
+
+/** Cambios pendientes de guardar, por columna. */
+export type Cambios = Record<string, ValorCampo>;
 
 function editable(g: Grupo, c: Campo): boolean {
   return !g.fijo && !c.fijo && c.formato !== "monto" && c.formato !== "bool";
@@ -420,19 +425,20 @@ function iguales(a: unknown, b: ValorCampo): boolean {
   if (vacio(a) && b == null) return true;
   if (vacio(a) || b == null) return false;
   if (typeof b === "number") return Number(a) === b;
-  return String(a).trim() === b;
+  return String(a).trim() === b.trim();
 }
 
 /**
  * Un valor de la ficha que se edita en el lugar: clic para escribir, Enter o
- * salir del campo guarda, Escape descarta. No se abre un formulario aparte
- * porque lo que se corrige casi siempre es un dato suelto.
+ * salir del campo lo deja anotado, Escape lo descarta. Anotado no es guardado:
+ * eso lo hace la barra de cambios de la ficha.
  */
 function ValorEditable({
   campo,
   valor,
   fila,
-  guardar,
+  proponer,
+  pendiente,
   opciones,
   si,
   no,
@@ -441,49 +447,52 @@ function ValorEditable({
   campo: Campo;
   valor: unknown;
   fila: Fila;
-  guardar: GuardarCampo;
+  proponer: ProponerCampo;
+  /** Tiene un cambio anotado sin guardar. */
+  pendiente: boolean;
   /** Si viene, el campo se elige de la lista (y admite escribir otro valor). */
   opciones?: ComboboxOption[];
   si: string;
   no: string;
-  labels: { editar: string; invalido: string };
+  labels: { editar: string; invalido: string; pendiente: string };
 }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState("");
-  const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(false);
+  /* La lista desplegable avisa que se salió del campo con un retardo: sin esta
+     marca, un Escape seguido de ese aviso anotaría igual lo escrito. */
+  const activo = useRef(false);
   const sinDato = vacio(valor);
 
   const abrir = () => {
     setBorrador(valorParaInput(campo, valor));
     setError(false);
+    activo.current = true;
     setEditando(true);
   };
 
-  const confirmar = async (raw = borrador) => {
-    if (guardando) return;
+  const cerrar = () => {
+    activo.current = false;
+    setEditando(false);
+  };
+
+  const confirmar = (raw = borrador) => {
+    if (!activo.current) return;
     const nuevo = valorParaGuardar(campo, raw);
     if (nuevo === undefined) {
       setError(true);
       return;
     }
-    if (iguales(valor, nuevo)) {
-      setEditando(false);
-      return;
-    }
-    setGuardando(true);
-    const ok = await guardar(campo.key, nuevo);
-    setGuardando(false);
-    if (ok) setEditando(false);
-    else setError(true);
+    if (!iguales(valor, nuevo)) proponer(campo.key, nuevo);
+    cerrar();
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      void confirmar();
+      confirmar();
     } else if (e.key === "Escape") {
-      setEditando(false);
+      cerrar();
     }
   };
 
@@ -496,9 +505,8 @@ function ValorEditable({
         <select
           autoFocus
           value={borrador || "NORMAL"}
-          disabled={guardando}
           onChange={(e) => setBorrador(e.target.value)}
-          onBlur={() => void confirmar()}
+          onBlur={() => confirmar()}
           onKeyDown={onKeyDown}
           className={clase}
         >
@@ -515,7 +523,6 @@ function ValorEditable({
           autoFocus
           value={borrador}
           options={opciones}
-          disabled={guardando}
           maxSuggestions={50}
           onChange={(v) => {
             setBorrador(v);
@@ -523,9 +530,9 @@ function ValorEditable({
           }}
           onSelect={(opt) => {
             setBorrador(opt.nombre);
-            void confirmar(opt.nombre);
+            confirmar(opt.nombre);
           }}
-          onBlurExtra={() => void confirmar()}
+          onBlurExtra={() => confirmar()}
           onKeyDownExtra={onKeyDown}
           inputClass={clase}
         />
@@ -540,14 +547,13 @@ function ValorEditable({
         step={esNumero ? (campo.entero ? 1 : "any") : undefined}
         inputMode={esNumero ? (campo.entero ? "numeric" : "decimal") : undefined}
         value={borrador}
-        disabled={guardando}
         aria-invalid={error || undefined}
         title={error ? labels.invalido : undefined}
         onChange={(e) => {
           setBorrador(e.target.value);
           setError(false);
         }}
-        onBlur={() => void confirmar()}
+        onBlur={() => confirmar()}
         onKeyDown={onKeyDown}
         className={`${clase} ${campo.mayus ? "uppercase" : ""}`}
       />
@@ -558,19 +564,23 @@ function ValorEditable({
     <button
       type="button"
       onClick={abrir}
-      title={labels.editar}
+      title={pendiente ? labels.pendiente : labels.editar}
       className={`group/editar -mx-1 mt-0.5 flex w-[calc(100%+0.5rem)] items-start gap-1 rounded-md px-1 text-left text-[13px] leading-snug outline-none hover:bg-dash-control focus-visible:ring-2 focus-visible:ring-[var(--estado-curso)] ${
         sinDato ? "text-dash-muted/45" : "font-semibold text-dash-fg"
       } ${campo.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
     >
       <span className="min-w-0 flex-1 break-words">{fmtValor(campo, valor, fila, si, no)}</span>
-      <Icon
-        icon="lucide:pencil"
-        width={11}
-        height={11}
-        className="mt-1 shrink-0 text-dash-muted opacity-0 transition-opacity group-hover/editar:opacity-100 group-focus-visible/editar:opacity-100"
-        aria-hidden
-      />
+      {pendiente ? (
+        <span className="estado--curso mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--estado)]" aria-label={labels.pendiente} />
+      ) : (
+        <Icon
+          icon="lucide:pencil"
+          width={11}
+          height={11}
+          className="mt-1 shrink-0 text-dash-muted opacity-0 transition-opacity group-hover/editar:opacity-100 group-focus-visible/editar:opacity-100"
+          aria-hidden
+        />
+      )}
     </button>
   );
 }
@@ -636,7 +646,8 @@ export function SeccionesOperacion({
   grupos,
   soloConDatos,
   labels,
-  guardar,
+  proponer,
+  pendientes = {},
   opciones = {},
 }: {
   fila: Fila;
@@ -644,12 +655,18 @@ export function SeccionesOperacion({
   soloConDatos: boolean;
   labels: ReservaDetalleLabels;
   /** Si viene, los campos editables se corrigen en el lugar. */
-  guardar?: GuardarCampo;
+  proponer?: ProponerCampo;
+  /** Cambios anotados sin guardar: se marcan en su campo. */
+  pendientes?: Cambios;
   /** Listas de valores por campo, para elegir en vez de escribir. */
   opciones?: Opciones;
 }) {
   const { tr, campos } = labels;
-  const labelsEdicion = { editar: tr.detalleEditarCampo, invalido: tr.detalleValorInvalido };
+  const labelsEdicion = {
+    editar: tr.detalleEditarCampo,
+    invalido: tr.detalleValorInvalido,
+    pendiente: tr.detalleCampoPendiente,
+  };
   const si = campos.yes ?? "Sí";
   const no = campos.no ?? "No";
   const etiqueta = (key: string) => campos[key] ?? tr[key] ?? key;
@@ -690,21 +707,29 @@ export function SeccionesOperacion({
                 {visibles.map((c) => {
                   const v = fila[c.key];
                   const sinDato = vacio(v);
+                  const pendiente = c.key in pendientes;
                   return (
                     <div
                       key={c.key}
-                      className={`min-w-0 rounded-lg px-2.5 py-2 ${sinDato ? "" : "bg-dash-control/50"}`}
+                      className={`min-w-0 rounded-lg px-2.5 py-2 ${
+                        pendiente
+                          ? "estado--curso bg-[color-mix(in_srgb,var(--estado)_12%,transparent)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--estado)_45%,transparent)]"
+                          : sinDato
+                            ? ""
+                            : "bg-dash-control/50"
+                      }`}
                     >
                       <dt className="truncate text-[10px] font-semibold uppercase tracking-wide text-dash-muted">
                         {etiqueta(c.labelKey)}
                       </dt>
-                      {guardar && editable(g, c) ? (
+                      {proponer && editable(g, c) ? (
                         <dd>
                           <ValorEditable
                             campo={c}
                             valor={v}
                             fila={fila}
-                            guardar={guardar}
+                            proponer={proponer}
+                            pendiente={pendiente}
                             opciones={opcionesDe(opciones, c.key, fila)}
                             si={si}
                             no={no}
@@ -739,14 +764,27 @@ type Props = {
   isCliente: boolean;
   supabase: SupabaseClient | null;
   labels: ReservaDetalleLabels;
-  /** Guarda un campo. Sin él la ficha es de solo lectura (cliente, operador). */
-  onGuardarCampo?: (id: string, key: string, valor: ValorCampo, anterior: unknown) => Promise<boolean>;
+  /** Guarda los cambios anotados, todos juntos. Sin él la ficha es de solo
+      lectura (cliente, operador). `anteriores` va a la auditoría. */
+  onGuardarCambios?: (id: string, cambios: Cambios, anteriores: Record<string, unknown>) => Promise<boolean>;
+  /** Avisa cuántos cambios hay sin guardar, para que el padre pida
+      confirmación antes de replegar. Vuelve a 0 al desmontar. */
+  onPendientesChange?: (n: number) => void;
   /** El padre lo pone en `true` al replegar y desmonta al terminar la salida. */
   cerrando: boolean;
   onClose: () => void;
 };
 
-export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo, cerrando, onClose }: Props) {
+export function ReservaDetalle({
+  op,
+  isCliente,
+  supabase,
+  labels,
+  onGuardarCambios,
+  onPendientesChange,
+  cerrando,
+  onClose,
+}: Props) {
   const { completa, estado } = useOperacionCompleta(supabase, op.id);
   const [soloConDatos, setSoloConDatos] = useState(false);
   /* Lo guardado desde la ficha. La lista solo trae sus columnas: sin esto, un
@@ -755,15 +793,51 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
   const cuerpoRef = useRef<HTMLDivElement>(null);
   const { tr, campos } = labels;
 
-  const fila: Fila = { ...(completa ?? {}), ...op, ...editados };
-  const opciones = useOpcionesCampos(supabase, !!onGuardarCampo);
-  const guardar: GuardarCampo | undefined = onGuardarCampo
-    ? async (key, valor) => {
-        const ok = await onGuardarCampo(op.id, key, valor, fila[key]);
-        if (ok) setEditados((prev) => ({ ...prev, [key]: valor }));
-        return ok;
-      }
-    : undefined;
+  const [pendientes, setPendientes] = useState<Cambios>({});
+  const [guardando, setGuardando] = useState(false);
+
+  /* `base` es lo que hay en la base; `fila`, lo que se ve: la base con los
+     cambios anotados encima, para revisar cómo queda antes de guardar. */
+  const base: Fila = { ...(completa ?? {}), ...op, ...editados };
+  const fila: Fila = { ...base, ...pendientes };
+  const puedeEditar = !!onGuardarCambios && estado === "listo";
+  const opciones = useOpcionesCampos(supabase, !!onGuardarCambios);
+  const nPendientes = Object.keys(pendientes).length;
+
+  useEffect(() => {
+    onPendientesChange?.(nPendientes);
+  }, [nPendientes, onPendientesChange]);
+  useEffect(() => () => onPendientesChange?.(0), [onPendientesChange]);
+
+  /* Anotar un valor igual al de la base es deshacer el cambio, no uno nuevo. */
+  const proponer: ProponerCampo = (key, valor) =>
+    setPendientes((prev) => {
+      const next = { ...prev };
+      if (iguales(base[key], valor)) delete next[key];
+      else next[key] = valor;
+      return next;
+    });
+
+  const guardarCambios = async () => {
+    if (!onGuardarCambios || nPendientes === 0 || guardando) return;
+    const cambios: Cambios = {};
+    const anteriores: Record<string, unknown> = {};
+    for (const [key, valor] of Object.entries(pendientes)) {
+      cambios[key] = typeof valor === "string" ? valor.trim() || null : valor;
+      anteriores[key] = base[key] ?? null;
+    }
+    setGuardando(true);
+    const ok = await onGuardarCambios(op.id, cambios, anteriores);
+    setGuardando(false);
+    if (!ok) return;
+    setEditados((prev) => ({ ...prev, ...cambios }));
+    setPendientes({});
+  };
+
+  const etiquetaCampo = (key: string) => {
+    const campo = GRUPOS.flatMap((g) => g.campos).find((c) => c.key === key);
+    return campo ? etiqueta(campo.labelKey) : key === "observaciones" ? etiqueta("colObservations") : key;
+  };
   const grupos = GRUPOS.filter((g) => !(g.interno && isCliente));
   const observaciones = texto(fila.observaciones);
   const bookingDoc = texto(fila.booking_doc_url);
@@ -976,11 +1050,12 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
               grupos={grupos}
               soloConDatos={soloConDatos}
               labels={labels}
-              guardar={estado === "listo" ? guardar : undefined}
+              proponer={puedeEditar ? proponer : undefined}
+              pendientes={pendientes}
               opciones={opciones}
             />
 
-            {(observaciones || (guardar && estado === "listo")) && (
+            {(observaciones || puedeEditar) && (
               <section
                 style={staggerStyle(grupos.length)}
                 className="rd-card motion-view-section flex gap-3 rounded-2xl px-4 py-3.5"
@@ -990,13 +1065,15 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-bold text-dash-fg">{etiqueta("colObservations")}</p>
-                  {guardar && estado === "listo" ? (
-                    <ObservacionesEditables
-                      valor={observaciones}
-                      guardar={guardar}
+                  {puedeEditar ? (
+                    <textarea
+                      value={String(fila.observaciones ?? "")}
+                      rows={Math.min(8, Math.max(2, String(fila.observaciones ?? "").split("\n").length))}
                       placeholder={tr.detalleObservacionesVacias}
-                      guardarLabel={tr.detalleGuardar}
-                      cancelarLabel={tr.detalleCancelar}
+                      onChange={(e) => proponer("observaciones", e.target.value === "" ? null : e.target.value)}
+                      className={`mt-1.5 w-full resize-y rounded-lg border bg-dash-bg px-2.5 py-2 text-[13px] leading-relaxed text-dash-fg outline-none placeholder:text-dash-muted/60 focus:ring-2 focus:ring-[var(--estado-curso)] ${
+                        "observaciones" in pendientes ? "border-[var(--estado-curso)]" : "border-dash-border"
+                      }`}
                     />
                   ) : (
                     <p className="mt-1 whitespace-pre-wrap text-[13px] leading-relaxed text-dash-fg/90">{observaciones}</p>
@@ -1005,78 +1082,49 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
               </section>
             )}
           </div>
+
+          {/* Barra de cambios: aparece con el primer cambio anotado y se queda
+              pegada abajo mientras haya algo sin guardar. */}
+          {nPendientes > 0 && (
+            <div className="motion-enter-lift sticky bottom-0 z-10 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-bg)_92%,transparent)] px-4 py-2.5 backdrop-blur-md">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="estado--curso estado-chip inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold tabular-nums">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--estado)]" aria-hidden />
+                  {nPendientes} {nPendientes === 1 ? tr.detalleCambioSinGuardar : tr.detalleCambiosSinGuardar}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[11px] text-dash-muted">
+                  {Object.keys(pendientes).map(etiquetaCampo).join(" · ")}
+                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendientes({})}
+                    disabled={guardando}
+                    className="rd-chip motion-interactive rounded-full px-3 py-1.5 text-[11px] font-semibold disabled:opacity-50"
+                  >
+                    {tr.detalleDescartar}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void guardarCambios()}
+                    disabled={guardando}
+                    className="motion-interactive inline-flex items-center gap-1.5 rounded-full bg-[var(--estado-curso)] px-3.5 py-1.5 text-[11px] font-bold text-white disabled:opacity-60"
+                  >
+                    <Icon
+                      icon={guardando ? "lucide:loader-2" : "lucide:save"}
+                      width={13}
+                      height={13}
+                      className={guardando ? "animate-spin" : ""}
+                      aria-hidden
+                    />
+                    {guardando ? tr.detalleGuardando : tr.detalleGuardarCambios}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
     </PanelBajoFila>
-  );
-}
-
-/**
- * Las observaciones son texto largo: Enter es salto de línea, así que se
- * guardan con botón (o Ctrl+Enter) y no al salir del campo, para que un clic
- * fuera no publique una nota a medio escribir.
- */
-function ObservacionesEditables({
-  valor,
-  guardar,
-  placeholder,
-  guardarLabel,
-  cancelarLabel,
-}: {
-  valor: string | null;
-  guardar: GuardarCampo;
-  placeholder: string;
-  guardarLabel: string;
-  cancelarLabel: string;
-}) {
-  const [borrador, setBorrador] = useState(valor ?? "");
-  const [guardando, setGuardando] = useState(false);
-  const cambiado = borrador.trim() !== (valor ?? "").trim();
-
-  const confirmar = async () => {
-    if (!cambiado || guardando) return;
-    setGuardando(true);
-    await guardar("observaciones", borrador.trim() || null);
-    setGuardando(false);
-  };
-
-  return (
-    <div className="mt-1.5">
-      <textarea
-        value={borrador}
-        rows={Math.min(8, Math.max(2, borrador.split("\n").length))}
-        placeholder={placeholder}
-        disabled={guardando}
-        onChange={(e) => setBorrador(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            void confirmar();
-          }
-        }}
-        className="w-full resize-y rounded-lg border border-dash-border bg-dash-bg px-2.5 py-2 text-[13px] leading-relaxed text-dash-fg outline-none placeholder:text-dash-muted/60 focus:ring-2 focus:ring-[var(--estado-curso)]"
-      />
-      {cambiado && (
-        <div className="mt-1.5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setBorrador(valor ?? "")}
-            disabled={guardando}
-            className="rd-chip motion-interactive rounded-full px-3 py-1 text-[11px] font-semibold"
-          >
-            {cancelarLabel}
-          </button>
-          <button
-            type="button"
-            onClick={() => void confirmar()}
-            disabled={guardando}
-            className="estado--curso estado-chip motion-interactive inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold"
-          >
-            {guardando && <Icon icon="lucide:loader-2" width={12} height={12} className="animate-spin" aria-hidden />}
-            {guardarLabel}
-          </button>
-        </div>
-      )}
-    </div>
   );
 }
 
