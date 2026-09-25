@@ -26,6 +26,10 @@ interface ComboboxInputProps {
   icon?: string;
   /** Estilo neón; el panel en portal usa clases erp-neon-* + data-erp-neon. */
   neon?: boolean;
+  autoFocus?: boolean;
+  /** Teclas que la lista no usó: Enter sin opción resaltada, Escape con la
+      lista cerrada. Para quien edita en el lugar y confirma o descarta. */
+  onKeyDownExtra?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export function ComboboxInput({
@@ -48,6 +52,8 @@ export function ComboboxInput({
   maxSuggestions = 15,
   icon,
   neon = false,
+  autoFocus,
+  onKeyDownExtra,
 }: ComboboxInputProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
@@ -110,6 +116,10 @@ export function ComboboxInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (onKeyDownExtra && ((e.key === "Enter" && (!open || highlight < 0)) || (e.key === "Escape" && !open))) {
+      onKeyDownExtra(e);
+      if (e.defaultPrevented) return;
+    }
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
@@ -258,6 +268,7 @@ export function ComboboxInput({
           onFocus={() => { if (!readOnly) setOpen(true); }}
           onClick={() => { if (!readOnly) setOpen(true); }}
           onBlur={handleBlur}
+          autoFocus={autoFocus}
           placeholder={placeholder}
           className={`${inputClass} ${icon ? "pl-12" : ""} pr-11`}
           autoComplete="nope"

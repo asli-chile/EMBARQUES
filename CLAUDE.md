@@ -358,7 +358,10 @@ En Mis Reservas la ficha se **edita en el lugar** para `superadmin`, `admin` y
 sus clientes). A diferencia de la celda en línea de la tabla, que solo llena
 vacíos, la ficha sobrescribe; cada cambio queda en `operaciones_cambios`. No se
 editan ahí `temporada`, `ingreso`, `cliente` ni el grupo de facturación: los
-fija el alta o los escribe el módulo de Facturación.
+fija el alta o los escribe el módulo de Facturación. Los campos con maestro (naviera,
+nave, POL, POD, especie, depósito, planta, consignatario, transporte,
+ejecutivo y los de `catalogos`) se eligen de la misma lista que en Crear
+Reserva: `TABLAS_OPCIONES` y `CATEGORIAS_OPCIONES` en `ReservaDetalle.tsx`.
 
 ## Módulo de Transportes
 

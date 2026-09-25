@@ -10,6 +10,7 @@ import { staggerStyle } from "@/lib/ui/motion";
 import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
 import { withBase } from "@/lib/basePath";
 import { motivoFueraDeNavitrack } from "@/lib/navitrack/alcance";
+import { ComboboxInput, type ComboboxOption } from "@/components/ui/ComboboxInput";
 
 /**
  * Detalle de una reserva, desplegado bajo su fila en Mis Reservas.
@@ -272,6 +273,105 @@ function fmtValor(campo: Campo, v: unknown, fila: Fila, si: string, no: string):
   }
 }
 
+/**
+ * De dónde salen las opciones de cada campo al editarlo: las mismas tablas y
+ * categorías de `catalogos` que usa Crear Reserva, para que la ficha no invente
+ * una naviera o un puerto escritos de otra forma.
+ */
+const TABLAS_OPCIONES: Record<string, string> = {
+  naviera: "navieras",
+  nave: "naves",
+  pol: "puertos_origen",
+  pod: "destinos",
+  especie: "especies",
+  deposito: "depositos",
+  planta_presentacion: "plantas",
+  consignatario: "consignatarios",
+  transporte: "transportes_empresas",
+};
+
+const CATEGORIAS_OPCIONES: Record<string, string> = {
+  tipo_operacion: "tipo_operacion",
+  incoterm: "incoterm",
+  forma_pago: "forma_pago",
+  tipo_unidad: "tipo_unidad",
+  tratamiento_frio: "tratamiento_frio",
+  tipo_atmosfera: "tipo_atmosfera",
+};
+
+type Opcion = ComboboxOption & { cliente?: string | null };
+type Opciones = Record<string, Opcion[]>;
+
+/**
+ * Carga las listas una vez, al habilitarse la edición. Una tabla que falle
+ * (por permisos, por ejemplo) deja ese campo como texto libre, no la ficha
+ * sin editar.
+ */
+function useOpcionesCampos(supabase: SupabaseClient | null, activo: boolean): Opciones {
+  const [opciones, setOpciones] = useState<Opciones>({});
+  useEffect(() => {
+    if (!activo || !supabase) return;
+    let vivo = true;
+    const tablas = Object.entries(TABLAS_OPCIONES).map(async ([key, tabla]) => {
+      const cols = tabla === "consignatarios" ? "id, nombre, cliente" : "id, nombre";
+      const { data, error } = await supabase.from(tabla).select(cols).order("nombre");
+      return [key, error ? [] : ((data ?? []) as unknown as Opcion[])] as const;
+    });
+    const catalogo = supabase
+      .from("catalogos")
+      .select("id, categoria, valor")
+      .eq("activo", true)
+      .order("orden")
+      .then(({ data }) => {
+        const porCampo: [string, Opcion[]][] = [];
+        for (const [key, categoria] of Object.entries(CATEGORIAS_OPCIONES)) {
+          const items = (data ?? [])
+            .filter((row) => row.categoria === categoria)
+            .map((row) => ({ id: String(row.id), nombre: String(row.valor) }));
+          porCampo.push([key, items]);
+        }
+        return porCampo;
+      });
+    /* Los ejecutivos viven en `usuarios`, que el navegador no lee: los da el
+       mismo endpoint que Crear Reserva. Se guarda el nombre, como allá. */
+    const ejecutivos = fetch(withBase("/api/reservas/ejecutivos"), { credentials: "include" })
+      .then(async (res) => (res.ok ? ((await res.json()) as { ejecutivos?: Opcion[] }).ejecutivos ?? [] : []))
+      .catch(() => [] as Opcion[]);
+    void Promise.all([Promise.all(tablas), catalogo, ejecutivos]).then(([deTablas, deCatalogo, ejec]) => {
+      if (!vivo) return;
+      const limpiar = (lista: Opcion[]) => {
+        /* Nombres repetidos o vacíos ensucian la lista sin agregar opción. */
+        const vistos = new Set<string>();
+        return lista.filter((o) => {
+          const n = (o.nombre ?? "").trim().toUpperCase();
+          if (!n || vistos.has(n)) return false;
+          vistos.add(n);
+          return true;
+        });
+      };
+      const todo: Opciones = {};
+      for (const [key, lista] of [...deTablas, ...deCatalogo]) todo[key] = limpiar(lista);
+      todo.ejecutivo = limpiar(ejec.map((e) => ({ id: String(e.id), nombre: e.nombre })));
+      setOpciones(todo);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [supabase, activo]);
+  return opciones;
+}
+
+/** Las opciones de un campo para esta fila. Los consignatarios se acotan al
+    cliente de la reserva; si el cliente no tiene ninguno, se muestran todos. */
+function opcionesDe(opciones: Opciones, key: string, fila: Fila): ComboboxOption[] | undefined {
+  const lista = opciones[key];
+  if (!lista || lista.length === 0) return undefined;
+  if (key !== "consignatario") return lista;
+  const cliente = texto(fila.cliente)?.toUpperCase();
+  const delCliente = lista.filter((o) => (o.cliente ?? "").toUpperCase() === cliente);
+  return delCliente.length > 0 ? delCliente : lista;
+}
+
 /** `etd` y `eta` son columnas `date`; el resto de las fechas, `timestamptz`. */
 const SOLO_FECHA = new Set(["etd", "eta"]);
 
@@ -333,6 +433,7 @@ function ValorEditable({
   valor,
   fila,
   guardar,
+  opciones,
   si,
   no,
   labels,
@@ -341,6 +442,8 @@ function ValorEditable({
   valor: unknown;
   fila: Fila;
   guardar: GuardarCampo;
+  /** Si viene, el campo se elige de la lista (y admite escribir otro valor). */
+  opciones?: ComboboxOption[];
   si: string;
   no: string;
   labels: { editar: string; invalido: string };
@@ -357,9 +460,9 @@ function ValorEditable({
     setEditando(true);
   };
 
-  const confirmar = async () => {
+  const confirmar = async (raw = borrador) => {
     if (guardando) return;
-    const nuevo = valorParaGuardar(campo, borrador);
+    const nuevo = valorParaGuardar(campo, raw);
     if (nuevo === undefined) {
       setError(true);
       return;
@@ -403,6 +506,29 @@ function ValorEditable({
           <option value="LATE">Late</option>
           <option value="EXTRA_LATE">Extra late</option>
         </select>
+      );
+    }
+    if (opciones) {
+      return (
+        <ComboboxInput
+          neon
+          autoFocus
+          value={borrador}
+          options={opciones}
+          disabled={guardando}
+          maxSuggestions={50}
+          onChange={(v) => {
+            setBorrador(v);
+            setError(false);
+          }}
+          onSelect={(opt) => {
+            setBorrador(opt.nombre);
+            void confirmar(opt.nombre);
+          }}
+          onBlurExtra={() => void confirmar()}
+          onKeyDownExtra={onKeyDown}
+          inputClass={clase}
+        />
       );
     }
     const esFecha = campo.formato === "fecha";
@@ -511,6 +637,7 @@ export function SeccionesOperacion({
   soloConDatos,
   labels,
   guardar,
+  opciones = {},
 }: {
   fila: Fila;
   grupos: Grupo[];
@@ -518,6 +645,8 @@ export function SeccionesOperacion({
   labels: ReservaDetalleLabels;
   /** Si viene, los campos editables se corrigen en el lugar. */
   guardar?: GuardarCampo;
+  /** Listas de valores por campo, para elegir en vez de escribir. */
+  opciones?: Opciones;
 }) {
   const { tr, campos } = labels;
   const labelsEdicion = { editar: tr.detalleEditarCampo, invalido: tr.detalleValorInvalido };
@@ -576,6 +705,7 @@ export function SeccionesOperacion({
                             valor={v}
                             fila={fila}
                             guardar={guardar}
+                            opciones={opcionesDe(opciones, c.key, fila)}
                             si={si}
                             no={no}
                             labels={labelsEdicion}
@@ -626,6 +756,7 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
   const { tr, campos } = labels;
 
   const fila: Fila = { ...(completa ?? {}), ...op, ...editados };
+  const opciones = useOpcionesCampos(supabase, !!onGuardarCampo);
   const guardar: GuardarCampo | undefined = onGuardarCampo
     ? async (key, valor) => {
         const ok = await onGuardarCampo(op.id, key, valor, fila[key]);
@@ -844,6 +975,7 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
               soloConDatos={soloConDatos}
               labels={labels}
               guardar={estado === "listo" ? guardar : undefined}
+              opciones={opciones}
             />
 
             {(observaciones || (guardar && estado === "listo")) && (
