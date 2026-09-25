@@ -69,6 +69,16 @@ export const translations = {
       /** Hidratación inicial (BaseLayout) y Suspense de rutas lazy (ModuleSoftFallback) */
       preparingUi: "Preparando interfaz…",
     },
+    claudeUso: {
+      aria: "Uso del plan de Claude",
+      sesion: "Sesión Claude",
+      semana: "Semana",
+      usado: "usado",
+      quedan: "Quedan",
+      reiniciaEn: "Se reinicia en",
+      ventanaNueva: "Ventana nueva",
+      sinNoticias: "El widget del PC no envía datos hace",
+    },
     marketingOficina: {
       title: "Oficina de marketing",
       subtitle: "Piezas gráficas para redes sociales, listas para publicar.",
@@ -3492,6 +3502,16 @@ export const translations = {
     },
     header: {
       preparingUi: "Preparing interface…",
+    },
+    claudeUso: {
+      aria: "Claude plan usage",
+      sesion: "Claude session",
+      semana: "Week",
+      usado: "used",
+      quedan: "Remaining",
+      reiniciaEn: "Resets in",
+      ventanaNueva: "New window",
+      sinNoticias: "The desktop widget hasn't reported for",
     },
     marketingOficina: {
       title: "Marketing office",

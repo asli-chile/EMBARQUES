@@ -10,6 +10,7 @@ import { LocaleToggle } from "./LocaleToggle";
 import { HeaderChrome } from "./HeaderChrome";
 import { ViewAsControl } from "./ViewAsControl";
 import { AppMobileNav } from "./AppMobileNav";
+import { ClaudeUsoIndicator } from "./ClaudeUsoIndicator";
 import { useLocale } from "@/lib/i18n";
 
 /**
@@ -60,7 +61,11 @@ export function Header({ pathname = "" }: { pathname?: string } = {}) {
         <HeaderRouteTitle pathname={pathname} />
       </div>
 
-      <div className="flex h-full min-w-0 items-center justify-self-center">
+      <div className="relative flex h-full min-w-0 items-center justify-self-center">
+        {/* Fuera del flujo: el logo tiene que seguir centrado aparezca o no. */}
+        <div className="absolute right-full top-1/2 -translate-y-1/2">
+          <ClaudeUsoIndicator />
+        </div>
         <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
         <a
           href={withBase("/inicio")}
