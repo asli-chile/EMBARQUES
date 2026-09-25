@@ -248,76 +248,76 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
   const isEdit = Boolean(op.contenedor);
   const refLabel = displayRefAsli(op.ref_asli, op.correlativo);
 
+  const initial = useMemo(
+    () => ({
+      transporte: op.transporte ?? "",
+      chofer: op.chofer ?? "",
+      rutChofer: op.rut_chofer ?? "",
+      telefonoChofer: op.telefono_chofer ?? "",
+      patenteCamion: op.patente_camion ?? "",
+      patenteRemolque: op.patente_remolque ?? "",
+      contenedor: op.contenedor ?? "",
+      sello: op.sello ?? "",
+      tara: op.tara != null ? String(op.tara) : "",
+    }),
+    [op]
+  );
+
+  // Guardar/Cancelar solo aparecen si hay algo distinto de lo que ya estaba
+  // cargado — mismo criterio que la ficha de Mis Reservas.
+  const isDirty =
+    transporte !== initial.transporte ||
+    chofer !== initial.chofer ||
+    rutChofer !== initial.rutChofer ||
+    telefonoChofer !== initial.telefonoChofer ||
+    patenteCamion !== initial.patenteCamion ||
+    patenteRemolque !== initial.patenteRemolque ||
+    contenedor !== initial.contenedor ||
+    sello !== initial.sello ||
+    tara !== initial.tara;
+
   return (
-    <div
-      className="dash-neon fixed inset-0 z-50 flex flex-col"
-      data-theme={theme}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="contenedor-transporte-title"
-    >
-      <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--dash-bg)]">
+    // Sin onClick acá a propósito: el modal no se cierra al hacer clic afuera,
+    // solo con la X del header.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div
+        className="dash-neon relative flex w-full max-w-2xl max-h-[88vh] flex-col overflow-hidden rounded-2xl border border-dash-border bg-[var(--dash-bg)] shadow-2xl"
+        data-theme={theme}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="contenedor-transporte-title"
+      >
         {/* Header */}
-        <header className="relative shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_72%,transparent)] backdrop-blur-md">
+        <header className="relative shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_72%,transparent)]">
           <div className="h-[3px] bg-gradient-to-r from-dash-neon via-dash-neon to-dash-neon-hot" />
-          <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
-            <div className="flex min-w-0 items-center gap-3.5">
-              <button
-                type="button"
-                onClick={onClose}
-                className="motion-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40 hover:text-dash-fg"
-                aria-label={tr.close}
-              >
-                <Icon icon="lucide:arrow-left" width={18} height={18} />
-              </button>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 id="contenedor-transporte-title" className="text-base font-bold tracking-tight text-dash-fg sm:text-lg">
-                    {isEdit ? tr.editContainerModal : tr.addContainerModal}
-                  </h3>
-                  <span className="rounded-md border border-dash-neon/30 bg-dash-neon/10 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-dash-fg">
-                    {refLabel}
-                  </span>
-                </div>
-                <p className="mt-0.5 truncate text-xs font-medium text-dash-muted">
-                  {op.cliente ?? "—"}
-                </p>
+          <div className="flex items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 id="contenedor-transporte-title" className="text-base font-bold tracking-tight text-dash-fg sm:text-lg">
+                  {isEdit ? tr.editContainerModal : tr.addContainerModal}
+                </h3>
+                <span className="rounded-md border border-dash-neon/30 bg-dash-neon/10 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-dash-fg">
+                  {refLabel}
+                </span>
               </div>
+              <p className="mt-0.5 truncate text-xs font-medium text-dash-muted">
+                {op.cliente ?? "—"}
+              </p>
             </div>
-            <div className="hidden items-center gap-2 sm:flex">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="dash-control px-4 py-2.5 text-xs font-semibold disabled:opacity-60"
-              >
-                {tr.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleSave()}
-                disabled={saving || loadingCatalog || !contenedor.trim()}
-                className="dash-cta inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? (
-                  <>
-                    <Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />
-                    {tr.saving}
-                  </>
-                ) : (
-                  <>
-                    <Icon icon="lucide:save" width={14} height={14} />
-                    {tr.save}
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="motion-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40 hover:text-dash-fg"
+              aria-label={tr.close}
+            >
+              <Icon icon="lucide:x" width={18} height={18} />
+            </button>
           </div>
         </header>
 
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1400px] space-y-4 px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6">
+          <div className="space-y-4 px-5 py-4">
             {error && (
               <div className="motion-enter-lift flex items-start gap-2.5 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-3 text-xs font-medium text-dash-fg">
                 <Icon icon="lucide:alert-circle" width={16} height={16} className="mt-0.5 shrink-0 text-red-400" />
@@ -331,9 +331,9 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
                 <p className="text-sm text-dash-muted">{tr.loadingCatalog}</p>
               </div>
             ) : (
-              <div className="motion-stagger-group grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-5">
-                {/* Contenedor — hero */}
-                <section className="dash-card overflow-hidden rounded-xl lg:col-span-2">
+              <div className="motion-stagger-group space-y-4">
+                {/* Contenedor */}
+                <section className="dash-card overflow-hidden rounded-xl">
                   <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
                   <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3 sm:px-5">
                     <span className={SECTION_ICON}>
@@ -379,7 +379,7 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
                 </section>
 
                 {/* Transporte */}
-                <section className="dash-card overflow-hidden rounded-xl lg:col-span-3">
+                <section className="dash-card overflow-hidden rounded-xl">
                   <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
                   <div className="flex items-center gap-2.5 border-b border-dash-border px-4 py-3 sm:px-5">
                     <span className={SECTION_ICON}>
@@ -387,8 +387,8 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
                     </span>
                     <h2 className="text-base font-bold tracking-wide text-dash-fg">{tr.transportDataSection}</h2>
                   </div>
-                  <div className="grid grid-cols-1 gap-3.5 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
-                    <div className="sm:col-span-2 xl:col-span-3">
+                  <div className="grid grid-cols-1 gap-3.5 p-4 sm:grid-cols-2 sm:p-5">
+                    <div className="sm:col-span-2">
                       <label className={LABEL}>{tr.transportCompanyLabel}</label>
                       <Combobox
                         neon
@@ -400,7 +400,7 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
                         icon="lucide:building-2"
                       />
                     </div>
-                    <div className="sm:col-span-2 xl:col-span-1">
+                    <div className="sm:col-span-2">
                       <label className={LABEL}>{tr.driverNameLabel}</label>
                       <Combobox
                         neon
@@ -446,7 +446,7 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
                         icon="lucide:truck"
                       />
                     </div>
-                    <div className="xl:col-span-2">
+                    <div>
                       <label className={LABEL}>{tr.trailerPlateLabel}</label>
                       <input
                         type="text"
@@ -463,37 +463,39 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
           </div>
         </div>
 
-        {/* Footer móvil */}
-        <footer className="shrink-0 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_85%,transparent)] px-4 py-3 backdrop-blur-md sm:hidden">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="dash-control flex-1 px-4 py-3 text-xs font-semibold disabled:opacity-60"
-            >
-              {tr.cancel}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saving || loadingCatalog || !contenedor.trim()}
-              className="dash-cta inline-flex flex-1 items-center justify-center gap-1.5 px-4 py-3 text-xs disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? (
-                <>
-                  <Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />
-                  {tr.saving}
-                </>
-              ) : (
-                <>
-                  <Icon icon="lucide:save" width={14} height={14} />
-                  {tr.save}
-                </>
-              )}
-            </button>
-          </div>
-        </footer>
+        {/* Guardar/Cancelar: solo si hay cambios pendientes */}
+        {isDirty ? (
+          <footer className="motion-enter-lift shrink-0 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_85%,transparent)] px-5 py-3">
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="dash-control px-4 py-2.5 text-xs font-semibold disabled:opacity-60"
+              >
+                {tr.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saving || loadingCatalog || !contenedor.trim()}
+                className="dash-cta inline-flex items-center justify-center gap-1.5 px-5 py-2.5 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <>
+                    <Icon icon="typcn:refresh" width={14} height={14} className="animate-spin" />
+                    {tr.saving}
+                  </>
+                ) : (
+                  <>
+                    <Icon icon="lucide:save" width={14} height={14} />
+                    {tr.save}
+                  </>
+                )}
+              </button>
+            </div>
+          </footer>
+        ) : null}
       </div>
     </div>
   );
