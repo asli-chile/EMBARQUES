@@ -8,8 +8,7 @@ import { NavitrackMap } from "./NavitrackMap";
 import { NavieraLogo } from "./NavieraLogo";
 import { NavitrackCadena, NavitrackTimeline, NavitrackTransbordo } from "./NavitrackJourney";
 import { isoDePais, isoDePuerto } from "./navitrack-banderas";
-import { getPortCoordinates } from "@/lib/ports-coordinates";
-import type { Recalada } from "./NavitrackRecalada";
+import type { ModoViaje, Recalada } from "./NavitrackItinerario";
 import { desvioEta, estadoDesvio, formatoDesvio, sentidoDesvio } from "@/lib/operaciones/desvioEta";
 import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
@@ -210,18 +209,16 @@ type ShipmentProps = {
   puedeGastar?: boolean;
   /** Tramos del viaje. Vacío = viaje directo. */
   tramos: Tramo[];
-  /** Puertos que el buque fue anunciando, con su decisión si ya se tomó. */
+  /** Puertos por donde pasa o pasará la carga, con lo que consta de cada uno. */
   recaladas: Recalada[];
-  /** Abre la ventana para decidir qué pasó en ese puerto. Ausente en solo lectura. */
-  onVerificarRecalada?: (r: Recalada) => void;
+  /** Itinerario cargado: directo o con transbordo. Null si nadie lo indicó. */
+  modoViaje: ModoViaje | null;
   /**
-   * Alta a mano de una recalada o transbordo que todavía nadie anunció.
-   *
-   * El operador lo ve en la web de la naviera días antes de que el buque lo
-   * declare por AIS. Sin esto había que esperar ese anuncio, y mientras tanto
-   * la pantalla mostraba un viaje directo que ya se sabía falso.
+   * Abre la ventana del itinerario. `foco` resalta un transbordo, cuando se
+   * abre porque la carga llegó a él sin que se sepa a qué nave pasa.
+   * Ausente para quien no decide.
    */
-  onAgregarRecalada?: () => void;
+  onEditarItinerario?: (foco?: string | null) => void;
   /** Abre la carga manual de posición. Ausente para quien no edita. */
   onCargarCoords?: () => void;
   /** Resultado de la última decisión, para confirmarla en pantalla. */
@@ -278,8 +275,8 @@ export function NavitrackShipment({
   alertas,
   tramos,
   recaladas,
-  onVerificarRecalada,
-  onAgregarRecalada,
+  modoViaje,
+  onEditarItinerario,
   onCargarCoords,
   avisoRecalada,
   eventos,
@@ -402,12 +399,12 @@ export function NavitrackShipment({
   /*
    * Próximo puerto: lo que el buque declara ahora mismo.
    *
-   * Se prefiere la lectura del AIS porque es la más reciente; si no la hay, la
-   * primera recalada pendiente, que es el mismo dato guardado. Si el buque
-   * declara el destino final, no hay escala intermedia que anunciar.
+   * Se prefiere la lectura del AIS porque es la más reciente; si no la hay, el
+   * primer puerto anotado donde el buque todavía no estuvo, que es el mismo
+   * dato guardado.
    */
   const proximoPuerto = (() => {
-    const pendiente = recaladas.find((r) => r.estado === "anunciada" || r.estado === "por_verificar");
+    const pendiente = recaladas.find((r) => !r.recalado_at);
     const nombre = (ais?.destination ?? pendiente?.puerto ?? "").trim();
     if (!nombre) return null;
     const eta = ais?.destination && ais?.eta
@@ -418,30 +415,60 @@ export function NavitrackShipment({
     return { nombre, eta };
   })();
 
-  /** Primera recalada sin resolver: es la que el estado ofrece verificar. */
-  const recaladaPendiente = recaladas.find((r) => r.estado === "por_verificar") ?? null;
-  /** Lo que espera una respuesta: es lo único que justifica una lista aparte. */
-  const pendientesDeVerificar = recaladas.filter((r) => r.estado === "por_verificar");
+  /*
+   * Los transbordos del itinerario, con lo anunciado y lo real de cada uno.
+   *
+   * Cada transbordo es el punto donde termina un tramo y empieza el siguiente:
+   * del que termina sale la llegada anunciada; del que empieza, la nave que
+   * recibe la carga. Lo real —cuándo llegó y cuándo zarpó el buque— lo deja el
+   * AIS en las recaladas, sin gastar nada.
+   */
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const transbordosDelViaje = (() => {
+    const t = [...tramos].sort((a, b) => a.orden - b.orden);
+    const salida: {
+      puerto: string;
+      nave: string | null;
+      naveAnterior: string | null;
+      llegada: string | null;
+      llegadaHora: string | null;
+      real: Recalada | null;
+      llego: boolean;
+    }[] = [];
+    for (let i = 1; i < t.length; i += 1) {
+      const puerto = (t[i].pol ?? t[i - 1].pod ?? "").trim();
+      if (!puerto) continue;
+      const real = recaladas.find((r) => mismoPuerto(r.puerto, puerto)) ?? null;
+      salida.push({
+        puerto,
+        nave: t[i].nave,
+        naveAnterior: t[i - 1].nave,
+        llegada: t[i - 1].eta,
+        llegadaHora: t[i - 1].eta_hora,
+        real,
+        // Llegó si el AIS lo vio ahí, o si ya pasó la fecha que anunció la naviera.
+        llego: Boolean(real?.recalado_at) || Boolean(t[i - 1].eta && t[i - 1].eta! <= hoyISO),
+      });
+    }
+    return salida;
+  })();
+
+  /** El primer transbordo al que llegó la carga sin que se sepa a qué nave pasa. */
+  const faltaNaveEn = transbordosDelViaje.find((x) => !x.nave && x.llego) ?? null;
 
   /*
-   * Sobre qué se decide.
-   *
-   * Si el chequeo diario ya anotó el puerto, se usa esa fila. Si no —porque el
-   * buque lo declaró hoy y el cron corre mañana— se arma una con lo que el AIS
-   * dice ahora, con `id: 0` para que el servidor sepa que debe crearla. Sin
-   * esto habría que esperar un día para responder algo que ya se sabe.
+   * Lo que la ficha le pide a quien decide. Es una sola cosa a la vez, y la
+   * más urgente primero: una carga en el transbordo sin nave no tiene a quién
+   * seguirse; un embarque sin itinerario, solo no sabe todavía qué preguntar.
    */
-  const recaladaAVerificar: Recalada = recaladaPendiente ?? {
-    id: 0,
-    puerto: (ais?.destination ?? "").trim(),
-    nave: journey.naveActual ?? op.nave,
-    anunciado_at: new Date().toISOString(),
-    eta_anunciada: ais?.eta ? ais.eta.toISOString() : null,
-    visto_at: new Date().toISOString(),
-    estado: "por_verificar",
-    decidido_at: null,
-    notas: null,
-  };
+  const pendienteItinerario =
+    !soloLectura && onEditarItinerario && estado.etapa !== "ARRIBADO"
+      ? faltaNaveEn
+        ? { texto: interpolar(tr.itPendienteNave, { puerto: faltaNaveEn.puerto }), foco: faltaNaveEn.puerto }
+        : modoViaje == null
+          ? { texto: tr.itSinDefinir, foco: null }
+          : null
+      : null;
 
   const banderaPol = isoDePuerto(op.pol);
   const etdFmt = fmtFecha(parseOpDate(op.etd), locale);
@@ -597,13 +624,12 @@ export function NavitrackShipment({
               * afirmando es discutible, así que el propio estado se vuelve el
               * botón para resolverlo: es donde el operador ya está mirando.
               */}
-            {!soloLectura &&
-            (recaladaPendiente || (estado.transbordoSospechado && recaladaAVerificar.puerto)) ? (
+            {pendienteItinerario ? (
               <button
                 type="button"
-                onClick={() => onVerificarRecalada?.(recaladaAVerificar)}
+                onClick={() => onEditarItinerario?.(pendienteItinerario.foco)}
                 className="motion-interactive block cursor-pointer"
-                title={tr.recaladaVerificar}
+                title={tr.itDefinir}
               >
                 <span className="nt-stage">
                   <span className="nt-stage-icon !h-6 !w-6">
@@ -612,8 +638,8 @@ export function NavitrackShipment({
                   {tr[ETAPA_LABEL_KEY[estado.etapa]]}
                   <Icon icon="lucide:pencil" width={12} height={12} className="opacity-70" aria-hidden />
                 </span>
-                <span className="mt-1 block max-w-[190px] truncate text-center text-[11px] font-semibold text-amber-400">
-                  {tr.recaladaVerificar} · {recaladaAVerificar.puerto}
+                <span className="mt-1 block max-w-[220px] truncate text-center text-[11px] font-semibold text-amber-400">
+                  {pendienteItinerario.texto}
                 </span>
               </button>
             ) : (
@@ -862,7 +888,7 @@ export function NavitrackShipment({
                 error={transbordoError}
                 onConfirmar={onConfirmarTransbordo}
                 onDescartar={onDescartarTransbordo}
-                onVerificar={() => onVerificarRecalada?.(recaladaAVerificar)}
+                onVerificar={() => onEditarItinerario?.(ais?.destination ?? null)}
                 tr={tr}
               />
             </div>
@@ -1037,14 +1063,14 @@ export function NavitrackShipment({
               </h2>
               {/* Lo que agrega —una escala, un transbordo— es historia del viaje,
                   así que el botón vive junto a ella y no en una caja aparte. */}
-              {onAgregarRecalada && (
+              {onEditarItinerario && (
                 <button
                   type="button"
-                  onClick={onAgregarRecalada}
+                  onClick={() => onEditarItinerario()}
                   className="dash-control motion-interactive ml-auto inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
                 >
-                  <Icon icon="lucide:plus" width={12} height={12} aria-hidden />
-                  {tr.recaladaAgregar}
+                  <Icon icon="lucide:route" width={12} height={12} aria-hidden />
+                  {tr.itEditar}
                 </button>
               )}
             </div>
@@ -1069,114 +1095,70 @@ export function NavitrackShipment({
               />
 
               {/*
-                * Lo que falta decidir. No es una segunda lista del viaje.
+                * Los transbordos, con lo prometido y lo ocurrido.
                 *
-                * Antes esta caja repetía **todos** los puertos que la línea de
-                * tiempo ya cuenta, con otro vocabulario: "Recalada" arriba y
-                * "Recaló aquí" abajo, "Puerto anunciado" arriba y "Anunciada"
-                * abajo. Los mismos cuatro puertos, dos veces, en dos órdenes
-                * distintos, y una columna de fecha que a veces era la llegada
-                * prevista y a veces el día en que alguien hizo clic.
-                *
-                * Ahora solo aparece lo que espera respuesta, que es lo único
-                * que pedía una lista aparte: hay algo que hacer y está acá. El
-                * viaje lo cuenta el historial, una sola vez.
+                * El historial ya cuenta que hubo un cambio de nave; esta lista
+                * dice lo que el historial no alcanza: qué anunció la naviera
+                * para cada transbordo y qué hizo de verdad el buque según el
+                * AIS. Las paradas programadas no se listan aparte: son parte
+                * del recorrido y el historial las cuenta una sola vez.
                 */}
-              {pendientesDeVerificar.length > 0 && (
+              {transbordosDelViaje.length > 0 && (
                 <section className="mt-4">
-                  <div className="flex items-center justify-between gap-2 pb-1.5">
-                    <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                      {tr.historialPendientes}
-                    </p>
-                  </div>
+                  <p className="pb-1.5 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
+                    {tr.itTransbordosTitulo}
+                  </p>
                   <ul className="divide-y divide-dash-border rounded-lg border border-dash-border">
-                    {pendientesDeVerificar.map((r) => {
-                      const pendiente = r.estado === "por_verificar";
-                      /*
-                       * Manda el hecho por sobre la decisión.
-                       *
-                       * Que el buque haya parado ahí consta; qué pasó con la
-                       * carga puede seguir sin verificarse. Rotular "anunciada"
-                       * un puerto por el que ya pasó sería decirle al cliente
-                       * que su embarque todavía no llega a donde ya estuvo.
-                       */
-                      const recalado = Boolean(r.recalado_at);
-                      const etiqueta =
-                        r.estado === "transbordo_anunciado"
-                          ? tr.historialTransbordoAnunciado
-                          : r.estado === "transbordo"
-                          ? tr.historialTransbordo
-                          : recalado
-                            ? tr.historialRecalada
-                            : r.estado === "parada_programada"
-                              ? tr.historialParada
-                              : pendiente
-                                ? tr.historialPorVerificar
-                                : tr.historialAnunciada;
+                    {transbordosDelViaje.map((x) => {
+                      const faltaNave = !x.nave && x.llego;
+                      const d = desvioDe({ pod: x.puerto, eta: x.llegada, eta_hora: x.llegadaHora });
                       return (
-                        <li key={r.id} className="flex items-center gap-2 px-2.5 py-2">
-                          <Icon
-                            icon={
-                              r.estado === "transbordo" || r.estado === "transbordo_anunciado"
-                                ? "lucide:git-branch"
-                                : recalado || r.estado === "parada_programada"
-                                  ? "lucide:anchor"
-                                  : "lucide:help-circle"
-                            }
-                            width={13}
-                            height={13}
-                            className={
-                              pendiente ? "shrink-0 text-amber-400" : "shrink-0 text-dash-muted"
-                            }
-                            aria-hidden
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[12.5px] font-bold text-dash-fg">
-                              {r.puerto}
+                        <li key={x.puerto} className="px-2.5 py-2">
+                          <div className="flex items-center gap-2">
+                            <Icon
+                              icon="lucide:git-branch"
+                              width={13}
+                              height={13}
+                              className={faltaNave ? "shrink-0 text-amber-400" : "shrink-0 text-dash-muted"}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[12.5px] font-bold text-dash-fg">{x.puerto}</span>
+                              <span className="block truncate text-[10.5px] text-dash-muted">
+                                {(x.naveAnterior ?? "—") + " → "}
+                                {x.nave ?? <em>{tr.itNavePorConfirmar}</em>}
+                              </span>
                             </span>
-                            <span className="block truncate text-[10.5px] text-dash-muted">
-                              {etiqueta}
-                              {r.nave ? ` · ${r.nave}` : ""}
+                            {faltaNave && onEditarItinerario ? (
+                              <button
+                                type="button"
+                                onClick={() => onEditarItinerario(x.puerto)}
+                                className="dash-control motion-interactive shrink-0 px-2 py-1 text-[11px] font-bold"
+                              >
+                                {tr.itIndicarNave}
+                              </button>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 pl-5 text-[10.5px] text-dash-muted tabular-nums">
+                            <span>
+                              {tr.recaladaAnunciado}:{" "}
+                              {x.llegada
+                                ? `${fmtFecha(parseOpDate(x.llegada), locale) ?? "—"}${
+                                    x.llegadaHora ? ` ${x.llegadaHora.slice(0, 5)} UTC` : ""
+                                  }`
+                                : "—"}
                             </span>
-                            {/*
-                              * Puerto sin coordenadas conocidas.
-                              *
-                              * La ruta del mapa lo ignora y se dibuja derecho al
-                              * destino, escondiendo una escala que el buque sí
-                              * anunció. Antes eso pasaba sin que nada lo dijera:
-                              * el mapa quedaba prolijo y equivocado.
-                              */}
-                            {!getPortCoordinates(r.puerto) && (
-                              <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-amber-400">
-                                {tr.puertoSinUbicacion}
+                            <span>
+                              {tr.itLlego}:{" "}
+                              {x.real?.recalado_at ? (fmtFechaHora(new Date(x.real.recalado_at), locale) ?? "—") : "—"}
+                            </span>
+                            {x.real?.zarpe_at && (
+                              <span>
+                                {tr.itZarpo}: {fmtFechaHora(new Date(x.real.zarpe_at), locale) ?? "—"}
                               </span>
                             )}
-                          </span>
-                          {pendiente && !soloLectura ? (
-                            <button
-                              type="button"
-                              onClick={() => onVerificarRecalada?.(r)}
-                              className="dash-control motion-interactive shrink-0 px-2 py-1 text-[11px] font-bold"
-                            >
-                              {tr.recaladaVerificar}
-                            </button>
-                          ) : (
-                            <span className="shrink-0 text-[10.5px] text-dash-muted tabular-nums">
-                              {/*
-                                * Una recalada no lleva fecha: consta que el
-                                * buque paró ahí, no cuándo (`atdUtc` no
-                                * acompaña a `lastPort`, ver `AisSnapshot`).
-                                * Las demás sí, porque su fecha es la decisión
-                                * o la previsión, que son datos nuestros.
-                                */}
-                              {recalado
-                                ? ""
-                                : (fmtFecha(
-                                    r.decidido_at ? new Date(r.decidido_at) : parseOpDate(r.eta_anunciada),
-                                    locale,
-                                  ) ?? "—")}
-                            </span>
-                          )}
+                            {d && <span className="font-bold text-dash-fg">{d}</span>}
+                          </p>
                         </li>
                       );
                     })}

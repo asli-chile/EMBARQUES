@@ -261,6 +261,15 @@ export function resolverEstado(
   now = new Date(),
   recaladas: RecaladaEstado[] = [],
   vista: NavitrackVista = "interna",
+  /**
+   * Itinerario cargado: directo o con transbordo. Null si nadie lo indicó.
+   *
+   * Con itinerario no hay sospecha que valga: que el buque anuncie otro puerto
+   * es lo esperable —completa carga en puertos intermedios— y dónde cambia de
+   * nave la carga ya lo dijo la naviera. La sospecha queda como red solo para
+   * el embarque que nadie definió.
+   */
+  modoViaje: "directo" | "con_transbordo" | null = null,
 ): EstadoEmbarque {
   const eta = compararEta(op, ais);
   const etaDate = eta.erp;
@@ -335,6 +344,7 @@ export function resolverEstado(
      * alerta y color no puedan contradecirse entre sí más adelante.
      */
     vista === "interna" &&
+    modoViaje == null &&
     decision?.estado !== "descartado" &&
     !yaResuelto &&
     (hayPendiente ||
@@ -608,14 +618,24 @@ export function construirTimeline(
     const anterior = cadena[i - 1];
     const siguiente = cadena[i];
     // Mismo buque en los dos tramos: es una escala del itinerario, no un transbordo.
-    if (!siguiente.nave || anterior.nave === siguiente.nave) continue;
+    if (siguiente.nave && anterior.nave === siguiente.nave) continue;
 
-    const cuando = parseOpDate(anterior.eta) ?? parseOpDate(siguiente.etd);
+    const lugar = siguiente.pol ?? anterior.pod ?? "";
+    /*
+     * La fecha es la real cuando consta, y si no, la anunciada.
+     *
+     * Muchas navieras informan el transbordo solo con el puerto ("transbordo en
+     * Rodman"), sin nave ni fecha. Ese hito se muestra igual: sin nave todavía,
+     * y con la llegada real del buque en cuanto el AIS la vea.
+     */
+    const real = recaladas.find((r) => r.recalado_at && mismoPuerto(r.puerto, lugar));
+    const cuando =
+      parseInstant(real?.recalado_at ?? null) ?? parseOpDate(anterior.eta) ?? parseOpDate(siguiente.etd);
     eventos.push({
       codigo: "TRANSBORDO",
       fecha: cuando,
-      lugar: siguiente.pol ?? anterior.pod ?? "",
-      nave: siguiente.nave,
+      lugar,
+      nave: siguiente.nave ?? undefined,
       naveAnterior: anterior.nave,
       /*
        * Manda el tramo que **empieza** aquí, no el que termina.

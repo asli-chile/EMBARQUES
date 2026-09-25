@@ -10,9 +10,9 @@
  *               arribo sigue viaje a otro destino y su posición, aunque real,
  *               ya no dice nada de esta carga.
  *
- * Va aparte de `/api/navitrack/recalada` a propósito. Esa ruta responde qué
- * pasó con la **carga en un puerto** —si cambió de barco o no—; esta registra
- * un hecho del **embarque**. Mezclarlas obligaría a tratar el destino como una
+ * Va aparte de `/api/navitrack/itinerario` a propósito. Esa ruta dice por
+ * dónde viaja la carga —directo o con transbordo—; esta registra un hecho del
+ * **embarque**. Mezclarlas obligaría a tratar el destino como una
  * escala más, que es justamente lo que no es.
  *
  * Lo que **no** hace: tocar `estado_operacion`. El arribo no es un estado del
@@ -20,7 +20,7 @@
  * ya en DOCUMENTACION_EN_REVISION, y escribir "arribada" ahí la haría retroceder
  * en el papeleo. Mis Reservas y Registros lo muestran al lado del estado.
  *
- * Deciden los mismos que deciden recaladas: superadmin, admin y ejecutivo. El
+ * Deciden los mismos que deciden el itinerario: superadmin, admin y ejecutivo. El
  * ejecutivo solo alcanza lo suyo, y no porque se compruebe acá sino porque RLS
  * no le deja ver ni escribir las demás operaciones.
  */
@@ -163,7 +163,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   /*
    * Una fecha sin hora se guarda a mediodía UTC.
    *
-   * Mismo motivo que en `/recalada`: "2026-09-18" guardado tal cual queda en
+   * Mismo motivo que en `/itinerario`: "2026-09-18" guardado tal cual queda en
    * medianoche UTC, que en Chile —tres horas atrás— es el 17. El operador
    * escribe 18 y la pantalla muestra 17. Mediodía deja el día intacto en todo
    * el continente.

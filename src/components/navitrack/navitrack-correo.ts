@@ -181,157 +181,6 @@ ${fila("Llegada estimada", op.eta)}
 }
 
 /**
- * Un solo aviso con **todas** las recaladas por verificar del día.
- *
- * Antes salía un correo por embarque. Una mañana con cuatro recaladas vencidas
- * eran cuatro correos, y con el reporte y el aviso de seguimiento, seis: el
- * volumen convierte el aviso en ruido y el ruido en que nadie los abra.
- *
- * Se pierde algo real al agrupar —el asunto ya no lleva la referencia del
- * embarque, así que el correo no se puede reenviar tal cual al ejecutivo que
- * lleva esa carga— y se compensa con lo que sí importa: cada fila trae su
- * embarque, su ruta y su enlace directo, de modo que la acción sigue estando a
- * un clic. El asunto dice cuántas son, que es lo que decide si se abre ahora.
- */
-export function correoRecaladas(
-  items: {
-    referencia: string;
-    contenedor: string;
-    cliente: string;
-    nave: string;
-    naviera: string | null;
-    pol: string | null;
-    pod: string;
-    eta: string;
-    destinoAis: string;
-    enlace: string | null;
-  }[],
-): { asunto: string; cuerpo: string } | null {
-  if (!items.length) return null;
-
-  const asunto =
-    items.length === 1
-      ? `Recalada por verificar · ${items[0].contenedor?.trim() || items[0].referencia} · ${items[0].nave}`
-      : `${items.length} recaladas por verificar`;
-
-  const filas = items
-    .map((op) => {
-      const identifica = op.contenedor?.trim() || op.referencia?.trim() || "Embarque";
-      const enlace = op.enlace
-        ? `<a href="${esc(op.enlace)}" style="color:${TEAL};text-decoration:none;font-size:12.5px;font-weight:700;white-space:nowrap">Ver embarque →</a>`
-        : "";
-      return `
-              <tr>
-                <td style="padding:14px 0;border-top:1px solid ${BORDE}">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td valign="top">
-                        <div style="color:${NAVY};font-size:15px;font-weight:700;line-height:1.35">${esc(identifica)}</div>
-                        <div style="color:${SUAVE};font-size:12.5px;padding-top:3px">${esc(op.cliente)}</div>
-                      </td>
-                      <td align="right" valign="top">${enlace}</td>
-                    </tr>
-                    <tr>
-                      <td colspan="2" style="padding-top:10px">
-                        <table width="100%" cellpadding="0" cellspacing="0">
-                          <tr>
-                            <td width="46%" valign="top" style="padding:10px 12px;background:#F4F7F9;border-radius:8px">
-                              <div style="color:${SUAVE};font-size:10px;letter-spacing:.9px;text-transform:uppercase;padding-bottom:4px">Comprometido</div>
-                              <div style="color:${NAVY};font-size:14px;font-weight:700">${esc(op.pod) || "—"}</div>
-                            </td>
-                            <td width="8%" align="center" valign="middle" style="color:${SUAVE};font-size:15px">→</td>
-                            <td width="46%" valign="top" style="padding:10px 12px;background:${AMBAR_FONDO};border-radius:8px">
-                              <div style="color:${AMBAR};font-size:10px;letter-spacing:.9px;text-transform:uppercase;padding-bottom:4px">Declara el buque</div>
-                              <div style="color:${NAVY};font-size:14px;font-weight:700">${esc(op.destinoAis)}</div>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colspan="2" style="padding-top:9px;color:${SUAVE};font-size:12px;line-height:1.5">
-                        ${esc(op.naviera ? `${op.nave} · ${op.naviera}` : op.nave)}${
-                          op.pol ? ` · ${esc(op.pol)} → ${esc(op.pod)}` : ""
-                        }${op.eta ? ` · Llegada estimada ${esc(op.eta)}` : ""}
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>`;
-    })
-    .join("");
-
-  const titular =
-    items.length === 1
-      ? "Un buque declara un destino distinto al comprometido"
-      : `${items.length} buques declaran un destino distinto al comprometido`;
-
-  const cuerpo = `
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">${items.length} ${
-    items.length === 1 ? "embarque necesita" : "embarques necesitan"
-  } que se confirme si hubo transbordo.</div>
-<table width="100%" cellpadding="0" cellspacing="0" style="background:${CREMA};padding:24px 12px;font-family:'Segoe UI',Arial,Helvetica,sans-serif">
-  <tr>
-    <td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDE}">
-
-        <tr>
-          <td style="background:${NAVY};padding:20px 28px">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="color:#ffffff;font-size:17px;font-weight:700;letter-spacing:.3px">Seguimiento de embarques</td>
-                <td align="right" style="color:#8FD8D8;font-size:11px;letter-spacing:1.2px;text-transform:uppercase">Seguimiento marítimo</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="padding:28px 28px 0">
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:${AMBAR_FONDO};border-left:4px solid ${AMBAR};border-radius:0 10px 10px 0">
-              <tr>
-                <td style="padding:16px 18px">
-                  <div style="color:${AMBAR};font-size:11px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;padding-bottom:5px">Requiere verificación</div>
-                  <div style="color:${NAVY};font-size:19px;font-weight:700;line-height:1.35">${titular}</div>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="padding:10px 28px 0">
-            <table width="100%" cellpadding="0" cellspacing="0">${filas}
-            </table>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="padding:22px 28px 0;color:${TEXTO};font-size:14px;line-height:1.65">
-            <p style="margin:0">Puede tratarse de un <strong>transbordo</strong>, de una escala intermedia, o
-            simplemente de un destino mal escrito a bordo, que es frecuente.
-            Conviene confirmarlo con la naviera antes de informar al cliente.</p>
-          </td>
-        </tr>
-
-        <tr>
-          <td style="padding:26px 28px 24px">
-            <div style="border-top:1px solid ${BORDE};padding-top:14px;color:${SUAVE};font-size:12px;line-height:1.55">
-              Aviso automático de seguimiento · ASLI<br>
-              Cada destino declarado se avisa una sola vez; si un buque informa otro, entra en el aviso del día siguiente.
-            </div>
-          </td>
-        </tr>
-
-      </table>
-    </td>
-  </tr>
-</table>`.trim();
-
-  return { asunto, cuerpo };
-}
-
-/**
  * Aviso de que alguien actualizó las posiciones a mano.
  *
  * El valor de este correo no es informar, es dejar rastro: gastar créditos a
@@ -641,7 +490,16 @@ export function correoResumenCorrida(datos: {
   puertosNuevos: number;
   /** Puertos donde consta que un buque paró, anotados por primera vez hoy. */
   recaladasNuevas: number;
-  porVerificar: { puerto: string; nave: string | null; embarque: string }[];
+  /**
+   * Transbordos a los que la carga ya llegó sin que se sepa a qué nave pasa.
+   *
+   * Es lo único que el sistema pide completar a mano, y se repite cada día
+   * hasta que alguien carga la nave: mientras falte, esa carga no tiene buque
+   * al que seguirse.
+   */
+  faltaNave: { puerto: string; naveAnterior: string | null; embarque: string }[];
+  /** Embarques navegando sin itinerario: nadie dijo si es directo o con transbordo. */
+  sinItinerario: string[];
   traspasos: { desde: string; hacia: string }[];
   sinSeguimiento: string[];
   /**
@@ -657,7 +515,11 @@ export function correoResumenCorrida(datos: {
   enlace: string | null;
 }): { asunto: string; cuerpo: string } {
   const hayProblema = datos.errores.length > 0 || !datos.ok;
-  const hayNovedad = datos.porVerificar.length > 0 || datos.traspasos.length > 0 || datos.sinSeguimiento.length > 0;
+  const hayNovedad =
+    datos.faltaNave.length > 0 ||
+    datos.sinItinerario.length > 0 ||
+    datos.traspasos.length > 0 ||
+    datos.sinSeguimiento.length > 0;
 
   const marca = datos.esPrueba ? "[PRUEBA] " : "";
   const asunto = hayProblema
@@ -667,7 +529,10 @@ export function correoResumenCorrida(datos: {
         // transbordo dejó de mandarse aparte, este asunto es el único lugar
         // donde eso asoma antes de abrir el correo.
         `${marca}Seguimiento: ${
-          datos.porVerificar.length + datos.traspasos.length + datos.sinSeguimiento.length
+          datos.faltaNave.length +
+          datos.sinItinerario.length +
+          datos.traspasos.length +
+          datos.sinSeguimiento.length
         } novedad(es)`
       : `${marca}Seguimiento al día · ${datos.revisadas} naves sin novedades`;
 
@@ -737,16 +602,24 @@ ${fila("Consultas usadas", String(datos.creditos), true)}
 ${fila("Saldo restante", datos.saldo == null ? "sin dato" : String(datos.saldo), true)}
 ${fila("Puertos anunciados nuevos", String(datos.puertosNuevos))}
 ${fila("Recaladas registradas", String(datos.recaladasNuevas))}
-${fila("Recaladas por verificar", String(datos.porVerificar.length))}
+${fila("Transbordos sin nave", String(datos.faltaNave.length))}
             </table>
           </td>
         </tr>
 
 ${lista(
-  "Requieren verificación",
-  datos.porVerificar.map(
-    (r) => `<strong style="color:${NAVY}">${esc(r.embarque)}</strong> — ${esc(r.nave ?? "")} anuncia <strong>${esc(r.puerto)}</strong>`,
+  "Falta la nave del transbordo",
+  datos.faltaNave.map(
+    (r) =>
+      `<strong style="color:${NAVY}">${esc(r.embarque)}</strong> — llegó a <strong>${esc(r.puerto)}</strong>${
+        r.naveAnterior ? ` en ${esc(r.naveAnterior)}` : ""
+      }; falta indicar a qué nave pasa`,
   ),
+  AMBAR,
+)}
+${lista(
+  "Falta indicar si es directo o con transbordo",
+  datos.sinItinerario.map(esc),
 )}
 ${lista(
   "Cambios de nave",

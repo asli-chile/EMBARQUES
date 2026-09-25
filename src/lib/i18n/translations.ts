@@ -2950,77 +2950,64 @@ export const translations = {
       colActualizado: "Última actualización",
       colAcciones: "Acciones",
       colReserva: "Reserva",
-      recaladaTitulo: "Verificar recalada",
-      recaladaSubtitulo: "{{nave}} anunció que recalaría en {{puerto}}.",
-      recaladaTituloManual: "Agregar recalada o transbordo",
-      recaladaSubtituloManual:
-        "Carga acá lo que ya sabes de {{nave}}, aunque el buque todavía no lo haya anunciado.",
-      recaladaPreguntaManual:
-        "¿Qué va a pasar con la carga en ese puerto?",
-      recaladaPuerto: "Puerto anunciado",
-      recaladaLlegadaAnunciada: "Llegada anunciada",
-      recaladaPregunta:
-        "Ya se cumplió la fecha. ¿La carga siguió en el mismo buque o cambió de nave en ese puerto?",
-      recaladaSigueTitulo: "Siguió en el mismo buque",
-      recaladaSigueTexto:
-        "El puerto queda en el historial como parada programada del itinerario. No cuesta consultas.",
-      recaladaDirectoTitulo: "Es un viaje directo",
-      recaladaDirectoTexto:
-        "La carga no cambia de nave en todo el viaje. Los puertos que el buque anuncie se registrarán como paradas programadas, sin volver a preguntar.",
-      recaladaGuardadaDirecto:
-        "Marcado como viaje directo: {{n}} puerto(s) quedaron como paradas programadas y no se volverá a preguntar.",
-      recaladaTransbordoTitulo: "Hubo transbordo",
-      recaladaTransbordoTexto:
-        "La carga cambió de nave. Se registra el tramo nuevo y el seguimiento pasa a ese buque.",
-      recaladaNaveNueva: "Nave que recibe la carga",
       recaladaNaveIdentificador: "IMO o MMSI (opcional)",
       recaladaNaveIdentificadorPlaceholder: "7 dígitos (IMO) o 9 (MMSI)",
       recaladaIdentificadorInvalido:
         "Un IMO tiene 7 dígitos y un MMSI 9. Con otro largo se guarda la nave sin identificador.",
-      recaladaAnunciadoTitulo: "Transbordo anunciado",
-      recaladaAnunciadoTexto:
-        "La naviera ya informó el cambio de nave, pero todavía no ocurre. Se registra el tramo y el seguimiento pasa al buque nuevo el día de la conexión, no hoy.",
-      recaladaAvisoProgramado:
-        "La carga sigue en {{anterior}} hasta {{fecha}}. Ese día el seguimiento pasa solo a {{nueva}}; hoy no se consulta ni se gasta nada.",
-      recaladaGuardadaAnunciado:
-        "Transbordo anunciado: {{anterior}} → {{nueva}}. El seguimiento cambiará el día de la conexión.",
       recaladaNavePlaceholder: "Escribe o elige del catálogo",
       recaladaSinImoCorto: "sin IMO",
-      recaladaViaje: "Viaje",
-      recaladaNuevaEta: "Nueva llegada estimada",
       recaladaHoraUtc: "Hora UTC",
       recaladaHoraOpcional: "Hora UTC, opcional. En blanco si solo dan el día.",
       recaladaAnunciado: "Anunciado",
-      recaladaReal: "Llegó",
-      recaladaDesvio: "Desvío",
       recaladaEnFecha: "en fecha",
-      recaladaSinLlegada: "Todavía sin registrar",
-      recaladaNuevoEtd: "Zarpe del tramo",
-      recaladaAgregar: "Agregar",
-      recaladaVacio:
-        "Todavía no hay puertos registrados para este embarque. Si ya sabes de una escala o un transbordo, agrégalo con el botón de arriba.",
       recaladaPuertoPlaceholder: "Ej. Cartagena Colombia",
       recaladaPuertoSinUbicacion:
         "El catálogo no ubica este puerto: se guarda igual, pero el mapa no podrá dibujarlo.",
-      recaladaNotas: "Notas (opcional)",
-      recaladaAvisoCosto:
-        "{{nueva}} no está en el catálogo con identificador. Guardar gastará 1 consulta para buscar su IMO y MMSI.",
-      recaladaAvisoYaExiste:
-        "{{nueva}} ya tiene identificador, así que guardar no cuesta consultas. Desde mañana se deja de seguir a {{anterior}} y se sigue a {{nueva}}.",
-      // Quien no gasta créditos igual registra el transbordo: lo que queda pendiente es el identificador.
-      recaladaAvisoSinCredito:
-        "{{nueva}} no está en el catálogo con identificador. El transbordo se registra igual y su posición será estimada hasta que se le cargue el IMO.",
-      recaladaGuardar: "Registrar transbordo",
-      recaladaGuardarConCosto: "Registrar y buscar IMO (1 consulta)",
-      recaladaGuardadaParada: "{{puerto}} quedó registrada como parada programada.",
-      recaladaGuardadaTransbordo:
-        "Transbordo registrado: la carga pasa de {{anterior}} a {{nueva}}.",
-      recaladaConImo: "Se identificó con IMO {{imo}} y ya se está siguiendo.",
-      recaladaSinImo:
-        "No se pudo identificar la nave, así que la carga queda sin posición hasta cargar su IMO.",
-      recaladaSinImoPendiente:
-        "La nave quedó sin identificador: su posición será estimada hasta que se le cargue el IMO.",
-      recaladaErrorGuardar: "No se pudo guardar la decisión.",
+      // ── Itinerario de la carga ────────────────────────────────────────
+      // Una sola pregunta por embarque: directo o con transbordo. Los demás
+      // puertos que anuncie el buque son paradas programadas y no se preguntan.
+      itTitulo: "Itinerario de la carga",
+      itPregunta: "¿Cómo viaja la carga?",
+      itSubtitulo:
+        "Lo que informó la naviera al confirmar la reserva. Si después cambia el puerto o la nave del transbordo, se edita aquí.",
+      itDirecto: "Viaje directo",
+      itDirectoTexto:
+        "La carga no cambia de nave. Todos los puertos que anuncie el buque se muestran como paradas programadas.",
+      itTransbordo: "Con transbordo",
+      itTransbordoTexto:
+        "La carga cambia de nave en uno o más puertos. Los demás puertos que anuncie el buque se muestran como paradas programadas.",
+      itTransbordoN: "Transbordo {{n}}",
+      itPuerto: "Puerto de transbordo",
+      itNave: "Nave que recibe la carga",
+      itNaveOpcional:
+        "La nave y las fechas son opcionales. Si la naviera todavía no las informa, la nave se pide cuando el buque llegue a este puerto.",
+      itLlegada: "Llegada al puerto",
+      itZarpe: "Zarpe de la nave nueva",
+      itQuitar: "Quitar",
+      itAgregar: "Agregar otro transbordo",
+      itReal: "Según AIS",
+      itLlego: "Llegó",
+      itZarpo: "Zarpó",
+      itSinDatoReal: "Todavía sin datos del AIS para este puerto.",
+      itFaltaNave: "El buque ya llegó a {{puerto}}. Falta indicar a qué nave pasa la carga.",
+      itNotas: "Notas (opcional)",
+      itGuardar: "Guardar itinerario",
+      itGuardado: "Itinerario guardado: {{detalle}}.",
+      itGuardadoDirecto: "viaje directo",
+      itGuardadoTransbordos: "{{n}} transbordo(s)",
+      itSinImo:
+        "{{naves}} sin IMO en el catálogo: su posición será estimada hasta que el chequeo diario lo busque.",
+      itError: "No se pudo guardar el itinerario.",
+      itErrorFaltaPuerto: "Cada transbordo necesita su puerto.",
+      itErrorExtremo: "El puerto de transbordo no puede ser el de origen ni el de destino.",
+      itErrorRepetido: "Hay dos transbordos en el mismo puerto.",
+      itNavePorConfirmar: "nave por confirmar",
+      itSinDefinir: "Falta indicar si es directo o con transbordo",
+      itDefinir: "Indicar itinerario",
+      itEditar: "Itinerario",
+      itPendienteNave: "Falta la nave en {{puerto}}",
+      itIndicarNave: "Indicar nave",
+      itTransbordosTitulo: "Transbordos",
       // ── Arribo a destino ──────────────────────────────────────────────
       // Es la última pregunta del viaje y son dos: la llegada que la naviera
       // anuncia y la que ya ocurrió. Se separan porque solo la segunda da la
@@ -3060,17 +3047,8 @@ export const translations = {
       arriboChipAnunciado: "Arribo anunciado",
       arriboChipTitulo: "Arribó a destino el {{fecha}}",
       arriboChipAnunciadoTitulo: "Arribo anunciado para el {{fecha}}",
-      recaladaVerificar: "Verificar",
       mapaAcercarBuque: "Acercar al buque",
       mapaVerRuta: "Ver la ruta completa",
-      historialRecaladas: "Puertos del recorrido",
-      historialPendientes: "Esperan respuesta",
-      historialParada: "Parada programada",
-      historialRecalada: "Recaló aquí",
-      historialTransbordo: "Transbordo",
-      historialTransbordoAnunciado: "Transbordo anunciado",
-      historialAnunciada: "Anunciada",
-      historialPorVerificar: "Por verificar",
       vistaTodos: "Todos",
       paginacion: "Mostrando {{desde}}–{{hasta}} de {{total}} embarques",
       paginaAnterior: "Página anterior",
@@ -6378,75 +6356,61 @@ export const translations = {
       colActualizado: "Last update",
       colAcciones: "Actions",
       colReserva: "Booking",
-      recaladaTitulo: "Verify port call",
-      recaladaSubtitulo: "{{nave}} announced it would call at {{puerto}}.",
-      recaladaTituloManual: "Add port call or transhipment",
-      recaladaSubtituloManual:
-        "Record what you already know about {{nave}}, even if the vessel has not announced it yet.",
-      recaladaPreguntaManual: "What will happen to the cargo at that port?",
-      recaladaPuerto: "Announced port",
-      recaladaLlegadaAnunciada: "Announced arrival",
-      recaladaPregunta:
-        "The date has passed. Did the cargo stay on the same vessel or change ships at that port?",
-      recaladaSigueTitulo: "Stayed on the same vessel",
-      recaladaSigueTexto:
-        "The port is kept in the history as a scheduled call. No queries used.",
-      recaladaDirectoTitulo: "It is a direct voyage",
-      recaladaDirectoTexto:
-        "The cargo does not change vessel at any point. Ports the vessel announces will be recorded as scheduled calls, without asking again.",
-      recaladaGuardadaDirecto:
-        "Marked as a direct voyage: {{n}} port(s) became scheduled calls and it will not ask again.",
-      recaladaTransbordoTitulo: "There was a transshipment",
-      recaladaTransbordoTexto:
-        "The cargo changed vessel. The new leg is recorded and tracking moves to that ship.",
-      recaladaNaveNueva: "Vessel receiving the cargo",
       recaladaNaveIdentificador: "IMO or MMSI (optional)",
       recaladaNaveIdentificadorPlaceholder: "7 digits (IMO) or 9 (MMSI)",
       recaladaIdentificadorInvalido:
         "An IMO has 7 digits and an MMSI 9. With any other length the vessel is saved without an identifier.",
-      recaladaAnunciadoTitulo: "Announced transhipment",
-      recaladaAnunciadoTexto:
-        "The carrier has already reported the vessel change, but it has not happened yet. The leg is recorded and tracking moves to the new vessel on the connection date, not today.",
-      recaladaAvisoProgramado:
-        "The cargo stays on {{anterior}} until {{fecha}}. On that day tracking moves to {{nueva}} on its own; nothing is queried or spent today.",
-      recaladaGuardadaAnunciado:
-        "Announced transhipment: {{anterior}} → {{nueva}}. Tracking will switch on the connection date.",
       recaladaNavePlaceholder: "Type or pick from the catalog",
       recaladaSinImoCorto: "no IMO",
-      recaladaViaje: "Voyage",
-      recaladaNuevaEta: "New estimated arrival",
       recaladaHoraUtc: "UTC time",
       recaladaHoraOpcional: "UTC time, optional. Leave blank if only the day is known.",
       recaladaAnunciado: "Announced",
-      recaladaReal: "Arrived",
-      recaladaDesvio: "Drift",
       recaladaEnFecha: "on time",
-      recaladaSinLlegada: "Not recorded yet",
-      recaladaNuevoEtd: "Leg departure",
-      recaladaAgregar: "Add",
-      recaladaVacio:
-        "No ports recorded for this shipment yet. If you already know of a call or a transhipment, add it with the button above.",
       recaladaPuertoPlaceholder: "e.g. Cartagena Colombia",
       recaladaPuertoSinUbicacion:
         "The catalogue cannot locate this port: it will still be saved, but the map will not be able to draw it.",
-      recaladaNotas: "Notes (optional)",
-      recaladaAvisoCosto:
-        "{{nueva}} is not in the catalog with an identifier. Saving will use 1 query to find its IMO and MMSI.",
-      recaladaAvisoYaExiste:
-        "{{nueva}} already has an identifier, so saving uses no queries. From tomorrow {{anterior}} is no longer tracked and {{nueva}} is.",
-      recaladaAvisoSinCredito:
-        "{{nueva}} is not in the catalog with an identifier. The transshipment is recorded anyway and its position will be estimated until an IMO is loaded.",
-      recaladaGuardar: "Record transshipment",
-      recaladaGuardarConCosto: "Record and find IMO (1 query)",
-      recaladaGuardadaParada: "{{puerto}} was recorded as a scheduled call.",
-      recaladaGuardadaTransbordo:
-        "Transshipment recorded: the cargo moves from {{anterior}} to {{nueva}}.",
-      recaladaConImo: "Identified with IMO {{imo}} and already being tracked.",
-      recaladaSinImo:
-        "The vessel could not be identified, so the cargo has no position until its IMO is loaded.",
-      recaladaSinImoPendiente:
-        "The vessel has no identifier: its position will be estimated until an IMO is loaded.",
-      recaladaErrorGuardar: "The decision could not be saved.",
+      itTitulo: "Cargo routing",
+      itPregunta: "How does the cargo travel?",
+      itSubtitulo:
+        "What the carrier reported when confirming the booking. If the transshipment port or vessel changes later, edit it here.",
+      itDirecto: "Direct voyage",
+      itDirectoTexto:
+        "The cargo stays on the same vessel. Every port the vessel announces is shown as a scheduled call.",
+      itTransbordo: "With transshipment",
+      itTransbordoTexto:
+        "The cargo changes vessel at one or more ports. Any other port the vessel announces is shown as a scheduled call.",
+      itTransbordoN: "Transshipment {{n}}",
+      itPuerto: "Transshipment port",
+      itNave: "Receiving vessel",
+      itNaveOpcional:
+        "Vessel and dates are optional. If the carrier has not reported them yet, the vessel is requested when the ship reaches this port.",
+      itLlegada: "Arrival at port",
+      itZarpe: "Departure of the new vessel",
+      itQuitar: "Remove",
+      itAgregar: "Add another transshipment",
+      itReal: "According to AIS",
+      itLlego: "Arrived",
+      itZarpo: "Departed",
+      itSinDatoReal: "No AIS data for this port yet.",
+      itFaltaNave: "The vessel already reached {{puerto}}. The receiving vessel is still missing.",
+      itNotas: "Notes (optional)",
+      itGuardar: "Save routing",
+      itGuardado: "Routing saved: {{detalle}}.",
+      itGuardadoDirecto: "direct voyage",
+      itGuardadoTransbordos: "{{n}} transshipment(s)",
+      itSinImo:
+        "{{naves}} has no IMO in the catalog: its position will be estimated until the daily check looks it up.",
+      itError: "The routing could not be saved.",
+      itErrorFaltaPuerto: "Each transshipment needs a port.",
+      itErrorExtremo: "The transshipment port cannot be the origin or the destination.",
+      itErrorRepetido: "Two transshipments share the same port.",
+      itNavePorConfirmar: "vessel to be confirmed",
+      itSinDefinir: "Direct or transshipment not set yet",
+      itDefinir: "Set routing",
+      itEditar: "Routing",
+      itPendienteNave: "Vessel missing at {{puerto}}",
+      itIndicarNave: "Set vessel",
+      itTransbordosTitulo: "Transshipments",
       arriboSeccion: "Arrival at destination",
       arriboAnunciadoTitulo: "Arrival announced",
       arriboAnunciadoTexto:
@@ -6479,17 +6443,8 @@ export const translations = {
       arriboChipAnunciado: "Arrival announced",
       arriboChipTitulo: "Arrived at destination on {{fecha}}",
       arriboChipAnunciadoTitulo: "Arrival announced for {{fecha}}",
-      recaladaVerificar: "Verify",
       mapaAcercarBuque: "Zoom to vessel",
       mapaVerRuta: "See full route",
-      historialRecaladas: "Ports on the route",
-      historialPendientes: "Awaiting an answer",
-      historialParada: "Scheduled call",
-      historialRecalada: "Called here",
-      historialTransbordo: "Transshipment",
-      historialTransbordoAnunciado: "Announced transhipment",
-      historialAnunciada: "Announced",
-      historialPorVerificar: "To verify",
       vistaTodos: "All",
       paginacion: "Showing {{desde}}–{{hasta}} of {{total}} shipments",
       paginaAnterior: "Previous page",

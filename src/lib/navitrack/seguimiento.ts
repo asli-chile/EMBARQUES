@@ -24,6 +24,7 @@
 
 import { mismoPuerto } from "@/components/navitrack/navitrack-model";
 import { normalizarEstado, ESTADO_META } from "@/lib/operaciones/estados";
+import { crearTramoCerrado } from "@/lib/navitrack/ventana";
 
 type Cliente = {
   from: (tabla: string) => any;
@@ -74,8 +75,6 @@ function claveNave(raw: string | null | undefined): string {
 
 export async function sincronizarSeguimiento(supabase: Cliente): Promise<ResultadoSincronia> {
   const vacio: ResultadoSincronia = { traspasos: [], encendidas: [], apagadas: [], sinCatalogo: [] };
-  const hoy = new Date().toISOString().slice(0, 10);
-
   const [tramosRes, opsRes, navesRes, recRes] = await Promise.all([
     supabase.from("navitrack_tramos").select("operacion_id, orden, nave, pod, eta").order("orden"),
     supabase
@@ -112,24 +111,11 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
   }
 
   /*
-   * Un tramo terminó si venció su ETA **o** si consta que el buque llegó.
-   *
-   * La fecha sola no alcanza: el transbordo se suele anunciar sin decir cuándo
-   * llega el buque al puerto de conexión ni cuándo zarpa al siguiente. Con la
-   * ETA en null el tramo no vencía nunca, así que el tramo 1 quedaba vigente
-   * para siempre y el traspaso de seguimiento no ocurría jamás —justo en el
-   * caso que la función existe para resolver—.
-   *
-   * El respaldo es el propio AIS, que ya se paga y se guarda: cuando el buque
-   * declara como último puerto el de conexión, la recalada queda anotada y eso
-   * cierra el tramo aunque nadie supiera la fecha de antemano.
+   * Un tramo terminó si consta que el buque llegó a su puerto, o si pasó el
+   * plazo de gracia desde la llegada anunciada. El criterio es el de la
+   * ventana, compartido a propósito: ver `crearTramoCerrado`.
    */
-  const tramoCerrado = (t: { operacion_id: string; pod: string | null; eta: string | null }) => {
-    if (t.eta && t.eta < hoy) return true;
-    const pod = (t.pod ?? "").trim();
-    if (!pod) return false;
-    return (recaladoEn.get(t.operacion_id) ?? []).some((p) => mismoPuerto(p, pod));
-  };
+  const tramoCerrado = crearTramoCerrado(recaladoEn, new Date());
 
   /*
    * Una operación terminada no retiene la nave.
@@ -193,10 +179,15 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
     const ordenados = [...lista].sort((a, b) => a.orden - b.orden);
     const indice = ordenados.findIndex((t) => !tramoCerrado(t));
     const actual = ordenados[indice < 0 ? ordenados.length - 1 : indice];
-    if (!actual?.nave) continue;
+    if (!actual) continue;
 
-    const claveActual = claveNave(actual.nave);
-    conCargaViva.add(claveActual);
+    /*
+     * Tramo vigente sin nave: la carga llegó al transbordo y todavía no se sabe
+     * a qué buque pasa. No hay a quién encender, pero la nave que la trajo sí
+     * la entregó y deja de interesar para este embarque.
+     */
+    const claveActual = actual.nave ? claveNave(actual.nave) : "";
+    if (claveActual) conCargaViva.add(claveActual);
 
     // Los tramos ya cerrados entregaron la carga: candidatos a dejar de seguirse.
     for (const t of ordenados) {
@@ -205,6 +196,7 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
       const k = claveNave(t.nave);
       if (k && k !== claveActual) {
         entregaron.set(k, claveActual);
+        if (!actual.nave) continue;
         traspasos.push({
           desde: t.nave,
           hacia: actual.nave,
@@ -241,7 +233,9 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
     const nueva = porClave.get(claveNueva);
 
     // Encender la que lleva la carga, si se puede consultar.
-    if (!nueva) {
+    if (!claveNueva) {
+      // Transbordo sin nave conocida: nada que encender todavía.
+    } else if (!nueva) {
       // No está en el catálogo: no hay a qué IMO preguntarle.
       sinCatalogo.add(nombreDeClave.get(claveNueva) ?? claveNueva);
     } else if (!nueva.tracking_activo) {

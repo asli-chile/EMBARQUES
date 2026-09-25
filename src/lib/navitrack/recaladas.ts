@@ -1,47 +1,45 @@
 /**
- * Puertos que el buque va anunciando, y cuándo toca verificarlos.
+ * Puertos por donde pasa la carga, según el AIS y el itinerario.
  *
- * El AIS declara el **próximo puerto**, no el destino final. Un buque de San
- * Antonio a Tokio anuncia Callao, luego Balboa, luego otro. Cada anuncio abre
- * una pregunta que nadie puede responder desde el dato: ¿es una parada del
- * itinerario o ahí la carga cambia de barco?
+ * El AIS declara el **próximo puerto**, no el destino final. Un buque de
+ * Valparaíso a Leixões con transbordo en Rotterdam anuncia Callao, luego
+ * Balboa, luego Rotterdam, luego Amberes. Qué es cada uno no lo decide este
+ * archivo ni lo pregunta: lo dice el itinerario que se cargó con la reserva
+ * (ver `itinerario.ts`). Rotterdam es el transbordo; los demás, paradas
+ * programadas que solo se muestran.
  *
- * La respuesta llega sola en el peor momento —cuando el contenedor no aparece—
- * así que el sistema la pregunta antes: **el día que el buque dice que va a
- * llegar a ese puerto**, la recalada pasa a `por_verificar` y alguien la mira.
+ * Lo que sí hace es guardar los hechos, que el AIS informa una sola vez:
  *
- * Antes de esa fecha no se molesta a nadie. Un buque que anuncia Callao con
- * diez días de anticipación no es noticia; que haya llegado a Callao sí.
+ *   - cuándo llegó el buque a un puerto: la primera lectura que lo ve atracado
+ *     o fondeado frente a él (`recalado_at`);
+ *   - cuándo zarpó: `atdUtc`, que el proveedor entrega junto al último puerto
+ *     (`zarpe_at`).
+ *
+ * Sin guardarlos, cada puerto desaparece del historial en cuanto el buque toca
+ * el siguiente.
  */
 
 import { mismoPuerto } from "@/components/navitrack/navitrack-model";
+import { estadoSegunItinerario, leerItinerario } from "@/lib/navitrack/itinerario";
 
 type Cliente = { from: (tabla: string) => any };
 
-export type RecaladaPendiente = {
-  id: number;
-  operacionId: string;
-  puerto: string;
-  nave: string | null;
-  etaAnunciada: string | null;
-};
+/** El buque está detenido en un puerto, no navegando hacia él. */
+function estaDetenido(navStatus: string | null | undefined): boolean {
+  return /moor|anchor|berth/i.test(String(navStatus ?? ""));
+}
 
-export type ResultadoRecaladas = {
-  /** Puertos vistos por primera vez en esta corrida. */
-  nuevas: number;
-  /** Recaladas que hoy pasaron a requerir verificación. */
-  porVerificar: RecaladaPendiente[];
-};
+/** Estados que todavía no dicen nada: los reemplaza el itinerario apenas existe. */
+const SIN_DECIDIR = ["anunciada", "por_verificar", "recalada"];
 
-/** Nombres de puerto comparables: el AIS los escribe de cualquier manera. */
-function normalizar(puerto: string | null | undefined): string {
-  return String(puerto ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^A-Z0-9 ]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+type FilaAnotada = { id: number; estado: string; puerto: string; recalado_at: string | null };
+
+async function anotadasDe(supabase: Cliente, operacionId: string): Promise<FilaAnotada[]> {
+  const { data } = await supabase
+    .from("navitrack_recaladas")
+    .select("id, estado, puerto, recalado_at")
+    .eq("operacion_id", operacionId);
+  return (data ?? []) as FilaAnotada[];
 }
 
 /**
@@ -57,7 +55,11 @@ export async function registrarAnuncio(
     puertoDeclarado: string;
     nave: string | null;
     etaDeclarada: string | null;
-    /** Extremos del embarque: ninguno de los dos abre una pregunta. */
+    /** Estado de navegación de la misma lectura: detenido frente al puerto = llegó. */
+    navStatus?: string | null;
+    /** Cuándo se tomó la posición. Es la mejor aproximación a la hora de llegada. */
+    recibidoAt?: string | null;
+    /** Extremos del embarque: ninguno de los dos es una escala. */
     pol: string | null;
     pod: string | null;
   },
@@ -68,61 +70,47 @@ export async function registrarAnuncio(
   /*
    * Los extremos del viaje no son recaladas.
    *
-   * El destino ya se descartaba; el **origen** no, y ahí el buque todavía no
-   * zarpó: declara el puerto donde está cargando. Eso entraba como "puerto
-   * anunciado" y terminaba pidiendo que alguien decidiera si la carga cambia de
-   * barco en el puerto del que aún no salió. El A00052 quedó así con San
-   * Antonio esperando respuesta.
-   *
-   * `registrarRecalada`, la función hermana, ya descartaba los dos. Esta se
-   * quedó a medias.
-   *
-   * La comparación la hace `mismoPuerto` y no un cotejo de texto: el AIS
-   * escribe "Hamburg Germany" donde el ERP dice "HAMBURGO", y buscar una cadena
-   * dentro de la otra no las reconoce —ni con el POD, que era el caso que ya
-   * estaba—. `mismoPuerto` resuelve el nombre y, si no calza, compara
-   * coordenadas.
+   * En el origen el buque todavía no zarpó: declara el puerto donde está
+   * cargando. El A00052 quedó así, preguntando si la carga cambiaba de barco en
+   * San Antonio, el puerto del que aún no salía. La comparación la hace
+   * `mismoPuerto` y no un cotejo de texto: el AIS escribe "Hamburg Germany"
+   * donde el ERP dice "HAMBURGO".
    */
   if (mismoPuerto(puerto, datos.pol) || mismoPuerto(puerto, datos.pod)) return "ignorada";
 
+  const itinerario = await leerItinerario(supabase, datos.operacionId);
+  const segun = estadoSegunItinerario(itinerario, puerto);
+
   /*
-   * Viaje marcado como directo.
+   * Detenido frente al puerto que declara: el buque llegó.
    *
-   * Alguien con el booking a la vista afirmó que la carga no cambia de nave.
-   * Los puertos que el buque anuncie se anotan igual —son parte del recorrido y
-   * del historial— pero ya resueltos: no preguntan ni avisan.
+   * El proveedor no informa la hora de llegada, solo la de zarpe. La primera
+   * lectura que lo ve atracado o fondeado con ese destino es lo más cerca que
+   * se puede estar sin inventar el dato, y se guarda una sola vez.
    */
-  const { data: viaje } = await supabase
-    .from("navitrack_viajes")
-    .select("modo")
-    .eq("operacion_id", datos.operacionId)
-    .maybeSingle();
-  const esDirecto = viaje?.modo === "directo";
+  const llegoAhora = estaDetenido(datos.navStatus)
+    ? (datos.recibidoAt ?? new Date().toISOString())
+    : null;
 
   /*
    * El puerto ya anotado se busca por identidad de lugar, no por texto exacto.
    *
-   * Comparando `eq("puerto", puerto)`, el mismo Rotterdam entraba de nuevo en
-   * cuanto el buque cambiaba el rótulo a "Rotterdam anch": dos filas, dos
-   * verificaciones pendientes y dos líneas en el historial para una sola
-   * parada. Se trae lo anotado para este embarque y se compara con la misma
-   * regla que usa el mapa.
+   * El AIS reescribe el destino al acercarse —"Rotterdam Netherlands" pasa a
+   * "Rotterdam anch Netherlands"— y comparando texto eso eran dos filas y dos
+   * líneas en el historial para una sola parada.
    */
-  const { data: anotadas } = await supabase
-    .from("navitrack_recaladas")
-    .select("id, estado, puerto")
-    .eq("operacion_id", datos.operacionId);
-
-  const existente = ((anotadas ?? []) as { id: number; estado: string; puerto: string }[]).find((r) =>
+  const existente = (await anotadasDe(supabase, datos.operacionId)).find((r) =>
     mismoPuerto(r.puerto, puerto),
   );
 
   if (existente) {
-    // Sigue declarando el mismo puerto: solo se refresca cuándo se vio.
-    await supabase
-      .from("navitrack_recaladas")
-      .update({ visto_at: new Date().toISOString(), eta_anunciada: datos.etaDeclarada })
-      .eq("id", existente.id);
+    const cambios: Record<string, unknown> = {
+      visto_at: new Date().toISOString(),
+      eta_anunciada: datos.etaDeclarada,
+    };
+    if (llegoAhora && !existente.recalado_at) cambios.recalado_at = llegoAhora;
+    if (segun && SIN_DECIDIR.includes(existente.estado)) cambios.estado = segun;
+    await supabase.from("navitrack_recaladas").update(cambios).eq("id", existente.id);
     return "repetida";
   }
 
@@ -131,9 +119,9 @@ export async function registrarAnuncio(
     puerto,
     nave: datos.nave,
     eta_anunciada: datos.etaDeclarada,
-    estado: esDirecto ? "parada_programada" : "anunciada",
-    decidido_at: esDirecto ? new Date().toISOString() : null,
-    notas: esDirecto ? "Viaje marcado como directo: no requiere verificación." : null,
+    recalado_at: llegoAhora,
+    estado: segun ?? "anunciada",
+    decidido_at: segun ? new Date().toISOString() : null,
   });
   return "nueva";
 }
@@ -142,22 +130,13 @@ export async function registrarAnuncio(
  * Anota el puerto donde el buque **ya paró**, según el AIS.
  *
  * Es el otro dato de la misma lectura, y el que el cliente realmente pregunta:
- * no por dónde dice el buque que va a pasar, sino por dónde pasó. Se descartaba
- * entero —vivía solo en el JSON crudo—, así que el historial mostraba futuro
- * anunciado y ningún puerto tocado.
+ * no por dónde dice el buque que va a pasar, sino por dónde pasó. Trae además
+ * la hora exacta de zarpe, que es el único dato de tiempo real que entrega el
+ * proveedor para un puerto.
  *
- * Tres cosas lo separan de `registrarAnuncio`:
- *
- * 1. **Se anota siempre**, incluso en un viaje marcado directo. Que nadie tenga
- *    que verificar nada no quita que el buque haya parado ahí, y esconderlo
- *    deja al cliente sin saber dónde está su carga. Directo significa "no
- *    preguntes", no "no lo cuentes".
- * 2. **No abre una verificación.** `marcarPorVerificar` se alimenta solo de
- *    `anunciada`: una recalada es un hecho, no una pregunta.
- * 3. **No pisa el estado de una fila existente.** Si ese puerto ya estaba
- *    anunciado o por verificar, solo se le agrega el hecho —`recalado_at` y el
- *    zarpe—; cerrar la pregunta sería afirmar que la carga no cambió de barco,
- *    que es justo lo que nadie ha comprobado.
+ * Si ese puerto es un transbordo, confirma el tramo que empieza ahí: el buque
+ * que traía la carga ya estuvo en el puerto de conexión, así que el cambio de
+ * nave dejó de ser un anuncio.
  */
 export async function registrarRecalada(
   supabase: Cliente,
@@ -177,27 +156,43 @@ export async function registrarRecalada(
   if (mismoPuerto(puerto, datos.pol) || mismoPuerto(puerto, datos.pod)) return "ignorada";
 
   const ahora = new Date().toISOString();
+  const itinerario = await leerItinerario(supabase, datos.operacionId);
+  const segun = estadoSegunItinerario(itinerario, puerto);
 
-  const { data: anotadas } = await supabase
-    .from("navitrack_recaladas")
-    .select("id, estado, puerto, recalado_at")
-    .eq("operacion_id", datos.operacionId);
+  if (segun === "transbordo") {
+    // Se compara por lugar y no con `ilike`: "Rotterdam" y "ROTTERDAM
+    // NETHERLANDS" son el mismo puerto y ningún cotejo de texto lo sabe.
+    const { data: tramos } = await supabase
+      .from("navitrack_tramos")
+      .select("id, pol, nave, confirmado")
+      .eq("operacion_id", datos.operacionId)
+      .gt("orden", 1);
+    for (const t of (tramos ?? []) as {
+      id: number;
+      pol: string | null;
+      nave: string | null;
+      confirmado: boolean;
+    }[]) {
+      if (!t.confirmado && t.nave && mismoPuerto(t.pol, puerto)) {
+        await supabase.from("navitrack_tramos").update({ confirmado: true }).eq("id", t.id);
+      }
+    }
+  }
 
-  const existente = (
-    (anotadas ?? []) as { id: number; estado: string; puerto: string; recalado_at: string | null }[]
-  ).find((r) => mismoPuerto(r.puerto, puerto));
+  const existente = (await anotadasDe(supabase, datos.operacionId)).find((r) =>
+    mismoPuerto(r.puerto, puerto),
+  );
 
   if (existente) {
-    await supabase
-      .from("navitrack_recaladas")
-      .update({
-        // La primera vez que consta la parada es la que vale: releer la misma
-        // lectura mañana no la convierte en una escala más reciente.
-        recalado_at: existente.recalado_at ?? ahora,
-        zarpe_at: datos.zarpeAt,
-        visto_at: ahora,
-      })
-      .eq("id", existente.id);
+    const cambios: Record<string, unknown> = {
+      // La primera vez que consta la parada es la que vale: releer la misma
+      // lectura mañana no la convierte en una escala más reciente.
+      recalado_at: existente.recalado_at ?? ahora,
+      zarpe_at: datos.zarpeAt,
+      visto_at: ahora,
+    };
+    if (segun && SIN_DECIDIR.includes(existente.estado)) cambios.estado = segun;
+    await supabase.from("navitrack_recaladas").update(cambios).eq("id", existente.id);
     return "repetida";
   }
 
@@ -205,59 +200,82 @@ export async function registrarRecalada(
     operacion_id: datos.operacionId,
     puerto,
     nave: datos.nave,
-    estado: "recalada",
+    estado: segun ?? "recalada",
+    decidido_at: segun ? ahora : null,
     recalado_at: ahora,
     zarpe_at: datos.zarpeAt,
   });
   return "nueva";
 }
 
+export type TransbordoSinNave = {
+  operacionId: string;
+  puerto: string;
+  /** Nave que trajo la carga hasta el puerto de transbordo. */
+  naveAnterior: string | null;
+  /** Llegada real si consta; si no, la anunciada por la naviera. */
+  llegada: string | null;
+  /** La llegada es la real del AIS, no la anunciada. */
+  llegoSegunAis: boolean;
+};
+
 /**
- * Pasa a `por_verificar` las recaladas cuya fecha anunciada ya llegó.
+ * Transbordos a los que ya llegó la carga sin que se sepa a qué nave pasa.
  *
- * Sin ETA anunciada se usa un plazo prudente desde que se vio el anuncio: es
- * preferible preguntar tarde que no preguntar nunca.
+ * Es el único caso en que el sistema pide algo: se cargó "transbordo en
+ * Rodman" sin la nave, porque la naviera no la había informado, y el buque ya
+ * está en Rodman. Desde ese momento la carga no tiene a quién seguirse.
+ *
+ * Cuenta como llegada la real del AIS o, si no hay lectura, la fecha que
+ * anunció la naviera para ese puerto.
  */
-export async function marcarPorVerificar(
+export async function transbordosSinNave(
   supabase: Cliente,
-  diasSinEta = 7,
-): Promise<RecaladaPendiente[]> {
-  const ahora = new Date();
+  ahora = new Date(),
+): Promise<TransbordoSinNave[]> {
+  const { data: huecos } = await supabase
+    .from("navitrack_tramos")
+    .select("operacion_id, orden, pol")
+    .is("nave", null)
+    .gt("orden", 1)
+    .limit(500);
 
-  const { data } = await supabase
-    .from("navitrack_recaladas")
-    .select("id, operacion_id, puerto, nave, eta_anunciada, anunciado_at")
-    .eq("estado", "anunciada")
-    .limit(200);
+  const pendientes = (huecos ?? []) as { operacion_id: string; orden: number; pol: string | null }[];
+  if (!pendientes.length) return [];
 
-  const vencidas = ((data ?? []) as {
-    id: number;
+  const ids = [...new Set(pendientes.map((t) => t.operacion_id))];
+  const [anterioresRes, recRes] = await Promise.all([
+    supabase.from("navitrack_tramos").select("operacion_id, orden, nave, eta").in("operacion_id", ids),
+    supabase
+      .from("navitrack_recaladas")
+      .select("operacion_id, puerto, recalado_at")
+      .in("operacion_id", ids)
+      .not("recalado_at", "is", null),
+  ]);
+  const anteriores = (anterioresRes.data ?? []) as {
     operacion_id: string;
-    puerto: string;
+    orden: number;
     nave: string | null;
-    eta_anunciada: string | null;
-    anunciado_at: string;
-  }[]).filter((r) => {
-    if (r.eta_anunciada) return new Date(r.eta_anunciada) <= ahora;
-    const desde = new Date(r.anunciado_at);
-    return ahora.getTime() - desde.getTime() >= diasSinEta * 86_400_000;
-  });
+    eta: string | null;
+  }[];
+  const recaladas = (recRes.data ?? []) as { operacion_id: string; puerto: string; recalado_at: string }[];
+  const hoy = ahora.toISOString().slice(0, 10);
 
-  if (!vencidas.length) return [];
-
-  await supabase
-    .from("navitrack_recaladas")
-    .update({ estado: "por_verificar" })
-    .in(
-      "id",
-      vencidas.map((r) => r.id),
-    );
-
-  return vencidas.map((r) => ({
-    id: r.id,
-    operacionId: r.operacion_id,
-    puerto: r.puerto,
-    nave: r.nave,
-    etaAnunciada: r.eta_anunciada,
-  }));
+  const salida: TransbordoSinNave[] = [];
+  for (const t of pendientes) {
+    const puerto = (t.pol ?? "").trim();
+    if (!puerto) continue;
+    const previo = anteriores.find((a) => a.operacion_id === t.operacion_id && a.orden === t.orden - 1);
+    const real = recaladas.find((r) => r.operacion_id === t.operacion_id && mismoPuerto(r.puerto, puerto));
+    const anunciadaVencida = Boolean(previo?.eta && previo.eta <= hoy);
+    if (!real && !anunciadaVencida) continue;
+    salida.push({
+      operacionId: t.operacion_id,
+      puerto,
+      naveAnterior: previo?.nave ?? null,
+      llegada: real?.recalado_at ?? previo?.eta ?? null,
+      llegoSegunAis: Boolean(real),
+    });
+  }
+  return salida;
 }

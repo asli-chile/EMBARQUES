@@ -18,15 +18,17 @@ import {
 } from "./NavitrackFleet";
 import { NavitrackShipment, type Escala } from "./NavitrackShipment";
 import {
-  NavitrackRecalada,
+  NavitrackItinerario,
+  type ModoViaje,
   type NaveCatalogo,
   type PuertoCatalogo,
   type Recalada,
-} from "./NavitrackRecalada";
+} from "./NavitrackItinerario";
 import { NavitrackRastreoPanel } from "./NavitrackRastreoPanel";
 import { NavitrackCoordsManual } from "./NavitrackCoordsManual";
 import {
   yaZarpo,
+  GRACIA_POST_ETA_DIAS,
   NAVITRACK_OP_SELECT,
   buildJourney,
   mismoPuerto,
@@ -178,10 +180,19 @@ export function NavitrackContent() {
   const [catalogoNaves, setCatalogoNaves] = useState<NaveCatalogo[]>([]);
   /** Catálogo de puertos para el alta a mano; llega junto al de naves. */
   const [catalogoPuertos, setCatalogoPuertos] = useState<PuertoCatalogo[]>([]);
-  const [recaladaAbierta, setRecaladaAbierta] = useState<Recalada | null>(null);
-  /* El alta a mano usa el mismo diálogo, con el puerto en blanco y editable. */
-  const [recaladaManual, setRecaladaManual] = useState(false);
+  /**
+   * Ventana del itinerario abierta, con el puerto a resaltar si se abrió por un
+   * transbordo al que la carga llegó sin nave.
+   */
+  const [itinerarioAbierto, setItinerarioAbierto] = useState<{ foco: string | null } | null>(null);
   const [avisoRecalada, setAvisoRecalada] = useState<string | null>(null);
+
+  /**
+   * Itinerario de cada embarque: directo o con transbordo. Sin fila, nadie lo
+   * indicó todavía. Es chico —una fila por embarque definido— y la tabla lo
+   * necesita entero: sin él no sabe a quién le falta.
+   */
+  const [modosViaje, setModosViaje] = useState<Map<string, ModoViaje>>(new Map());
 
   /** Recaladas de cada embarque, para que la tabla y la ficha coincidan. */
   const [recaladasPorOp, setRecaladasPorOp] = useState<Map<string, { puerto: string; estado: string }[]>>(
@@ -224,7 +235,7 @@ export function NavitrackContent() {
     setRefrescando(true);
     const desde = isoHaceDias(VENTANA_DIAS);
 
-    const [opsRes, navesRes, navierasRes, decRes, tramosRes, recRes, lecturasRes] = await Promise.all([
+    const [opsRes, navesRes, navierasRes, decRes, tramosRes, recRes, lecturasRes, viajesRes] = await Promise.all([
       (() => {
         let q = supabase
           .from("operaciones")
@@ -276,6 +287,7 @@ export function NavitrackContent() {
         .eq("tipo", "posicion")
         .order("consultado_at", { ascending: false })
         .limit(600),
+      supabase.from("navitrack_viajes").select("operacion_id, modo").limit(2000),
     ]);
 
     const filas = (opsRes.data ?? []) as unknown as NavitrackOperacion[];
@@ -296,6 +308,12 @@ export function NavitrackContent() {
       recPorOperacion.set(r.operacion_id, lista);
     }
     setRecaladasPorOp(recPorOperacion);
+
+    const porModo = new Map<string, ModoViaje>();
+    for (const v of (viajesRes.data ?? []) as { operacion_id: string; modo: string }[]) {
+      if (v.modo === "directo" || v.modo === "con_transbordo") porModo.set(v.operacion_id, v.modo);
+    }
+    setModosViaje(porModo);
 
     // La consulta viene ordenada de más nueva a más vieja: la primera manda.
     const porIdent = new Map<string, AisSnapshot>();
@@ -384,11 +402,24 @@ export function NavitrackContent() {
     (op: NavitrackOperacion): string | null => {
       const lista = tramos.get(op.id) ?? [];
       if (!lista.length) return op.nave;
-      const hoy = new Date().toISOString().slice(0, 10);
-      const enCurso = [...lista]
-        .sort((a, b) => a.orden - b.orden)
-        .find((t) => !(t.eta && t.eta < hoy));
-      return enCurso?.nave ?? lista[lista.length - 1]?.nave ?? op.nave;
+      /*
+       * Mismo margen que el chequeo diario (`crearTramoCerrado`): la llegada es
+       * la que anunció la naviera y los buques se atrasan. Cortando el mismo
+       * día, la pantalla pasaba a la nave siguiente mientras el chequeo seguía
+       * leyendo la anterior.
+       */
+      const tope = new Date();
+      tope.setDate(tope.getDate() - GRACIA_POST_ETA_DIAS);
+      const topeISO = tope.toISOString().slice(0, 10);
+      const ordenados = [...lista].sort((a, b) => a.orden - b.orden);
+      const enCurso = ordenados.find((t) => !(t.eta && t.eta < topeISO));
+      /*
+       * Tramo en curso sin nave: la carga está en el transbordo y la naviera
+       * todavía no dijo a qué buque pasa. No se cae a la nave anterior, que ya
+       * la soltó: su posición sería un dato real que no habla de esta carga.
+       */
+      if (enCurso) return enCurso.nave;
+      return ordenados[ordenados.length - 1]?.nave ?? op.nave;
     },
     [tramos],
   );
@@ -560,7 +591,7 @@ export function NavitrackContent() {
       return;
     }
     try {
-      const r = await fetch(`${apiPrefix}/api/navitrack/recalada?op=${encodeURIComponent(seleccionId)}`, {
+      const r = await fetch(`${apiPrefix}/api/navitrack/itinerario?op=${encodeURIComponent(seleccionId)}`, {
         credentials: "same-origin",
       });
       const j = (await r.json()) as {
@@ -607,6 +638,18 @@ export function NavitrackContent() {
    * Un embarque arribado se deja sin AIS a propósito: el buque ya va en otro
    * viaje y su posición actual no dice nada de esa carga.
    */
+  /**
+   * Itinerario de un embarque. Una cadena de tramos cuenta como transbordo
+   * aunque falte la fila de `navitrack_viajes`: así quedaron los embarques
+   * cargados antes de que el modo existiera, y pedirles de nuevo el dato sería
+   * preguntar lo que ya está.
+   */
+  const modoDe = useCallback(
+    (opId: string): ModoViaje | null =>
+      modosViaje.get(opId) ?? ((tramos.get(opId)?.length ?? 0) > 1 ? "con_transbordo" : null),
+    [modosViaje, tramos],
+  );
+
   const filas = useMemo<FleetRow[]>(
     () =>
       ops.map((op) => {
@@ -622,10 +665,11 @@ export function NavitrackContent() {
           ahora,
           recaladasPorOp.get(op.id) ?? [],
           modo,
+          modoDe(op.id),
         );
         return { op, ais: guardada, journey, estado };
       }),
-    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga, recaladasPorOp, modo],
+    [ops, decisiones, ahora, naves, aisCache, tramos, naveDeLaCarga, recaladasPorOp, modo, modoDe],
   );
 
   const conteos = useMemo(() => {
@@ -828,7 +872,16 @@ export function NavitrackContent() {
           }
         : calculado;
 
-    const estado = resolverEstado(seleccion, ais, journey, decision, ahora, recaladasUnicas, modo);
+    const estado = resolverEstado(
+      seleccion,
+      ais,
+      journey,
+      decision,
+      ahora,
+      recaladasUnicas,
+      modo,
+      modoDe(seleccion.id),
+    );
     return {
       journey,
       estado,
@@ -844,7 +897,7 @@ export function NavitrackContent() {
         recaladasUnicas,
       ),
     };
-  }, [seleccion, ais, aisCargando, decisiones, ahora, tramos, recaladasUnicas, modo]);
+  }, [seleccion, ais, aisCargando, decisiones, ahora, tramos, recaladasUnicas, modo, modoDe]);
 
   /*
    * Enlace profundo: `/navitrack?op=<referencia>`.
@@ -1100,35 +1153,15 @@ export function NavitrackContent() {
               puedeGastar={puedeGastar}
               tramos={tramos.get(seleccion.id) ?? []}
               recaladas={recaladasUnicas}
-              onVerificarRecalada={
-                soloLectura
-                  ? undefined
-                  : (r: Recalada) => {
-                      setRecaladaManual(false);
-                      setRecaladaAbierta(r);
-                    }
-              }
+              modoViaje={modoDe(seleccion.id)}
               /*
-               * Alta a mano. Solo para quien decide: crea tramos y puede
-               * encender el seguimiento de otra nave, que es gasto.
+               * El itinerario lo edita quien decide: cambia a qué nave se le
+               * atribuye la carga y, con eso, a cuál se sigue.
                */
-              onAgregarRecalada={
-                soloLectura || !puedeDecidir || !seleccion
+              onEditarItinerario={
+                soloLectura || !puedeDecidir
                   ? undefined
-                  : () => {
-                      setRecaladaManual(true);
-                      setRecaladaAbierta({
-                        id: 0,
-                        puerto: "",
-                        nave: detalle?.journey.naveActual ?? seleccion.nave ?? null,
-                        anunciado_at: new Date().toISOString(),
-                        eta_anunciada: null,
-                        visto_at: new Date().toISOString(),
-                        estado: "por_verificar",
-                        decidido_at: null,
-                        notas: null,
-                      });
-                    }
+                  : (foco?: string | null) => setItinerarioAbierto({ foco: foco ?? null })
               }
               onCargarCoords={soloLectura ? undefined : () => setCoordsAbiertas(true)}
               avisoRecalada={avisoRecalada}
@@ -1225,30 +1258,28 @@ export function NavitrackContent() {
           />
         )}
 
-        {/* Decisión sobre una recalada: qué pasó en el puerto anunciado. */}
-      {recaladaAbierta && (
-        <NavitrackRecalada
-          recalada={recaladaAbierta}
+        {/* Itinerario de la carga: directo o con transbordo, y el arribo. */}
+      {itinerarioAbierto && seleccion && (
+        <NavitrackItinerario
+          operacionId={seleccion.id}
+          pol={seleccion.pol ?? null}
+          pod={seleccion.pod ?? null}
+          naveOrigen={seleccion.nave ?? null}
+          modoViaje={modoDe(seleccion.id)}
+          tramos={tramos.get(seleccion.id) ?? []}
+          recaladas={recaladasUnicas}
           naves={catalogoNaves}
           puertos={catalogoPuertos}
-          operacionId={seleccionId ?? ""}
-          naveActual={detalle?.journey.naveActual ?? seleccion?.nave ?? null}
-          puedeGastar={puedeGastar}
-          manual={recaladaManual}
-          pod={seleccion?.pod ?? null}
-          etaOperacion={seleccion?.eta ?? null}
-          arriboConfirmado={Boolean(seleccion?.arribo_confirmado)}
-          arriboAt={seleccion?.arribo_at ?? null}
-          arriboAnunciadoAt={seleccion?.arribo_anunciado_at ?? null}
+          foco={itinerarioAbierto.foco}
+          etaOperacion={seleccion.eta ?? null}
+          arriboConfirmado={Boolean(seleccion.arribo_confirmado)}
+          arriboAt={seleccion.arribo_at ?? null}
+          arriboAnunciadoAt={seleccion.arribo_anunciado_at ?? null}
           tr={tr}
           apiPrefix={apiPrefix}
-          onCerrar={() => {
-            setRecaladaAbierta(null);
-            setRecaladaManual(false);
-          }}
+          onCerrar={() => setItinerarioAbierto(null)}
           onGuardado={(mensaje) => {
-            setRecaladaAbierta(null);
-            setRecaladaManual(false);
+            setItinerarioAbierto(null);
             setAvisoRecalada(mensaje);
             // El cambio toca tramos, naves y el propio historial: se recarga todo.
             void cargarRecaladas();

@@ -1,6 +1,6 @@
 /**
- * Chequeo diario de NaviTrack: una lectura por nave seguida y aviso por correo
- * si el buque declara un destino distinto al comprometido.
+ * Chequeo diario de NaviTrack: una lectura por nave seguida, los puertos por
+ * donde pasa cada carga y un reporte por correo con lo que falta completar.
  *
  * Lo dispara el cron de Vercel (ver `vercel.json`). Gasta **1 crédito por nave
  * en seguimiento y por día**, que es el uso más barato del plan: con una nave,
@@ -13,13 +13,12 @@ import type { APIRoute } from "astro";
 import { numeroDeEntorno, textoDeEntorno } from "@/lib/navitrack/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cuerpoProveedor, enVentanaDeSeguimiento, llegoAlPod } from "@/components/navitrack/navitrack-model";
-import { calcularVentana, naveEnVentana } from "@/lib/navitrack/ventana";
+import { calcularVentana, claveDeNave, naveEnVentana } from "@/lib/navitrack/ventana";
 import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
 import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
 import { correoResumenCorrida } from "@/components/navitrack/navitrack-correo";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
-import { marcarPorVerificar, registrarAnuncio, registrarRecalada } from "@/lib/navitrack/recaladas";
-import { correoRecaladas } from "@/components/navitrack/navitrack-correo";
+import { registrarAnuncio, registrarRecalada, transbordosSinNave } from "@/lib/navitrack/recaladas";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Naves que puede revisar una corrida. Freno ante una lista blanca inflada. */
@@ -285,7 +284,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const sinRespuesta: { nave: string; motivo: string }[] = [];
 
   const resultado = {
-    porVerificar: 0,
+    faltaNave: 0,
     revisadas: 0,
     creditos: 0,
     desvios: 0,
@@ -423,17 +422,31 @@ export const GET: APIRoute = async ({ request, url }) => {
         ? { lng: num(detalle.longitude) as number, lat: num(detalle.latitude) as number }
         : null;
 
-    // Operaciones vivas de esa nave: son las que tienen algo que verificar.
-    const hoy = new Date().toISOString().slice(0, 10);
-    const { data: ops } = await supabase
-      .from("operaciones")
-      .select(
-        "id, ref_asli, contenedor, cliente, nave, naviera, pol, pod, etd, eta, estado_operacion, arribo_confirmado",
-      )
-      .is("deleted_at", null)
-      .ilike("nave", `${nave.nombre}%`)
-      .gte("eta", hoy)
-      .limit(50);
+    /*
+     * Embarques de los que habla esta lectura: los que **hoy** van en esta nave.
+     *
+     * Se buscaban por `operaciones.nave`, que es la nave con que zarpó la carga.
+     * Con transbordo eso falla dos veces: los puertos de la nave que la recibió
+     * no se anotaban nunca, y los de la que ya la soltó se seguían anotando
+     * —en A00051, MSC SERENA dejó la carga en Rodman y su escala en Thames
+     * quedó en el historial como si la caja hubiera ido a Inglaterra—.
+     *
+     * La nave vigente la decide la ventana con el mismo criterio del traspaso.
+     */
+    const claveNaveLeida = claveDeNave(nave.nombre);
+    const idsDeEstaNave = [...ventana.vigentePorOp]
+      .filter(([, vigente]) => Boolean(vigente && claveNaveLeida && vigente.startsWith(claveNaveLeida)))
+      .map(([id]) => id);
+    const { data: ops } = idsDeEstaNave.length
+      ? await supabase
+          .from("operaciones")
+          .select(
+            "id, ref_asli, contenedor, cliente, nave, naviera, pol, pod, etd, eta, estado_operacion, arribo_confirmado",
+          )
+          .in("id", idsDeEstaNave)
+          .is("deleted_at", null)
+          .limit(50)
+      : { data: [] as never[] };
 
     for (const op of ops ?? []) {
       if (op.arribo_confirmado) continue;
@@ -462,11 +475,11 @@ export const GET: APIRoute = async ({ request, url }) => {
       }
 
       /*
-       * El puerto declarado se anota, no se avisa todavía.
+       * El puerto declarado se anota y se clasifica según el itinerario.
        *
-       * Que un buque anuncie Callao con diez días de anticipación no es noticia;
-       * que haya llegado a Callao sí. El aviso sale el día que se cumple la
-       * fecha anunciada, y lo dispara `marcarPorVerificar`.
+       * No abre ninguna pregunta: si coincide con un transbordo cargado, es
+       * transbordo; si no, parada programada. Si el buque ya está detenido
+       * frente a él, queda además la hora de llegada.
        */
       if (destinoAis) {
         const anuncio = await registrarAnuncio(supabase, {
@@ -474,6 +487,8 @@ export const GET: APIRoute = async ({ request, url }) => {
           puertoDeclarado: destinoAis,
           nave: String(op.nave ?? nave.nombre),
           etaDeclarada: fecha(detalle.etaUtc),
+          navStatus: str(detalle.navigationalStatus),
+          recibidoAt: fecha(detalle.positionReceived),
           pol: op.pol,
           pod: op.pod,
         });
@@ -505,83 +520,54 @@ export const GET: APIRoute = async ({ request, url }) => {
   }));
 
   /*
-   * ── Las recaladas que vencen hoy ────────────────────────────────────────
+   * ── Lo que falta completar ──────────────────────────────────────────────
    *
-   * Aquí es donde el anuncio se convierte en pregunta. El buque dijo que
-   * llegaría a este puerto en esta fecha, la fecha llegó, y ahora alguien tiene
-   * que decir si la carga siguió viaje o cambió de barco.
+   * Ya no se pregunta puerto por puerto: qué es cada puerto lo dice el
+   * itinerario cargado con la reserva. Quedan dos pendientes, y van dentro del
+   * reporte diario en vez de en un correo aparte:
    *
-   * Un solo correo por recalada: esta lista ya viene filtrada por estado, así
-   * que lo que se avisó ayer no se repite hoy.
+   *   - transbordos a los que la carga llegó sin que se sepa a qué nave pasa;
+   *   - embarques navegando sin itinerario, de los que nadie dijo si son
+   *     directos o con transbordo.
+   *
+   * Se repiten cada día hasta que alguien los completa. Es a propósito: son
+   * tareas, no noticias.
    */
-  const vencidas = await marcarPorVerificar(supabase);
-  resultado.porVerificar = vencidas.length;
-
-  /*
-   * Todas las recaladas del día en **un** correo.
-   *
-   * Antes salía uno por embarque: una mañana con cuatro vencidas eran cuatro
-   * correos y, con el reporte y el aviso de seguimiento, seis. El aviso que
-   * llega seis veces se deja de leer, y entonces deja de servir justamente
-   * cuando hace falta.
-   */
-  const paraAvisar: Parameters<typeof correoRecaladas>[0] = [];
-  const avisadas: { operacionId: string; puerto: string }[] = [];
-
-  for (const r of vencidas) {
-    if (!destinatario) break;
-
-    const { data: op } = await supabase
+  const faltaNave: { puerto: string; naveAnterior: string | null; embarque: string }[] = [];
+  for (const t of await transbordosSinNave(supabase)) {
+    const { data: o } = await supabase
       .from("operaciones")
-      .select("ref_asli, contenedor, cliente, nave, naviera, pol, pod, eta")
-      .eq("id", r.operacionId)
+      .select("contenedor, ref_asli, arribo_confirmado, deleted_at")
+      .eq("id", t.operacionId)
       .maybeSingle();
-    if (!op) continue;
-
-    paraAvisar.push({
-      referencia: String(op.ref_asli ?? ""),
-      contenedor: String(op.contenedor ?? ""),
-      cliente: String(op.cliente ?? ""),
-      nave: r.nave ?? String(op.nave ?? ""),
-      naviera: op.naviera ?? null,
-      pol: op.pol ?? null,
-      pod: String(op.pod ?? ""),
-      eta: fechaLarga(op.eta),
-      destinoAis: r.puerto,
-      // Al embarque concreto: quien lee la fila quiere ver ese contenedor.
-      enlace: sitio
-        ? `${sitio}/navitrack?op=${encodeURIComponent(String(op.ref_asli ?? r.operacionId))}`
-        : null,
+    if (!o || o.deleted_at || o.arribo_confirmado) continue;
+    faltaNave.push({
+      puerto: t.puerto,
+      naveAnterior: t.naveAnterior,
+      embarque: String(o.contenedor || o.ref_asli || ""),
     });
-    avisadas.push({ operacionId: r.operacionId, puerto: r.puerto });
   }
+  resultado.faltaNave = faltaNave.length;
 
-  const avisoRecaladas = correoRecaladas(paraAvisar);
-  if (avisoRecaladas && destinatario) {
-    const envio = await enviarCorreo({
-      to: destinatario,
-      cc: enCopia || undefined,
-      subject: avisoRecaladas.asunto,
-      body: avisoRecaladas.cuerpo,
-      sendFrom: "informaciones",
-      skipSignature: true,
-    });
-    if (envio.ok) {
-      resultado.correos += 1;
-      resultado.desvios += avisadas.length;
-      // Una fila por recalada avisada, aunque el correo sea uno: el registro es
-      // de qué se avisó, no de cuántos mensajes salieron.
-      await supabase.from("navitrack_avisos").insert(
-        avisadas.map((a) => ({
-          operacion_id: a.operacionId,
-          tipo: "desvio",
-          detalle: a.puerto,
-          enviado_a: destinatario,
-        })),
-      );
-    } else {
-      resultado.errores += 1;
-      falloCorreo = envio.error;
+  const sinItinerario: string[] = [];
+  if (ventana.ops.size) {
+    const idsVentana = [...ventana.ops];
+    const [{ data: conModo }, { data: conTramos }, { data: opsVentana }] = await Promise.all([
+      supabase.from("navitrack_viajes").select("operacion_id").in("operacion_id", idsVentana),
+      supabase.from("navitrack_tramos").select("operacion_id").in("operacion_id", idsVentana),
+      supabase.from("operaciones").select("id, ref_asli, contenedor, nave").in("id", idsVentana),
+    ]);
+    const definidos = new Set(
+      [...(conModo ?? []), ...(conTramos ?? [])].map((r: { operacion_id: string }) => r.operacion_id),
+    );
+    for (const o of (opsVentana ?? []) as {
+      id: string;
+      ref_asli: string | null;
+      contenedor: string | null;
+      nave: string | null;
+    }[]) {
+      if (definidos.has(o.id)) continue;
+      sinItinerario.push(`${o.contenedor || o.ref_asli || o.id}${o.nave ? ` (${o.nave})` : ""}`);
     }
   }
 
@@ -613,20 +599,6 @@ export const GET: APIRoute = async ({ request, url }) => {
    */
   const saldoFinal = await consultarSaldo(esPrueba ? undefined : apiKey);
 
-  const detallesPorVerificar: { puerto: string; nave: string | null; embarque: string }[] = [];
-  for (const r of vencidas) {
-    const { data: o } = await supabase
-      .from("operaciones")
-      .select("contenedor, ref_asli")
-      .eq("id", r.operacionId)
-      .maybeSingle();
-    detallesPorVerificar.push({
-      puerto: r.puerto,
-      nave: r.nave,
-      embarque: String(o?.contenedor ?? o?.ref_asli ?? ""),
-    });
-  }
-
   const problemas: string[] = [];
   for (const f of sinRespuesta) problemas.push(`${f.nave}: ${f.motivo}`);
   if (!destinatario) problemas.push("No hay destinatario configurado para las alertas");
@@ -643,7 +615,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       saldo: saldoFinal.creditos,
       puertosNuevos: resultado.escalas,
       recaladasNuevas: resultado.recaladas,
-      porVerificar: detallesPorVerificar,
+      faltaNave,
+      sinItinerario,
       traspasos: huboCambioDeSeguimiento
         ? sincro.traspasos.map((t) => ({ desde: t.desde, hacia: t.hacia }))
         : [],
@@ -689,7 +662,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       naveFueraDeVentana: fueraDeVentanaNaves,
       problemas,
       traspasos: sincro.traspasos,
-      porVerificar: detallesPorVerificar,
+      faltaNave,
+      sinItinerario,
       sinSeguimiento: resultado.sinSeguimiento,
     },
   });

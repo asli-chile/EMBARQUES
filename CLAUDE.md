@@ -268,7 +268,7 @@ para seguir un embarque hay que iniciar sesión.
 
 Quién entra y con cuánto poder:
 
-| Rol | Ve | Decide recaladas y transbordos | Gasta créditos AIS |
+| Rol | Ve | Decide el itinerario (directo o transbordo) | Gasta créditos AIS |
 |-----|----|-------------------------------|--------------------|
 | `superadmin` | todos | sí | **sí, el único** |
 | `admin` | todos | sí | no |
@@ -624,6 +624,20 @@ supabase/migrations/20260831000002_revoke_anon_operaciones_clientes.sql
 Revoca los `GRANT ALL ... TO anon` que las migraciones iniciales dejaron sobre `operaciones` y `clientes`. Hoy RLS ya bloquea a `anon` en ambas tablas (no queda ninguna política dirigida a ese rol), pero mientras los GRANT sigan vigentes, RLS es la **única** barrera: si alguien lo desactiva por error o crea una política sin `TO authenticated`, esas tablas quedarían legibles y escribibles con la anon key, que es pública por diseño.
 
 `authenticated` y `service_role` conservan sus privilegios, así que **aplicarla no cambia nada en el funcionamiento del ERP**. Para verificar que quedó aplicada, la propia migración incluye la consulta al final: no debe devolver filas.
+
+NaviTrack (solo datos, sin cambio de esquema):
+
+```
+supabase/migrations/20260925000001_navitrack_itinerario_datos.sql
+```
+
+Ordena lo que dejó el flujo anterior de "verificar recalada" al pasar al
+itinerario por embarque (directo o con transbordo): marca A00042 con
+transbordo, deja Rodman como transbordo de A00051 y retira Cristóbal y Thames
+(los anunció MSC SERENA después de soltar la carga), retira San Antonio y
+Callao de A00052 (ruta de entrada del buque) y devuelve a estado neutro lo que
+seguía `por_verificar`. **Mientras no se aplique**, esas filas se ven como
+puertos anunciados sin decidir; nada falla.
 
 Se pueden aplicar de tres formas:
 

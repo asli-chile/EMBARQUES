@@ -163,19 +163,22 @@ Son dos ejes y conviene no mezclarlos:
 
 | | Qué dice | Dónde vive |
 |---|---|---|
-| `estado` | Qué se decidió sobre la **carga**: anunciada, por_verificar, parada_programada, transbordo, recalada | Decisión humana (o la falta de ella) |
+| `estado` | Qué es ese puerto para la **carga**: `transbordo`, `parada_programada`, o sin itinerario todavía (`anunciada`, `recalada`) | Lo decide el itinerario del embarque (ver "Recaladas y transbordos") |
 | `recalado_at` | Qué hizo el **buque**: consta que paró aquí | Hecho del AIS |
 
-Un puerto puede estar recalado y con el transbordo aún sin verificar. Por eso
-`registrarRecalada()` **no** cierra una verificación pendiente: que el buque
-haya parado no dice nada sobre si la carga se bajó ahí.
+Del AIS salen dos hechos por puerto, y se guardan una sola vez:
+
+- **Llegada** (`recalado_at`): el proveedor no la informa. Se toma la primera
+  lectura que ve al buque detenido (`moored`, `anchor`, `berth`) con ese puerto
+  como destino; si nunca se lo vio así, la primera vez que figura como
+  `lastPort`, que es posterior al zarpe.
+- **Zarpe** (`zarpe_at`): `atdUtc`, que viene junto a `lastPort` y es exacto.
 
 Tres reglas que no conviene tocar sin entender el costo:
 
-- **Se anota siempre, también en un viaje marcado directo.** Directo significa
-  "no preguntes", no "no lo cuentes": el cliente igual necesita saber por dónde
-  pasó su carga. Marcar un viaje directo mueve `anunciada`/`por_verificar` a
-  `parada_programada` y **no toca** las filas `recalada`.
+- **Se anota siempre, también en un viaje directo.** Directo significa "no hay
+  transbordo", no "no lo cuentes": el cliente igual necesita saber por dónde
+  pasó su carga.
 - **El cliente las ve.** Es la única excepción a que solo vea lo decidido: una
   recalada es un hecho, no una averiguación interna en curso.
 - **Hay que persistirlas.** El AIS solo informa la última parada: sin guardarla,
@@ -423,9 +426,21 @@ naves de la cadena más `operaciones.nave`, así que A00051 pagaba dos buques po
 la misma caja: MSC SERENA, que la entregó en Rodman el 18-09-2026 y siguió a
 Thames con otra carga, y MSC BOSTON, que la recibió. `sincronizarSeguimiento`
 apagaba a la que entregó y la ventana la volvía a encender en la misma corrida.
-Cuál es el tramo vigente lo deciden las dos con el mismo criterio —venció su ETA,
-o consta la recalada en su POD—; si difirieran, una apagaría la nave que la otra
-paga.
+Cuál es el tramo vigente lo deciden las dos con el mismo criterio,
+`crearTramoCerrado()` en `ventana.ts` —consta la recalada en su POD, o pasaron
+`GRACIA_POST_ETA_DIAS` desde la llegada anunciada—; si difirieran, una apagaría
+la nave que la otra paga. La gracia existe porque la fecha es la de la naviera:
+cortando en ella se dejaba de leer al buque justo antes de llegar al
+transbordo, y se perdían la llegada y el zarpe reales.
+
+**Lo que declara el AIS se atribuye a la nave vigente de cada carga**, no a
+`operaciones.nave`. Con la columna, los puertos de la nave que recibe la carga
+no se anotaban nunca, y los de la que ya la soltó sí: en A00051, MSC SERENA dejó
+la carga en Rodman y su paso por Cristóbal y Thames quedó en el historial como
+si la caja hubiera ido a Inglaterra. La ventana expone `vigentePorOp` y el
+chequeo diario consulta por esos ids. Si el tramo vigente no tiene nave —la
+carga llegó a un transbordo que se cargó solo con el puerto—, no se le atribuye
+nada a nadie hasta que alguien indique la nave.
 
 Esa misma función tampoco soltaba la nave cuando la operación estaba cerrada:
 miraba solo `arribo_confirmado`, que casi nadie marca. MSC SERENA arrastraba
@@ -474,12 +489,47 @@ que lo llamara gastaría créditos ajenos.
 
 ## Recaladas y transbordos: lo anunciado y lo que pasó
 
-El AIS declara el **próximo puerto**, no el destino final. Cada anuncio abre una
-pregunta que el dato no puede responder: ¿es una escala del itinerario, o ahí la
-carga cambia de barco? El sistema la guarda y la plantea el día en que el buque
-dijo que llegaría — antes de eso no molesta a nadie.
+El AIS declara el **próximo puerto**, no el destino final: un buque de
+Valparaíso a Leixões anuncia Callao, Balboa, Rotterdam, Amberes… Cuál de ellos
+es un transbordo no lo puede decir el dato, pero la naviera sí, y lo dice al
+confirmar la reserva. Por eso **se pregunta una vez por embarque, no una vez
+por puerto** (desde el 25-09-2026; antes cada puerto quedaba "por verificar" el
+día de su llegada y alguien tenía que elegir entre cuatro opciones).
 
-**Los extremos del viaje no son recaladas.** Ni el POL ni el POD abren pregunta:
+El **itinerario** se carga en la ventana `NavitrackItinerario.tsx` y lo guarda
+`POST /api/navitrack/itinerario`:
+
+| Modo | Qué se carga | Qué pasa con los puertos del AIS |
+|---|---|---|
+| Directo | Nada más | Todos son `parada_programada` |
+| Con transbordo | Uno o más transbordos, en orden. Por cada uno: **puerto** (obligatorio), nave que recibe la carga, llegada y zarpe anunciados con hora UTC opcional | El que coincide con un transbordo es `transbordo`; **todos los demás**, antes o después, son `parada_programada` |
+| Sin indicar | — | Se anotan sin decidir (`anunciada` / `recalada`). La ficha y el reporte diario piden el itinerario, una sola vez |
+
+Cómo se guarda: el modo en `navitrack_viajes` y los transbordos como la cadena
+de `navitrack_tramos` (N transbordos = N + 1 tramos; el primero sale de la
+operación). Guardar **reescribe la cadena entera**, así que editar un puerto o
+una nave es tan simple como la primera carga. Lo ocurrido no se toca: vive en
+`navitrack_recaladas`. La regla de clasificación está en un solo lugar,
+`estadoSegunItinerario()` de `src/lib/navitrack/itinerario.ts`, y la usan el
+chequeo diario y el endpoint. Una cadena de tramos sin fila en
+`navitrack_viajes` cuenta como "con transbordo" (así quedó A00042).
+
+Muchas navieras informan el transbordo **solo con el puerto** ("transbordo en
+Rodman"). Se carga así, y cuando el buque llega a ese puerto —según el AIS, o
+porque pasó la fecha anunciada— la ficha pide la nave ("Falta la nave en
+Rodman") y el reporte diario la lista hasta que alguien la indique
+(`transbordosSinNave()`). Es lo único que el sistema pide completar.
+
+Las naves nuevas se agregan al catálogo **apagadas y sin gastar**: el
+seguimiento pasa a cada una el día en que su tramo se vuelve el vigente, y lo
+hace `sincronizarSeguimiento`, que también le busca el IMO si le falta.
+
+`authenticated` no tiene `DELETE` sobre `navitrack_recaladas`, y está bien:
+desde el navegador nadie borra historia. Cuando un puerto deja de ser transbordo
+y el buque nunca pasó por él, el endpoint lo retira con la clave de servicio,
+acotado a filas que ya leyó con la sesión del usuario.
+
+**Los extremos del viaje no son recaladas.** Ni el POL ni el POD son escalas:
 en el origen el buque todavía está cargando, y el destino es donde la carga
 termina. La comparación la hace `mismoPuerto`, no un cotejo de texto: el AIS
 escribe "Hamburg Germany" donde el ERP dice "HAMBURGO". Durante un tiempo la
@@ -529,17 +579,17 @@ Tres permisos independientes, porque no son el mismo eje. Se resuelven en
   Por eso la consulta se acota además por `empresaNombres` cuando el rol
   efectivo es cliente o ejecutivo (`empresasAcotadas` en `NavitrackContent`).
   Sin eso, un superadmin mirando "como cliente" veía los embarques de todos.
-- **`puedeDecidir`** es resolver una recalada o confirmar un transbordo. Es una
-  afirmación de ASLI sobre el viaje y sale en un correo a su nombre.
+- **`puedeDecidir`** es cargar o editar el itinerario (directo o transbordo) y
+  marcar el arribo. Es una afirmación de ASLI sobre el viaje.
 - **`puedeGastar`** es consultar al proveedor AIS. Cada llamada es un crédito y
   el plan es uno para toda la empresa: quién lo gasta es una decisión, no un
   permiso más. Por eso un ejecutivo decide sobre el viaje pero no consulta, y
   su posición sale de la última lectura guardada.
 
-Cuando un ejecutivo registra un transbordo hacia una nave sin IMO, el endpoint
-**guarda igual** y deja la nave sin identificador (`SIN_IDENTIFICADOR_PENDIENTE`),
-en vez de rechazar la decisión: perder el dato por no poder pagar un crédito
-sería el peor de los dos resultados. La ventana lo advierte antes de guardar.
+Cuando alguien carga un transbordo hacia una nave sin IMO, el endpoint **guarda
+igual** y la nave queda sin identificador hasta que el chequeo diario la busque
+(o hasta que se escriba el IMO en la misma ventana, que lo pide solo en ese
+caso). La respuesta lo dice, para que no sorprenda una posición estimada.
 
 ### Además, el cliente ve menos
 
@@ -549,9 +599,9 @@ no puedan contradecirse.
 
 | | Personal | Cliente |
 |---|---|---|
-| Sospecha de transbordo | La ve y la resuelve | **No la ve** |
-| Transbordo confirmado | Sí | Sí: cadena de tramos e historia del viaje |
-| Recaladas | Todas | Solo las ya resueltas |
+| Sospecha de transbordo (solo sin itinerario) | La ve y la resuelve cargando el itinerario | **No la ve** |
+| Transbordos del itinerario | Sí, editables | Sí: cadena de tramos, historia y lista de transbordos |
+| Puertos del recorrido | Todos | Paradas, transbordos y recaladas; no los `anunciada` sin itinerario |
 | Alerta "puerto sin ubicación" | Sí | No: es para quien mantiene el catálogo |
 | Pestaña Escalas y Panel de Rastreo | Solo quien gasta | No |
 
@@ -578,8 +628,8 @@ Tres capas, y la de pantalla es la menos importante:
    misma función que usan `operaciones` y los documentos. De
    `navitrack_ais_lecturas` solo se abren las filas de tipo `posicion`: no
    cuelgan de una operación y dónde navega un buque es información pública.
-2. **Los endpoints.** `recalada` acepta a los tres decisores y solo el
-   superadmin gasta; `vessel`, `escalas`, `rastreo` y `actualizar` siguen
+2. **Los endpoints.** `itinerario` y `arribo` aceptan a los tres decisores y no
+   gastan nada; `vessel`, `escalas`, `rastreo` y `actualizar` siguen
    exigiendo superadmin, porque todos terminan en el proveedor.
 3. **La pantalla.** `soloLectura` apaga acciones y `modo` decide qué se muestra.
 
@@ -589,12 +639,11 @@ Al agregar algo que escriba o gaste, la pregunta es la 1 y la 2, no la 3.
 
 ## 6 ter. El arribo a destino
 
-Es la última pregunta del viaje y se responde desde la misma ventana que las
-recaladas (`NavitrackRecalada.tsx`), en un bloque aparte bajo el título
-"Llegada a destino". Aparte, porque las cuatro opciones de arriba hablan de qué
-pasa con la carga **en ese puerto** y estas dos, de que el viaje terminó:
-mezclarlas invita a marcar el arribo en una escala intermedia, que apaga la
-verificación de un embarque que sigue navegando.
+Es la última pregunta del viaje y se responde desde la misma ventana que el
+itinerario (`NavitrackItinerario.tsx`), en un bloque aparte bajo el título
+"Llegada a destino". Aparte, porque el itinerario habla de por dónde viaja la
+carga y esto, de que el viaje terminó: mezclarlos invita a marcar el arribo en
+un transbordo, que apaga la verificación de un embarque que sigue navegando.
 
 Son dos hechos distintos, no uno:
 
@@ -606,8 +655,7 @@ Son dos hechos distintos, no uno:
 Guarda `POST /api/navitrack/arribo` (`decision`: `anunciado`, `confirmado` o
 `deshacer`). Deciden los mismos que deciden recaladas —superadmin, admin y
 ejecutivo—, y el ejecutivo solo alcanza lo suyo porque RLS no le deja ver el
-resto. Un arribo confirmado **cierra la recalada pendiente** que se estaba
-respondiendo: si la carga llegó a destino, ese puerto fue una escala.
+resto.
 
 Tres cosas que no hace, y conviene no prometer:
 

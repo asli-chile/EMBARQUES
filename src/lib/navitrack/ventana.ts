@@ -17,7 +17,12 @@
  * copias.
  */
 
-import { enVentanaDeSeguimiento, llegoAlPod, mismoPuerto } from "@/components/navitrack/navitrack-model";
+import {
+  enVentanaDeSeguimiento,
+  GRACIA_POST_ETA_DIAS,
+  llegoAlPod,
+  mismoPuerto,
+} from "@/components/navitrack/navitrack-model";
 
 type Cliente = { from: (tabla: string) => any };
 
@@ -42,7 +47,42 @@ export type Ventana = {
   sinEta: string[];
   /** Última lectura conocida de cada nave, indexada por `claveAis`. */
   ultimaPorNave: Map<string, LecturaMinima>;
+  /**
+   * La nave que lleva la carga hoy, por operación en ventana (`claveDeNave`).
+   *
+   * Es a quién se le atribuye lo que declara el AIS. Null cuando la carga ya
+   * llegó a un transbordo y todavía no se sabe a qué nave pasa: en ese momento
+   * no hay buque cuya lectura hable de ella.
+   */
+  vigentePorOp: Map<string, string | null>;
 };
+
+type TramoMinimo = { operacion_id: string; orden: number; nave: string | null; pod: string | null; eta: string | null };
+
+/**
+ * Criterio único de "este tramo ya terminó".
+ *
+ * Termina si consta que el buque estuvo en su puerto de llegada, o si pasaron
+ * `GRACIA_POST_ETA_DIAS` desde la llegada anunciada. La fecha sola no alcanza:
+ * es la que informó la naviera y los buques se atrasan días. Cortar en ella
+ * dejaba de leer al buque que traía la carga justo antes de que llegara al
+ * transbordo, y con eso se perdía la llegada y el zarpe reales, que son el
+ * dato que interesa.
+ *
+ * Lo usan esta ventana y `sincronizarSeguimiento`. Si decidieran distinto
+ * cuál es el tramo vigente, una apagaría la nave que la otra sigue pagando.
+ */
+export function crearTramoCerrado(recaladoEn: Map<string, string[]>, ahora: Date) {
+  const tope = new Date(ahora);
+  tope.setDate(tope.getDate() - GRACIA_POST_ETA_DIAS);
+  const topeISO = tope.toISOString().slice(0, 10);
+  return (t: Pick<TramoMinimo, "operacion_id" | "pod" | "eta">): boolean => {
+    if (t.eta && t.eta < topeISO) return true;
+    const pod = (t.pod ?? "").trim();
+    if (!pod) return false;
+    return (recaladoEn.get(t.operacion_id) ?? []).some((p) => mismoPuerto(p, pod));
+  };
+}
 
 /** Clave comparable de nave: el catálogo y las operaciones no coinciden en caja. */
 export function claveDeNave(v: unknown): string {
@@ -97,10 +137,15 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
      * tramo: la que lleva la caja hoy solo aparece acá. Sin esto, la nave que
      * recibe la carga quedaría fuera de la ventana y no se consultaría nunca.
      */
+    /*
+     * También los tramos sin nave: son transbordos a los que todavía no se les
+     * conoce el buque. Dejarlos fuera hacía que, cerrado el primer tramo, el
+     * último conocido pasara por vigente y se siguiera leyendo al buque que ya
+     * soltó la carga.
+     */
     supabase
       .from("navitrack_tramos")
       .select("nave, operacion_id, orden, pod, eta")
-      .not("nave", "is", null)
       .limit(2000),
     /*
      * La última posición conocida de cada nave, para el nivel 2 del cierre.
@@ -146,8 +191,6 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
     });
   }
 
-  const hoyISO = ahora.toISOString().slice(0, 10);
-
   /** Puertos ya recalados, por operación. */
   const recaladoEn = new Map<string, string[]>();
   for (const r of (recaladasRes.data ?? []) as { operacion_id: string; puerto: string }[]) {
@@ -156,21 +199,8 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
     recaladoEn.set(r.operacion_id, lista);
   }
 
-  type Tramo = { operacion_id: string; orden: number; nave: string | null; pod: string | null; eta: string | null };
-
-  /**
-   * Un tramo terminó si venció su ETA **o** si consta que el buque llegó.
-   *
-   * Mismo criterio que `sincronizarSeguimiento`, y a propósito: si las dos
-   * funciones decidieran distinto cuál es el tramo vigente, una apagaría la nave
-   * que la otra sigue pagando.
-   */
-  const tramoCerrado = (t: Tramo) => {
-    if (t.eta && t.eta < hoyISO) return true;
-    const pod = (t.pod ?? "").trim();
-    if (!pod) return false;
-    return (recaladoEn.get(t.operacion_id) ?? []).some((p) => mismoPuerto(p, pod));
-  };
+  type Tramo = TramoMinimo;
+  const tramoCerrado = crearTramoCerrado(recaladoEn, ahora);
 
   /** Tramos por operación, ordenados por recorrido. */
   const tramosPorOp = new Map<string, Tramo[]>();
@@ -186,16 +216,17 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
    *
    * Es el primer tramo que no cerró; si cerraron todos, el último.
    */
-  const naveVigenteDe = (opId: string): string | null => {
+  const naveVigenteDe = (opId: string): { nave: string | null } | null => {
     const lista = tramosPorOp.get(opId);
     if (!lista?.length) return null;
     const i = lista.findIndex((t) => !tramoCerrado(t));
-    return (i < 0 ? lista[lista.length - 1] : lista[i]).nave;
+    return { nave: (i < 0 ? lista[lista.length - 1] : lista[i]).nave };
   };
 
   const claves = new Set<string>();
   const ops = new Set<string>();
   const sinEta: string[] = [];
+  const vigentePorOp = new Map<string, string | null>();
 
   for (const o of (opsRes.data ?? []) as {
     id: string;
@@ -207,7 +238,10 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
     estado_operacion: string | null;
     arribo_confirmado: boolean | null;
   }[]) {
-    const llego = llegoAlPod(ultimaPorNave.get(claveAis(o.nave)) ?? null, o.pod);
+    // Al destino llega la nave del último tramo, no la que zarpó de origen.
+    const cadena = tramosPorOp.get(o.id);
+    const naveFinal = cadena?.length ? (cadena[cadena.length - 1].nave ?? o.nave) : o.nave;
+    const llego = llegoAlPod(ultimaPorNave.get(claveAis(naveFinal)) ?? null, o.pod);
     if (!enVentanaDeSeguimiento(o, ahora, { llegoAlPod: llego })) continue;
     ops.add(o.id);
     if (!o.eta) sinEta.push(`${o.ref_asli ?? o.id} (${o.nave ?? "sin nave"})`);
@@ -225,9 +259,12 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
      * encender por la puerta de atrás en la misma corrida.
      */
     const vigente = naveVigenteDe(o.id);
-    const k = claveDeNave(vigente ?? o.nave);
+    // Tramo vigente sin nave: la carga espera en el transbordo y no hay buque
+    // al que valga la pena preguntarle por ella.
+    const k = vigente ? claveDeNave(vigente.nave) : claveDeNave(o.nave);
+    vigentePorOp.set(o.id, k || null);
     if (k) claves.add(k);
   }
 
-  return { claves, ops, sinEta, ultimaPorNave };
+  return { claves, ops, sinEta, ultimaPorNave, vigentePorOp };
 }

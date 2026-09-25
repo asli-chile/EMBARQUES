@@ -107,12 +107,17 @@ export function NavitrackTimeline({ eventos, etapa, locale, tr }: TimelineProps)
               )}
               {/* En un transbordo, el hito sin las dos naves no dice nada:
                   saber que hubo transbordo en Cristóbal no sirve si no se ve
-                  de qué buque a cuál pasó la carga. */}
-              {ev.naveAnterior && ev.nave && (
+                  de qué buque a cuál pasó la carga. Si la naviera todavía no
+                  dijo a cuál, se dice eso en vez de callar la segunda nave. */}
+              {ev.codigo === "TRANSBORDO" && ev.naveAnterior && (
                 <p className="mt-0.5 flex items-center gap-1 truncate text-[11.5px] text-dash-fg">
                   <span className="truncate opacity-70">{ev.naveAnterior}</span>
                   <Icon icon="lucide:arrow-right" width={11} height={11} className="shrink-0 opacity-60" aria-hidden />
-                  <span className="truncate font-semibold">{ev.nave}</span>
+                  {ev.nave ? (
+                    <span className="truncate font-semibold">{ev.nave}</span>
+                  ) : (
+                    <span className="truncate italic text-dash-muted">{tr.itNavePorConfirmar}</span>
+                  )}
                 </p>
               )}
             </div>
