@@ -806,7 +806,10 @@ type TableRowProps = {
 
 function bookingChipClass(booking: string | null | undefined, hasDoc: boolean, emptyExtra = ""): string {
   if (hasDoc) {
-    return "bg-emerald-500/20 text-emerald-200 border-emerald-400/45 shadow-[0_0_18px_-8px_rgba(52,211,153,0.55)] ring-1 ring-emerald-400/25";
+    // text-emerald-300 tiene override de tema en dashboard-neon.css (claro:
+    // verde oscuro legible; oscuro: el tono neón). text-emerald-200 no lo
+    // tenía y quedaba casi invisible sobre el fondo claro de la chip.
+    return "bg-emerald-500/20 text-emerald-300 border-emerald-400/45 shadow-[0_0_18px_-8px_rgba(52,211,153,0.55)] ring-1 ring-emerald-400/25";
   }
   if (booking) {
     return "bg-dash-neon/20 text-dash-fg border-dash-neon/50 shadow-[0_0_20px_-8px_rgba(45,212,191,0.55)] ring-1 ring-dash-neon/30 font-bold";

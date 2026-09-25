@@ -76,8 +76,12 @@ export function AppIconRail({ pathname }: AppIconRailProps) {
   const iconCls = "shrink-0 opacity-95";
   const iconStroke = { strokeWidth: 2.35 };
   const navBtn =
-    "group/item flex h-12 w-full items-center gap-3.5 overflow-hidden rounded-lg px-3 text-left text-[13px] font-semibold text-white/75 transition hover:bg-white/10 hover:text-white";
-  const navActive = "bg-white/12 text-white shadow-sm ring-1 ring-white/10";
+    "group/item relative flex h-12 w-full items-center gap-3.5 overflow-hidden rounded-lg px-3 text-left text-[13px] font-semibold text-white/75 transition hover:bg-white/10 hover:text-white";
+  // Fondo más marcado + barra de acento a la izquierda: visible aunque el
+  // rail esté colapsado a solo íconos, donde la diferencia de opacidad del
+  // fondo solo no se notaba (ver captura del usuario).
+  const navActive =
+    "bg-white/15 text-white shadow-sm ring-1 ring-white/10 before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-r-full before:bg-[#2DD4BF]";
   const labelCls =
     "min-w-0 truncate opacity-0 transition-opacity duration-150 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100";
 
