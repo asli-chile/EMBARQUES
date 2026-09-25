@@ -799,12 +799,14 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
   return (
     <PanelBajoFila cerrando={cerrando}>
         {/* ── Cabecera de marca: qué reserva es y de dónde a dónde va ── */}
-        <div className="rd-hero shrink-0 px-5 pb-5 pt-4 sm:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
+        <div className="rd-hero shrink-0 px-5 py-3.5 sm:px-6">
+          {/* Una franja: quién es, por dónde va y qué se puede hacer. En
+              pantallas angostas se apila en ese mismo orden. */}
+          <div className="grid items-center gap-x-8 gap-y-3 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
+            <div className="min-w-0 lg:max-w-[22rem]">
               <p className="rd-muted text-[10px] font-bold uppercase tracking-[0.18em]">{tr.detalleReserva}</p>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2.5">
-                <h3 className="text-2xl font-extrabold tabular-nums tracking-tight">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h3 className="text-xl font-extrabold leading-none tabular-nums tracking-tight">
                   {displayRefAsli(texto(fila.ref_asli), (fila.correlativo as number | null) ?? null, "-")}
                 </h3>
                 {estadoTxt && (
@@ -822,12 +824,44 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
                 )}
                 {estado === "error" && <span className="rd-muted text-xs">{tr.detalleError}</span>}
               </div>
-              <p className="rd-muted mt-0.5 truncate text-sm font-medium">
+              <p className="rd-muted mt-1 truncate text-xs font-semibold">
                 {[texto(fila.cliente), texto(fila.naviera)].filter(Boolean).join("  ·  ") || "—"}
               </p>
             </div>
-
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {/* Ruta: se lee de izquierda a derecha, como el viaje. */}
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(4rem,1fr)_minmax(0,1fr)] items-center gap-3">
+              <div className="min-w-0">
+                <p className="rd-muted text-[9px] font-bold uppercase tracking-[0.16em]">{tr.cardOrigin}</p>
+                <p className="flex items-center gap-1.5 text-[15px] font-extrabold leading-tight">
+                  <Bandera puerto={pol} />
+                  <span className="truncate">{pol ?? "—"}</span>
+                </p>
+                <p className="rd-muted text-[11px] tabular-nums">
+                  ETD <span className="font-bold text-white">{vacio(fila.etd) ? "—" : fmtFecha(String(fila.etd))}</span>
+                </p>
+              </div>
+              <div className="flex items-center" aria-hidden>
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full border-2 border-white/60" />
+                <span className="rd-ruta flex-1" />
+                <span className="rd-nave mx-1.5 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums">
+                  <Icon icon="lucide:ship" width={12} height={12} />
+                  {tt ? `${tt} ${tr.detalleDias}` : "—"}
+                </span>
+                <span className="rd-ruta rd-ruta--destino flex-1" />
+                <Icon icon="lucide:map-pin" width={13} height={13} className="rd-acento shrink-0" />
+              </div>
+              <div className="min-w-0 text-right">
+                <p className="rd-muted text-[9px] font-bold uppercase tracking-[0.16em]">{tr.cardDestino}</p>
+                <p className="flex items-center justify-end gap-1.5 text-[15px] font-extrabold leading-tight">
+                  <span className="truncate">{pod ?? "—"}</span>
+                  <Bandera puerto={pod} />
+                </p>
+                <p className="rd-muted text-[11px] tabular-nums">
+                  ETA <span className="font-bold text-white">{vacio(fila.eta) ? "—" : fmtFecha(String(fila.eta))}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5 lg:justify-end">
               {/* Documentos en la misma pestaña, como el menú contextual: es
                   seguir trabajando la operación. NaviTrack en una nueva, para
                   mirar el viaje sin perder la lista. */}
@@ -882,58 +916,26 @@ export function ReservaDetalle({ op, isCliente, supabase, labels, onGuardarCampo
             </div>
           </div>
 
-          {/* Ruta: se lee de izquierda a derecha, como el viaje. */}
-          <div className="mt-5 grid grid-cols-[minmax(0,1fr)_minmax(5rem,1.4fr)_minmax(0,1fr)] items-center gap-4">
-            <div className="min-w-0">
-              <p className="rd-muted text-[10px] font-bold uppercase tracking-[0.16em]">{tr.cardOrigin}</p>
-              <p className="mt-0.5 flex items-center gap-2 text-lg font-extrabold leading-tight">
-                <Bandera puerto={pol} />
-                <span className="truncate">{pol ?? "—"}</span>
-              </p>
-              <p className="rd-muted mt-1 text-[11px] tabular-nums">
-                ETD <span className="font-bold text-white">{vacio(fila.etd) ? "—" : fmtFecha(String(fila.etd))}</span>
-              </p>
-            </div>
-            <div className="flex items-center" aria-hidden>
-              <span className="h-2 w-2 shrink-0 rounded-full border-2 border-white/60" />
-              <span className="rd-ruta flex-1" />
-              <span className="rd-nave mx-2 inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold tabular-nums">
-                <Icon icon="lucide:ship" width={13} height={13} />
-                {tt ? `${tt} ${tr.detalleDias}` : "—"}
-              </span>
-              <span className="rd-ruta rd-ruta--destino flex-1" />
-              <Icon icon="lucide:map-pin" width={14} height={14} className="rd-acento shrink-0" />
-            </div>
-            <div className="min-w-0 text-right">
-              <p className="rd-muted text-[10px] font-bold uppercase tracking-[0.16em]">{tr.cardDestino}</p>
-              <p className="mt-0.5 flex items-center justify-end gap-2 text-lg font-extrabold leading-tight">
-                <span className="truncate">{pod ?? "—"}</span>
-                <Bandera puerto={pod} />
-              </p>
-              <p className="rd-muted mt-1 text-[11px] tabular-nums">
-                ETA <span className="font-bold text-white">{vacio(fila.eta) ? "—" : fmtFecha(String(fila.eta))}</span>
-              </p>
-            </div>
-          </div>
-
-          {/* Lo que más se busca, a la vista sin entrar a las secciones. */}
-          <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {/* Lo que más se busca, en una sola barra: una celda por dato, con
+              divisiones finas en vez de seis tarjetas sueltas. */}
+          <dl className="rd-vidrio rd-resumen mt-3 grid grid-cols-2 overflow-hidden rounded-xl sm:grid-cols-3 xl:grid-cols-6">
             {resumen.map((r) => (
-              <div key={r.label} className="rd-vidrio min-w-0 rounded-xl px-3 py-2">
-                <p className="rd-muted flex items-center gap-1.5 truncate text-[10px] font-bold uppercase tracking-wider">
-                  <Icon icon={r.icono} width={12} height={12} className="rd-acento shrink-0" aria-hidden />
+              <div key={r.label} className="min-w-0 px-3 py-1.5">
+                <dt className="rd-muted flex items-center gap-1.5 truncate text-[9px] font-bold uppercase tracking-wider">
+                  <Icon icon={r.icono} width={11} height={11} className="rd-acento shrink-0" aria-hidden />
                   {r.label}
-                </p>
-                <p
-                  className={`mt-0.5 truncate text-[14px] ${r.valor ? "font-bold" : "rd-muted"} ${
+                </dt>
+                <dd
+                  className={`truncate text-[13px] leading-snug ${r.valor ? "font-bold" : "rd-muted"} ${
                     r.mono && r.valor ? "font-mono tracking-tight" : ""
                   }`}
+                  title={r.valor ?? undefined}
                 >
                   {r.valor ?? "—"}
-                </p>
+                </dd>
               </div>
             ))}
-          </div>
+          </dl>
         </div>
 
         {/* ── Cuerpo: índice de secciones fijo arriba y las secciones debajo ── */}

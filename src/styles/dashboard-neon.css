@@ -847,6 +847,30 @@ html[data-erp-neon="light"] {
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
+/* Divisiones de la barra de resumen: una línea entre celdas vecinas de la
+   misma fila, en cada corte de columnas (2, 3 y 6). */
+.rd-resumen > * {
+  border-color: color-mix(in srgb, #ffffff 11%, transparent);
+}
+.rd-resumen > :not(:nth-child(2n + 1)) {
+  border-left-width: 1px;
+}
+@media (min-width: 640px) {
+  .rd-resumen > :not(:nth-child(2n + 1)) {
+    border-left-width: 0;
+  }
+  .rd-resumen > :not(:nth-child(3n + 1)) {
+    border-left-width: 1px;
+  }
+}
+@media (min-width: 1280px) {
+  .rd-resumen > :not(:nth-child(3n + 1)) {
+    border-left-width: 0;
+  }
+  .rd-resumen > :not(:first-child) {
+    border-left-width: 1px;
+  }
+}
 .rd-btn {
   background: color-mix(in srgb, #ffffff 9%, transparent);
   border: 1px solid color-mix(in srgb, #ffffff 16%, transparent);
