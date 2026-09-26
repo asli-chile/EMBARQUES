@@ -28,8 +28,9 @@ type Proyecto = { nombre: string; estado: EstadoGh | null; url: string | null; d
 type Deploy = { sha: string; proyectos: Proyecto[] };
 type Commit = { mensaje: string; fecha: string };
 
+// Ámbar para "desplegando": es algo que mirar, no un éxito ni un error.
 const COLOR: Record<EstadoGh, string> = {
-  pending: "var(--estado-curso)",
+  pending: "var(--estado-atencion)",
   success: "var(--estado-ok)",
   failure: "var(--estado-error)",
   error: "var(--estado-error)",
@@ -50,8 +51,9 @@ function hace(iso: string | null, ahora: number, corto = false): string {
 function Punto({ estado }: { estado: EstadoGh | null }) {
   return (
     <span
-      className={`h-2 w-2 shrink-0 rounded-full ${estado === "pending" ? "animate-pulse" : ""}`}
-      style={{ background: estado ? COLOR[estado] : "rgb(255 255 255 / 0.3)" }}
+      className={`h-2 w-2 shrink-0 rounded-full ${estado === "pending" || !estado ? "animate-pulse" : ""}`}
+      // Sin estado = Vercel aún no toma el push: ya es parte del deploy en curso.
+      style={{ background: COLOR[estado ?? "pending"] }}
       aria-hidden
     />
   );
