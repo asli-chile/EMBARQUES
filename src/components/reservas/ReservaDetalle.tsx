@@ -172,6 +172,8 @@ const GRUPOS: Grupo[] = [
     id: "documentos",
     tituloKey: "detalleDocumentos",
     icono: "lucide:file-text",
+    // Ya existe /documentos/mis-documentos para el papeleo del cliente.
+    interno: true,
     campos: [
       { key: "aga", labelKey: "colAGA" },
       { key: "dus", labelKey: "colDUS", mono: true },
