@@ -134,10 +134,32 @@ function writeViewAs(state: ViewAsState | null) {
   }
 }
 
+/**
+ * Conserva la referencia anterior si el contenido no cambió.
+ *
+ * Supabase avisa SIGNED_IN cada vez que la pestaña vuelve a estar visible, y
+ * `loadSession` arma objetos nuevos con los mismos datos. Una docena de pantallas
+ * tiene `user` o `empresaNombres` en las dependencias de sus efectos: con una
+ * referencia nueva recargaban sus datos y borraban lo que el usuario llevaba
+ * escrito sin guardar, solo por haber ido a mirar otra pestaña.
+ */
+function mismoValor<T>(prev: T, next: T): T {
+  return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [profile, setProfile] = useState<AuthProfile | null>(null);
-  const [empresaNombres, setEmpresaNombres] = useState<string[]>([]);
+  const [user, setUserRaw] = useState<AuthUser | null>(null);
+  const [profile, setProfileRaw] = useState<AuthProfile | null>(null);
+  const [empresaNombres, setEmpresaNombresRaw] = useState<string[]>([]);
+  const setUser = useCallback((next: AuthUser | null) => setUserRaw((prev) => mismoValor(prev, next)), []);
+  const setProfile = useCallback(
+    (next: AuthProfile | null) => setProfileRaw((prev) => mismoValor(prev, next)),
+    [],
+  );
+  const setEmpresaNombres = useCallback(
+    (next: string[]) => setEmpresaNombresRaw((prev) => mismoValor(prev, next)),
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [viewAs, setViewAsState] = useState<ViewAsState | null>(null);
 
@@ -247,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [clearViewAs]);
+  }, [clearViewAs, setUser, setProfile, setEmpresaNombres]);
 
   useEffect(() => {
     const cached = readAuthCache();
