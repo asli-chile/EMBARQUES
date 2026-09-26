@@ -3,7 +3,7 @@
  * verificador. "seku 1234567" → "SEKU123456-7".
  *
  * Es la misma regla que `public.normalizar_contenedor` en la base
- * (migración 20260925000001), que la impone con un trigger en cada guardado.
+ * (migración 20260925000003), que la impone con un trigger en cada guardado.
  * Aquí sirve para que el usuario vea el formato antes de guardar; si se cambia
  * una, cambiar la otra.
  *
