@@ -576,6 +576,15 @@ llama a `chequeo-diario?sin_gasto=1` por HTTP interno. El botón vive junto a
 "Actualizar posiciones" —esa sí gasta y pide confirmación; este no gasta nada
 y no la pide—.
 
+**El reporte lista las naves, no solo el número.** "6 naves revisadas" no dice
+cuáles; para confiar en el número hay que poder verlas. El correo agrega
+"Naves revisadas hoy", agrupadas por naviera. La naviera no vive en el
+catálogo de naves —un buque no es de una sola línea para siempre—: sale de
+las operaciones vivas que carga cada una en esa corrida (`ops.naviera`, ya
+consultado para atribuirle los puertos). Sin ninguna operación viva
+atribuida, la nave cae bajo "Sin naviera", que es un caso a mirar y no un
+error de esta lista.
+
 **El nombre de la nave no lleva el código de viaje.** Algunas navieras lo
 escriben pegado ("MSC ATHOS [MC633R]"), igual que el AIS. Si ese texto entra
 tal cual al catálogo, la misma nave se da de alta una vez por cada viaje que

@@ -485,6 +485,16 @@ export function correoResumenCorrida(datos: {
   ok: boolean;
   esPrueba: boolean;
   revisadas: number;
+  /**
+   * Las naves de `revisadas`, con nombre y agrupadas por naviera.
+   *
+   * "6 naves revisadas" no dice cuáles: para confiar en el número hay que
+   * poder verlas. La naviera sale de las operaciones vivas de cada nave, no
+   * del catálogo —un buque no es de una sola línea para siempre—; sin
+   * ninguna operación viva atribuida queda bajo "Sin naviera", que es un caso
+   * a mirar, no un error de esta lista.
+   */
+  porNaviera: { naviera: string; naves: string[] }[];
   creditos: number;
   saldo: number | null;
   puertosNuevos: number;
@@ -608,6 +618,13 @@ ${fila("Transbordos sin nave", String(datos.faltaNave.length))}
           </td>
         </tr>
 
+${lista(
+  "Naves revisadas hoy",
+  datos.porNaviera.map(
+    (g) =>
+      `<strong style="color:${NAVY}">${esc(g.naviera)}</strong> — ${g.naves.map(esc).join(", ")}`,
+  ),
+)}
 ${lista(
   "Falta la nave del transbordo",
   datos.faltaNave.map(

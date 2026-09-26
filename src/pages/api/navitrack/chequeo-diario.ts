@@ -297,6 +297,16 @@ export const GET: APIRoute = async ({ request, url }) => {
    */
   const sinRespuesta: { nave: string; motivo: string }[] = [];
 
+  /*
+   * Naves revisadas hoy, agrupadas por naviera.
+   *
+   * "6 naves revisadas" no dice cuáles: para saber si el chequeo está mirando
+   * lo que corresponde, hay que abrir la base. La naviera no vive en el
+   * catálogo de naves —un buque no es de una sola línea para siempre—, sale
+   * de las operaciones vivas que carga cada una en esta corrida.
+   */
+  const porNaviera = new Map<string, Set<string>>();
+
   const resultado = {
     faltaNave: 0,
     revisadas: 0,
@@ -473,6 +483,21 @@ export const GET: APIRoute = async ({ request, url }) => {
           .limit(50)
       : { data: [] as never[] };
 
+    /*
+     * A qué naviera se anota esta nave hoy: la de sus operaciones vivas.
+     * Sin ninguna operación viva atribuida, queda bajo "Sin naviera" — es un
+     * caso a mirar, no un dato que haya que inventar.
+     */
+    const navierasDeEstaNave = new Set<string>();
+    for (const op of ops ?? []) {
+      const n = String(op.naviera ?? "").trim();
+      if (n) navierasDeEstaNave.add(n);
+    }
+    const etiquetaNaviera = navierasDeEstaNave.size ? [...navierasDeEstaNave].sort().join(" / ") : "Sin naviera";
+    const listaDeNaviera = porNaviera.get(etiquetaNaviera) ?? new Set<string>();
+    listaDeNaviera.add(String(nave.nombre));
+    porNaviera.set(etiquetaNaviera, listaDeNaviera);
+
     for (const op of ops ?? []) {
       if (op.arribo_confirmado) continue;
 
@@ -642,6 +667,9 @@ export const GET: APIRoute = async ({ request, url }) => {
       ok: resultado.errores === 0,
       esPrueba,
       revisadas: resultado.revisadas,
+      porNaviera: [...porNaviera.entries()]
+        .map(([naviera, naves]) => ({ naviera, naves: [...naves].sort() }))
+        .sort((a, b) => a.naviera.localeCompare(b.naviera)),
       creditos: resultado.creditos,
       saldo: saldoFinal.creditos,
       puertosNuevos: resultado.escalas,
@@ -696,6 +724,10 @@ export const GET: APIRoute = async ({ request, url }) => {
       faltaNave,
       sinItinerario,
       sinSeguimiento: resultado.sinSeguimiento,
+      porNaviera: [...porNaviera.entries()].map(([naviera, naves]) => ({
+        naviera,
+        naves: [...naves].sort(),
+      })),
     },
   });
 
@@ -706,6 +738,9 @@ export const GET: APIRoute = async ({ request, url }) => {
     reporteEnviado,
     falloCorreo,
     sinRespuesta,
+    porNaviera: [...porNaviera.entries()]
+      .map(([naviera, naves]) => ({ naviera, naves: [...naves].sort() }))
+      .sort((a, b) => a.naviera.localeCompare(b.naviera)),
     ...resultado,
   });
 };
