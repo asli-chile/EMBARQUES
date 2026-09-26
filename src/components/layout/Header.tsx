@@ -64,7 +64,8 @@ export function Header({ pathname = "" }: { pathname?: string } = {}) {
 
       <div className="relative flex h-full min-w-0 items-center justify-self-center">
         {/* Fuera del flujo: el logo tiene que seguir centrado aparezca o no. */}
-        <div className="absolute right-full top-1/2 -translate-y-1/2">
+        {/* w-max: absoluto, heredaría el ancho del logo y partiría el texto en dos líneas. */}
+        <div className="absolute right-full top-1/2 w-max -translate-y-1/2">
           <ClaudeUsoIndicator />
         </div>
         <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
@@ -83,7 +84,7 @@ export function Header({ pathname = "" }: { pathname?: string } = {}) {
           />
         </a>
         <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
-        <div className="absolute left-full top-1/2 -translate-y-1/2">
+        <div className="absolute left-full top-1/2 w-max -translate-y-1/2">
           <DeployIndicator />
         </div>
       </div>

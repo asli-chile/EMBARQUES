@@ -35,15 +35,16 @@ const COLOR: Record<EstadoGh, string> = {
   error: "var(--estado-error)",
 };
 
-function hace(iso: string | null, ahora: number): string {
+function hace(iso: string | null, ahora: number, corto = false): string {
   if (!iso) return "";
   const s = Math.max(0, Math.floor((ahora - new Date(iso).getTime()) / 1000));
+  const sep = corto ? "" : " ";
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min`;
+  if (m < 60) return `${m}${sep}${corto ? "m" : "min"}`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} h`;
-  return `${Math.floor(h / 24)} d`;
+  if (h < 24) return `${h}${sep}h`;
+  return `${Math.floor(h / 24)}${sep}d`;
 }
 
 function Punto({ estado }: { estado: EstadoGh | null }) {
@@ -165,17 +166,28 @@ export function DeployIndicator() {
   return (
     <div className="group asli-no-drag relative z-10 ml-3 hidden items-center md:flex">
       <div
-        className="flex h-8 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 text-[12px] font-semibold text-white/90"
+        className="flex h-8 items-center gap-2.5 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] pl-2.5 pr-3 text-[12px] leading-none text-white/90"
         aria-label={`${tr.aria}: ${textoEstado(resumen)}`}
       >
-        <Icon icon="lucide:rocket" width={14} height={14} className="text-white/60" aria-hidden />
-        {deploy.proyectos.map((p) => (
-          <span key={p.nombre} className="flex items-center gap-1.5">
-            <Punto estado={p.estado} />
-            <span className="font-medium text-white/80">{p.nombre}</span>
-          </span>
-        ))}
-        <span className="font-medium text-white/50 tabular-nums">{hace(ultimo, ahora)}</span>
+        {/* El cohete lleva el resumen: se lee de un vistazo sin mirar cada punto. */}
+        <Icon
+          icon="lucide:rocket"
+          width={15}
+          height={15}
+          className={`shrink-0 ${resumen === "pending" ? "animate-pulse" : ""}`}
+          style={{ color: resumen ? COLOR[resumen] : undefined }}
+          aria-hidden
+        />
+        <span className="h-3.5 w-px shrink-0 bg-white/15" aria-hidden />
+        <span className="flex items-center gap-3">
+          {deploy.proyectos.map((p) => (
+            <span key={p.nombre} className="flex items-center gap-1.5">
+              <Punto estado={p.estado} />
+              <span className="font-semibold">{p.nombre}</span>
+            </span>
+          ))}
+        </span>
+        <span className="text-[11px] font-medium text-white/45 tabular-nums">{hace(ultimo, ahora, true)}</span>
       </div>
 
       {/* Detalle al pasar el mouse. El pt-2 hace de puente para poder llegar a los enlaces. */}

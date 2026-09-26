@@ -116,7 +116,7 @@ export function ClaudeUsoIndicator() {
   return (
     <div className="group asli-no-drag relative z-10 mr-3 hidden items-center md:flex">
       <div
-        className={`flex h-8 items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 text-[12px] font-semibold text-white/90 ${
+        className={`flex h-8 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-3 text-[12px] font-semibold text-white/90 ${
           viejo ? "opacity-60" : ""
         }`}
         aria-label={tr.aria}
