@@ -12,6 +12,7 @@ import { withBase } from "@/lib/basePath";
 import { motivoFueraDeNavitrack } from "@/lib/navitrack/alcance";
 import { ComboboxInput, type ComboboxOption } from "@/components/ui/ComboboxInput";
 import { semanaIsoDeFecha } from "@/lib/operaciones/semanaEtd";
+import { normalizarContenedor } from "@/lib/contenedor";
 
 /**
  * Detalle de una reserva, desplegado bajo su fila en Mis Reservas.
@@ -516,6 +517,7 @@ function valorParaGuardar(campo: Campo, raw: string): ValorCampo | undefined {
     if (campo.entero && !Number.isInteger(n)) return undefined;
     return n;
   }
+  if (campo.key === "contenedor") return normalizarContenedor(s);
   return campo.mayus ? s.toUpperCase() : s;
 }
 

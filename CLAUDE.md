@@ -914,4 +914,11 @@ de verdad desde el navegador.
 - **Soft delete**: `deleted_at IS NULL` en operaciones — nunca borrar físicamente
 - **Fechas**: almacenar en ISO 8601, mostrar con `date-fns` + locale `es`
 - **Monedas**: CLP sin decimales, USD/EUR con 2 decimales
+- **Contenedores**: `MEDU123456-0` (4 letras, 6 dígitos, guion, dígito
+  verificador). Lo impone en la base `public.normalizar_contenedor` con un
+  trigger en `operaciones`, `transportes_reservas_ext` y `proformas`, así que
+  "seku 1234567" se guarda como `SEKU123456-7` venga de donde venga. En pantalla
+  se usa `normalizarContenedor()` de `src/lib/contenedor.ts` (misma regla) para
+  mostrar el formato al salir del campo. El campo admite varios contenedores
+  separados por `|`, `,`, `;` o salto de línea: se corrige cada uno por separado
 - **Numeración facturas transporte**: formato `TRAxxxx` (TRA0001, TRA0002...)

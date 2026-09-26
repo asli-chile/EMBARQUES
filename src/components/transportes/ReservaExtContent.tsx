@@ -7,6 +7,7 @@ import { Combobox } from "@/components/ui/Combobox";
 import { ComboboxInput } from "@/components/ui/ComboboxInput";
 import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { normalizarContenedor } from "@/lib/contenedor";
 import { format } from "date-fns";
 import { sileo } from "sileo";
 
@@ -752,7 +753,7 @@ export function ReservaExtContent() {
       telefono_chofer: formData.telefono_chofer || null,
       patente_camion: formData.patente_camion || null,
       patente_remolque: formData.patente_remolque || null,
-      contenedor: formData.contenedor || null,
+      contenedor: normalizarContenedor(formData.contenedor) || null,
       sello: formData.sello || null,
       tara: formData.tara ? parseFloat(formData.tara) : null,
       deposito: formData.deposito || null,
@@ -895,6 +896,7 @@ export function ReservaExtContent() {
         lang="es-CL"
         value={formData[field]}
         onChange={(e) => handleChange(field, e.target.value)}
+        onBlur={field === "contenedor" ? (e) => handleChange(field, normalizarContenedor(e.target.value)) : undefined}
         placeholder={placeholder}
         className={inputClass}
       />

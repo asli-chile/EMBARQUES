@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { displayRefAsli } from "@/lib/refAsli";
+import { normalizarContenedor } from "@/lib/contenedor";
 import { Combobox } from "@/components/ui/Combobox";
 
 export type ContenedorTransporteOp = {
@@ -224,7 +225,7 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
       telefono_chofer: emptyToNull(telefonoChofer),
       patente_camion: emptyToNull(patenteCamion.toUpperCase()),
       patente_remolque: emptyToNull(patenteRemolque.toUpperCase()),
-      contenedor: contenedorTrim.toUpperCase(),
+      contenedor: normalizarContenedor(contenedorTrim),
       sello: emptyToNull(sello),
       tara: taraNum,
     };
@@ -351,8 +352,9 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
                         type="text"
                         value={contenedor}
                         onChange={(e) => setContenedor(e.target.value.toUpperCase())}
+                        onBlur={() => setContenedor((v) => normalizarContenedor(v))}
                         className={`${FIELD} font-mono text-lg tracking-wider`}
-                        placeholder="ABCD1234567"
+                        placeholder="ABCD123456-7"
                         autoFocus={!isEdit}
                       />
                     </div>

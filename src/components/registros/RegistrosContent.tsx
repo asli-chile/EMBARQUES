@@ -20,6 +20,7 @@ import { arriboLabelsDe } from "@/components/ui/ArriboChip";
 import { ESTADO_INICIAL, estadosEnOrden, etiquetaEstado } from "@/lib/operaciones/estados";
 import { listarTemporadas, TEMPORADA_TODAS, type Temporada } from "@/lib/temporadas";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { normalizarContenedor } from "@/lib/contenedor";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -1558,6 +1559,9 @@ export function RegistrosContent() {
         if (dbValue !== e.newValue) {
           e.node.setDataValue("ventilacion", dbValue as number | null);
         }
+      } else if (field === "contenedor") {
+        dbValue = normalizarContenedor(String(e.newValue ?? "")) || null;
+        if (dbValue !== e.newValue) e.node.setDataValue("contenedor", dbValue ?? "");
       }
 
       const updates: Record<string, unknown> = { [field]: dbValue };
