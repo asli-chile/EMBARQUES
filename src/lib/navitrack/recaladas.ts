@@ -339,18 +339,23 @@ export async function registrarZarpeReal(
     /** Cuándo se tomó esta posición: es lo más cerca que se puede estar del zarpe real. */
     recibidoAt: string | null;
   },
-): Promise<void> {
+  // "sin_pol" y "cerca" son diagnóstico, no casos que deban preocupar por sí
+  // solos: dicen por qué esta llamada no escribió nada.
+): Promise<"nueva" | "ya_tenia" | "sin_pol" | "cerca"> {
   const pol = (datos.pol ?? "").trim();
-  if (!pol) return;
+  if (!pol) return "sin_pol";
   // Sigue cerca del origen: nada que registrar todavía.
-  if (cercaDelPuerto(datos.lat, datos.lng, pol)) return;
+  if (cercaDelPuerto(datos.lat, datos.lng, pol)) return "cerca";
 
-  await supabase
+  const { data } = await supabase
     .from("operaciones")
     .update({ zarpe_real_at: datos.recibidoAt ?? new Date().toISOString() })
     .eq("id", datos.operacionId)
     // La primera lectura que lo vio zarpado es la que vale: no se pisa.
-    .is("zarpe_real_at", null);
+    .is("zarpe_real_at", null)
+    .select("id");
+
+  return (data ?? []).length > 0 ? "nueva" : "ya_tenia";
 }
 
 export type TransbordoSinNave = {

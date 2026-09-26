@@ -312,6 +312,21 @@ export const GET: APIRoute = async ({ request, url }) => {
    */
   const porNaviera = new Map<string, Set<string>>();
 
+  /*
+   * Diagnóstico temporal del zarpe real, solo visible en modo de prueba.
+   *
+   * Se agregó junto con `registrarZarpeReal()` para poder ver, en la propia
+   * respuesta, por qué una operación sí o no quedó marcada, sin tener que
+   * adivinarlo leyendo la base a ciegas.
+   */
+  const diagZarpe: {
+    ref: string;
+    resultado: string;
+    pol: string | null;
+    lat: number | null;
+    lng: number | null;
+  }[] = [];
+
   const resultado = {
     faltaNave: 0,
     revisadas: 0,
@@ -320,6 +335,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     escalas: 0,
     /** Puertos donde consta que el buque paró, vistos por primera vez hoy. */
     recaladas: 0,
+    /** Zarpes de POL confirmados por posición, por primera vez hoy. */
+    zarpesReales: 0,
     /** Embarques saltados por no haber zarpado todavía. */
     fueraDeVentana: 0,
     /** Naves no consultadas por no llevar ninguna carga en ventana. */
@@ -579,12 +596,20 @@ export const GET: APIRoute = async ({ request, url }) => {
        * Antes de esto, el historial del viaje solo mostraba la fecha
        * planificada de la reserva y nunca la confirmaba con lo que ve el AIS.
        */
-      await registrarZarpeReal(supabase, {
+      const zarpeReal = await registrarZarpeReal(supabase, {
         operacionId: op.id,
         pol: op.pol,
         lat: posicion?.lat ?? null,
         lng: posicion?.lng ?? null,
         recibidoAt: fecha(detalle.positionReceived),
+      });
+      if (zarpeReal === "nueva") resultado.zarpesReales += 1;
+      diagZarpe.push({
+        ref: op.ref_asli ?? op.id,
+        resultado: zarpeReal,
+        pol: op.pol,
+        lat: posicion?.lat ?? null,
+        lng: posicion?.lng ?? null,
       });
     }
   }));
@@ -761,6 +786,8 @@ export const GET: APIRoute = async ({ request, url }) => {
     porNaviera: [...porNaviera.entries()]
       .map(([naviera, naves]) => ({ naviera, naves: [...naves].sort() }))
       .sort((a, b) => a.naviera.localeCompare(b.naviera)),
+    // Solo en prueba: para ver por qué una operación sí o no quedó con zarpe real.
+    ...(esPrueba ? { diagZarpe } : {}),
     ...resultado,
   });
 };
