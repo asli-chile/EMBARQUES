@@ -907,8 +907,14 @@
   background: color-mix(in srgb, var(--dash-surface) 90%, transparent);
 }
 
-/* Separador vertical entre columnas del bloque; en una sola columna desaparece. */
-@media (min-width: 640px) {
+/*
+ * Separador vertical entre columnas del bloque; en una sola columna desaparece.
+ *
+ * Se decide por el ancho de la tarjeta (`@container`), no por el de la
+ * pantalla: con el navegador al 125 %, la pantalla sigue siendo "ancha" pero la
+ * tarjeta queda angosta, y tres columnas ahí se leían amontonadas.
+ */
+@container (min-width: 36rem) {
   .navitrack .nt-info-col + .nt-info-col {
     border-left: 1px solid var(--dash-border);
   }
@@ -979,3 +985,53 @@
 }
 
 .navitrack .nt-menu-item:disabled { opacity: 0.55; }
+
+
+/* ─── La pizarra, solo cuando cabe ──────────────────────────────────────────
+ *
+ * En escritorio la ficha es una pizarra sin scroll de página: todo reparte el
+ * alto de la ventana. Eso funciona con alto de sobra y se rompe sin él. Con el
+ * navegador al 125 % en una pantalla de 1080 quedan unos 740 px útiles, y una
+ * vez restados la cabecera y el historial, al mapa y a la información les
+ * tocaba una franja: todo "muy grande y amontonado".
+ *
+ * Así que la ficha solo se congela cuando hay alto para hacerlo. Por debajo se
+ * desplaza, y el bloque del mapa conserva un alto mínimo en vez de aplastarse.
+ */
+@media (min-width: 1024px) and (min-height: 860px) {
+  .navitrack .nt-ficha { overflow: hidden; }
+}
+
+@media (min-width: 1024px) {
+  .navitrack .nt-ficha-centro { min-height: 32rem; }
+}
+
+/*
+ * Densidad compacta en ventanas bajas o angostas.
+ *
+ * Lo que se achica es el aire, no la lectura: nodos y teselas algo más chicos,
+ * menos relleno. Los textos no bajan de lo que ya se lee bien.
+ */
+@media (min-width: 1024px) and (max-height: 859px), (min-width: 1024px) and (max-width: 1599px) {
+  .navitrack .nt-step-node {
+    height: 1.7rem;
+    width: 1.7rem;
+  }
+
+  .navitrack .nt-stat {
+    gap: 0.55rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .navitrack .nt-stat-icon {
+    height: 2.05rem;
+    width: 2.05rem;
+  }
+
+  .navitrack .nt-stat-value { font-size: 0.85rem; }
+
+  .navitrack .nt-tab {
+    padding: 0.42rem 0.7rem;
+    font-size: 0.74rem;
+  }
+}

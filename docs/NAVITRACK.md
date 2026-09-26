@@ -984,6 +984,13 @@ Reglas para no romperlo:
   baja. El historial se desplaza en **horizontal** cuando no caben los hitos, y
   al abrirse se centra en el actual. Si una sección nueva puede crecer, va en una
   pestaña o con su propio `overflow-y-auto`, nunca empujando la página.
+- **La pizarra se congela solo si hay alto** (1024 px de ancho y 860 de alto,
+  regla `.nt-ficha` en `navitrack.css`). Con menos —por ejemplo el navegador al
+  125 % en una pantalla de 1080, que deja unos 740 px útiles— la ficha se
+  desplaza y el bloque del mapa conserva 32rem de alto en vez de aplastarse.
+  Las columnas de la Información del embarque se deciden por el **ancho de la
+  tarjeta** (`@container`), no el de la pantalla: al 125 % la pantalla sigue
+  siendo ancha, pero la tarjeta no, y tres columnas ahí se amontonaban.
 - **Bajo `lg` la pizarra no cabe** y la vista vuelve a ser una columna con
   scroll (`lg:overflow-hidden` en la raíz). Forzarla en un teléfono produciría
   texto ilegible; es deliberado.

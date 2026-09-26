@@ -660,7 +660,7 @@ export function NavitrackShipment({
   ];
 
   return (
-    <div className="motion-view-section flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3 pb-5 sm:p-2.5 lg:overflow-hidden">
+    <div className="nt-ficha motion-view-section flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3 pb-5 sm:p-2.5">
       {/* Barra superior: salir del detalle y recorrer la lista sin volver a ella. */}
       <div className="flex shrink-0 items-center justify-between gap-2">
         <button
@@ -921,7 +921,7 @@ export function NavitrackShipment({
         * teléfono la vista es una columna con scroll y cada tarjeta toma su alto
         * natural.
         */}
-      <div className="grid grid-cols-1 gap-2.5 sm:min-h-0 sm:flex-1 lg:grid-cols-[1.22fr_1fr]">
+      <div className="nt-ficha-centro grid grid-cols-1 gap-2.5 sm:min-h-0 sm:flex-1 lg:grid-cols-[1.22fr_1fr]">
         <section className="dash-card dash-card-static flex flex-col overflow-hidden sm:min-h-0">
           <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
             <div role="tablist" className="flex items-center gap-1.5 overflow-x-auto">
@@ -1209,8 +1209,8 @@ export function NavitrackShipment({
             </a>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto border-t border-dash-border p-3">
-            <div className="nt-info-bloque grid grid-cols-1 sm:grid-cols-3">
+          <div className="@container min-h-0 flex-1 space-y-2.5 overflow-y-auto border-t border-dash-border p-3">
+            <div className="nt-info-bloque grid grid-cols-1 @xl:grid-cols-3">
               <div className="nt-info-col space-y-2.5 px-3.5 py-3">
                 <div className="min-w-0">
                   <p className="nt-eyebrow">{tr.embarque}</p>
@@ -1414,7 +1414,7 @@ export function NavitrackShipment({
             </div>
 
             {/* Indicadores: lo que un operador mira de reojo. */}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3">
               <Stat
                 icon="lucide:anchor"
                 label={tr.cadenaInicial}
