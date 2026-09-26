@@ -637,6 +637,35 @@ el AIS solo, en `navitrack_recaladas.recalado_at`, sin gastar créditos.
 hora anunciada responde en horas; sin ella, en días. Decir "+13 h" contra un
 anuncio que solo dijo "el 20" sería inventar una precisión que no existe.
 
+### El zarpe real, no solo el planificado
+
+`operaciones.etd` es la fecha que se carga con la reserva: la promesa, sujeta
+a clima y a cupo en el puerto. Hasta el 26-09-2026 el historial del viaje solo
+mostraba esa fecha y nunca la confirmaba con lo que ve el AIS —el mismo hueco
+que ya se había cerrado para los transbordos y el arribo, pero que faltaba
+para el zarpe de origen—.
+
+`registrarZarpeReal()` (en `recaladas.ts`) lo detecta **por posición**, no por
+`atdUtc`: la primera lectura que ve al buque fuera del radio de `MISMO_PUERTO_KM`
+de su POL es la evidencia de que zarpó. Se guarda una sola vez, en
+`operaciones.zarpe_real_at` (migración `20260926000001`) — no en
+`navitrack_recaladas`, porque esa tabla es el historial de puertos
+intermedios y el zarpe de origen no es una escala.
+
+Por qué no `atdUtc`: ese campo del proveedor quedó documentado como poco
+confiable para emparejarlo con un puerto en particular (ver el comentario de
+`AisSnapshot.departedAt` en `navitrack-model.ts`): en la serie guardada, un
+buque declaró dos puertos de procedencia distintos con el mismo `atdUtc`, así
+que a lo más uno de los dos emparejamientos era cierto. La posición, en
+cambio, es el mismo método ya usado para corregir la detección de llegadas
+(ver "Del AIS salen dos hechos por puerto" más arriba): no se afirma nada que
+no se pueda verificar con coordenadas.
+
+El hito "Zarpe" en Historia del viaje pasa de `certeza: "ESTIMADO"` (la fecha
+de la reserva, sin hora) a `certeza: "REAL"` (`zarpe_real_at`, con hora)
+apenas se detecta — la misma distinción visual que ya existe para las
+recaladas y los transbordos.
+
 ## 6 bis. Quién entra, y con cuánto poder
 
 Tres permisos independientes, porque no son el mismo eje. Se resuelven en
