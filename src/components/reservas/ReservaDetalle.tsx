@@ -83,7 +83,7 @@ const GRUPOS: Grupo[] = [
       { key: "contrato", labelKey: "colContrato" },
       { key: "incoterm", labelKey: "colIncoterm" },
       { key: "forma_pago", labelKey: "colPaymentMethod" },
-      { key: "pais", labelKey: "colDestCountry" },
+      { key: "pais", labelKey: "colDestCountry", fijo: true },
     ],
   },
   {
@@ -428,7 +428,7 @@ const CATEGORIAS_OPCIONES: Record<string, string> = {
   tipo_atmosfera: "tipo_atmosfera",
 };
 
-type Opcion = ComboboxOption & { cliente?: string | null };
+type Opcion = ComboboxOption & { cliente?: string | null; pais?: string | null };
 type Opciones = Record<string, Opcion[]>;
 
 /**
@@ -442,7 +442,8 @@ function useOpcionesCampos(supabase: SupabaseClient | null, activo: boolean): Op
     if (!activo || !supabase) return;
     let vivo = true;
     const tablas = Object.entries(TABLAS_OPCIONES).map(async ([key, tabla]) => {
-      const cols = tabla === "consignatarios" ? "id, nombre, cliente" : "id, nombre";
+      const cols =
+        tabla === "consignatarios" ? "id, nombre, cliente" : tabla === "destinos" ? "id, nombre, pais" : "id, nombre";
       const { data, error } = await supabase.from(tabla).select(cols).order("nombre");
       return [key, error ? [] : ((data ?? []) as unknown as Opcion[])] as const;
     });
@@ -499,6 +500,18 @@ function opcionesDe(opciones: Opciones, key: string, fila: Fila): ComboboxOption
   const cliente = texto(fila.cliente)?.toUpperCase();
   const delCliente = lista.filter((o) => (o.cliente ?? "").toUpperCase() === cliente);
   return delCliente.length > 0 ? delCliente : lista;
+}
+
+/**
+ * País de un puerto de destino, según el catálogo. El país no se escribe: la
+ * base lo deduce del POD con un trigger (20260926000002_pais_desde_pod); esto
+ * solo lo adelanta en pantalla mientras el POD cambiado no se guardó.
+ */
+function paisDelPod(opciones: Opciones, pod: unknown): string | null {
+  const nombre = texto(pod)?.trim().toUpperCase();
+  if (!nombre) return null;
+  const destino = (opciones.pod ?? []).find((o) => o.nombre.trim().toUpperCase() === nombre);
+  return texto(destino?.pais) ?? null;
 }
 
 /** `etd` y `eta` son columnas `date`; el resto de las fechas, `timestamptz`. */
@@ -1005,10 +1018,17 @@ export function ReservaDetalle({
   const base: Fila = { ...(completa ?? {}), ...op, ...editados };
   /* La semana sale del ETD, no de la columna (ver `semanaIsoDeFecha`): así
      sigue al zarpe, incluso a uno cambiado y todavía sin guardar. */
-  const conPendientes: Fila = { ...base, ...pendientes };
-  const fila: Fila = { ...conPendientes, semana: semanaIsoDeFecha(texto(conPendientes.etd)) };
-  const puedeEditar = !!onGuardarCambios && estado === "listo";
   const opciones = useOpcionesCampos(supabase, !!onGuardarCambios);
+  const conPendientes: Fila = { ...base, ...pendientes };
+  /* El país sigue al POD: con un POD cambiado y sin guardar, se muestra el
+     país que le va a poner la base. */
+  const paisNuevo = "pod" in pendientes ? paisDelPod(opciones, conPendientes.pod) : null;
+  const fila: Fila = {
+    ...conPendientes,
+    semana: semanaIsoDeFecha(texto(conPendientes.etd)),
+    ...(paisNuevo ? { pais: paisNuevo } : {}),
+  };
+  const puedeEditar = !!onGuardarCambios && estado === "listo";
   const nPendientes = Object.keys(pendientes).length;
 
   useEffect(() => {
@@ -1037,6 +1057,15 @@ export function ReservaDetalle({
     if ("etd" in cambios) {
       cambios.semana = semanaIsoDeFecha(typeof cambios.etd === "string" ? cambios.etd : null);
       anteriores.semana = base.semana ?? null;
+    }
+    /* La base pone el país al guardar el POD; se manda también para que la
+       ficha y la lista lo muestren sin recargar. */
+    if ("pod" in cambios) {
+      const pais = paisDelPod(opciones, cambios.pod);
+      if (pais) {
+        cambios.pais = pais;
+        anteriores.pais = base.pais ?? null;
+      }
     }
     setGuardando(true);
     const ok = await onGuardarCambios(op.id, cambios, anteriores);

@@ -926,4 +926,8 @@ de verdad desde el navegador.
   `navitrack_tramos` y `proformas` (`20260926000001_viaje_mayusculas.sql`), así
   que vale para cualquier pantalla y la importación. No toca puntos, guiones ni
   espacios intermedios: son parte del código que publica la naviera
+- **País de destino**: no se escribe, sale del POD. Un trigger en
+  `operaciones` lo toma del catálogo `destinos` al crear la operación o cambiar
+  su POD (`20260926000002_pais_desde_pod.sql`). Si un puerto nuevo queda sin
+  país, el arreglo es completar `destinos.pais`, no escribirlo en la operación
 - **Numeración facturas transporte**: formato `TRAxxxx` (TRA0001, TRA0002...)
