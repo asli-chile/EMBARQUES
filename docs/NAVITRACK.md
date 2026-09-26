@@ -545,6 +545,12 @@ falta encenderlo ya, `GET /api/navitrack/chequeo-diario?sin_gasto=1` (con
 `x-cron-secret`) corre `sincronizarSeguimiento` de verdad sin consultar al
 proveedor, reutilizando lecturas ya guardadas.
 
+**`sin_gasto=1` no evita el correo, solo el gasto.** El reporte de la corrida
+se manda igual, y hasta el 26-09-2026 iba a la lista de producción —Hans y
+Mario en copia— cada vez que alguien probaba algo a mano. Con `esPrueba`, el
+destinatario pasa a ser Rodrigo (`?correo=` para probar contra otro) y no hay
+copia: probar no debería avisarle al resto del equipo.
+
 **El nombre de la nave no lleva el código de viaje.** Algunas navieras lo
 escriben pegado ("MSC ATHOS [MC633R]"), igual que el AIS. Si ese texto entra
 tal cual al catálogo, la misma nave se da de alta una vez por cada viaje que

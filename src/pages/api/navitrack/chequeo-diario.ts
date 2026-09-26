@@ -189,17 +189,31 @@ export const GET: APIRoute = async ({ request, url }) => {
   const apiKey = textoDeEntorno(import.meta.env.DATADOCKED_API_KEY, "DATADOCKED_API_KEY");
   if (!apiKey) return json({ ok: false, code: "NO_CONFIG" }, 503);
 
-  const destinatario = textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_EMAIL, "NAVITRACK_ALERTAS_EMAIL");
+  /*
+   * En prueba, el correo va **solo** a quien está probando.
+   *
+   * `sin_gasto=1` evita gastar créditos con el proveedor, pero el envío del
+   * reporte no dependía de eso: cada corrida de prueba mandaba el mismo correo
+   * de producción a Hans y Mario en copia. Diagnosticar algo a mano —lo que
+   * esto existe para permitir— no debería avisarle al resto del equipo cada
+   * vez. Quien quiera probar contra otro correo puede pasar `?correo=` en la
+   * URL; sin eso, cae en Rodrigo.
+   */
+  const destinatario = esPrueba
+    ? url.searchParams.get("correo")?.trim() || "rodrigo.caceres@asli.cl"
+    : textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_EMAIL, "NAVITRACK_ALERTAS_EMAIL");
   /*
    * En copia.
    *
    * Un aviso de seguimiento que llega a una sola persona depende de que esa
    * persona lo vea. La copia no es formalidad: es que la carga no se quede sin
-   * vigilar porque alguien está de vacaciones.
+   * vigilar porque alguien está de vacaciones. En prueba no hay copia: solo va
+   * a quien la pidió.
    */
-  const enCopia =
-    textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ||
-    "hans.vasquez@asli.cl, mario.basaez@asli.cl";
+  const enCopia = esPrueba
+    ? ""
+    : textoDeEntorno(import.meta.env.NAVITRACK_ALERTAS_CC, "NAVITRACK_ALERTAS_CC") ||
+      "hans.vasquez@asli.cl, mario.basaez@asli.cl";
   /*
    * Base para el botón del correo.
    *
