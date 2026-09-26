@@ -59,7 +59,10 @@ export function NavitrackTimeline({ eventos, etapa, locale, tr }: TimelineProps)
               : ev.certeza === "ANUNCIADO"
                 ? "certezaAnunciado"
                 : "certezaEstimado";
-        const fecha = ev.codigo === "TRANSITO" ? fmtFechaHora(ev.fecha, locale) : fmtFechaCorta(ev.fecha, locale);
+        // El zarpe lleva hora solo cuando es real: la fecha planificada (`etd`)
+        // no tiene hora, y ponerle una sería inventar una precisión que no hay.
+        const conHora = ev.codigo === "TRANSITO" || (ev.codigo === "ZARPE" && ev.certeza === "REAL");
+        const fecha = conHora ? fmtFechaHora(ev.fecha, locale) : fmtFechaCorta(ev.fecha, locale);
 
         return (
           <li key={`${ev.codigo}-${i}`} className="flex gap-3">

@@ -311,6 +311,48 @@ export async function registrarRecalada(
   return "nueva";
 }
 
+/**
+ * El zarpe real del puerto de origen, detectado por posición.
+ *
+ * `operaciones.etd` es la fecha planificada de la reserva; puede moverse por
+ * clima o cupo en el puerto. El historial del viaje solo la mostraba a ella,
+ * nunca la confirmaba con lo que ve el AIS —el mismo hueco que ya se cerró
+ * para los transbordos (anunciado vs. real) y el arribo.
+ *
+ * Se usa posición y no `atdUtc`: ese campo quedó documentado como poco
+ * confiable para emparejarlo con un puerto en particular (ver el comentario
+ * de `AisSnapshot.departedAt`). La primera lectura que ve al buque **fuera**
+ * del radio de su puerto de origen es la evidencia de que zarpó; no hace
+ * falta más.
+ *
+ * Se guarda en `operaciones.zarpe_real_at`, no en `navitrack_recaladas`: esa
+ * tabla es el historial de puertos intermedios, y el zarpe de origen no es
+ * una escala, es el propio inicio del viaje.
+ */
+export async function registrarZarpeReal(
+  supabase: Cliente,
+  datos: {
+    operacionId: string;
+    pol: string | null;
+    lat: number | null;
+    lng: number | null;
+    /** Cuándo se tomó esta posición: es lo más cerca que se puede estar del zarpe real. */
+    recibidoAt: string | null;
+  },
+): Promise<void> {
+  const pol = (datos.pol ?? "").trim();
+  if (!pol) return;
+  // Sigue cerca del origen: nada que registrar todavía.
+  if (cercaDelPuerto(datos.lat, datos.lng, pol)) return;
+
+  await supabase
+    .from("operaciones")
+    .update({ zarpe_real_at: datos.recibidoAt ?? new Date().toISOString() })
+    .eq("id", datos.operacionId)
+    // La primera lectura que lo vio zarpado es la que vale: no se pisa.
+    .is("zarpe_real_at", null);
+}
+
 export type TransbordoSinNave = {
   operacionId: string;
   puerto: string;

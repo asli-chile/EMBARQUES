@@ -588,15 +588,26 @@ export function construirTimeline(
     });
   }
 
+  /*
+   * El zarpe: programado hasta que el AIS lo confirma.
+   *
+   * `zarpe_real_at` lo detecta `registrarZarpeReal()` por posición —el buque
+   * ya no está en el radio de su POL—, no por `atdUtc` del proveedor, que
+   * quedó documentado como poco confiable para emparejarlo con un puerto en
+   * particular. Con él, el zarpe pasa de "estimado" a "real" y la fecha deja
+   * de ser la promesa de la reserva para ser lo que de verdad ocurrió: la
+   * misma distinción que ya existe para los transbordos (anunciado vs. real)
+   * y el arribo.
+   */
   const etd = parseOpDate(op.etd);
+  const zarpeReal = parseInstant(op.zarpe_real_at);
   const zarpado = estado.etapa !== "EN_ORIGEN";
   if (etd || zarpado) {
     eventos.push({
       codigo: "ZARPE",
-      fecha: etd,
+      fecha: zarpeReal ?? etd,
       lugar: pol,
-      // El zarpe es "real" cuando el estado de la operación lo confirma, no solo por fecha.
-      certeza: zarpado ? "CONFIRMADO" : "ESTIMADO",
+      certeza: zarpeReal ? "REAL" : zarpado ? "CONFIRMADO" : "ESTIMADO",
       cumplido: zarpado,
       actual: false,
     });

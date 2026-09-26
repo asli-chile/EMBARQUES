@@ -18,7 +18,12 @@ import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
 import { resolverNavesSinIdentificador } from "@/lib/navitrack/identificadores";
 import { correoResumenCorrida } from "@/components/navitrack/navitrack-correo";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
-import { registrarAnuncio, registrarRecalada, transbordosSinNave } from "@/lib/navitrack/recaladas";
+import {
+  registrarAnuncio,
+  registrarRecalada,
+  registrarZarpeReal,
+  transbordosSinNave,
+} from "@/lib/navitrack/recaladas";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Naves que puede revisar una corrida. Freno ante una lista blanca inflada. */
@@ -568,6 +573,19 @@ export const GET: APIRoute = async ({ request, url }) => {
         if (rec === "nueva") resultado.recaladas += 1;
       }
 
+      /*
+       * El zarpe real del POL, por posición.
+       *
+       * Antes de esto, el historial del viaje solo mostraba la fecha
+       * planificada de la reserva y nunca la confirmaba con lo que ve el AIS.
+       */
+      await registrarZarpeReal(supabase, {
+        operacionId: op.id,
+        pol: op.pol,
+        lat: posicion?.lat ?? null,
+        lng: posicion?.lng ?? null,
+        recibidoAt: fecha(detalle.positionReceived),
+      });
     }
   }));
 

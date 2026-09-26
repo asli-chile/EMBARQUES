@@ -28,6 +28,13 @@ export type NavitrackOperacion = {
   /** País de destino: da la bandera del POD en la cabecera. */
   pais: string | null;
   etd: string | null;
+  /**
+   * Cuándo consta, por posición del AIS, que el buque ya no está en el POL.
+   * Null hasta que se detecte. Es a `etd` lo que `recalado_at` es a la fecha
+   * anunciada de un transbordo: la promesa de la reserva puede moverse por
+   * clima o cupo en el puerto; esto es lo que de verdad pasó.
+   */
+  zarpe_real_at: string | null;
   eta: string | null;
   tt: number | null;
   estado_operacion: string | null;
@@ -54,7 +61,7 @@ export type NavitrackOperacion = {
 };
 
 export const NAVITRACK_OP_SELECT =
-  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, eta, tt, estado_operacion, arribo_confirmado, eta_original, eta_original_heredada, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
+  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, zarpe_real_at, eta, tt, estado_operacion, arribo_confirmado, eta_original, eta_original_heredada, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
 
 /** Identificadores del catálogo `naves`: permiten resolver el AIS sin buscar a mano. */
 export type NaveIdent = { nombre: string; imo: string | null; mmsi: string | null };
