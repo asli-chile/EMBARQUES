@@ -15,6 +15,7 @@ import {
   parseInstant,
   parseOpDate,
   type AisSnapshot,
+  type Escala,
   type Journey,
   type LngLat,
   type NavitrackOperacion,
@@ -545,6 +546,15 @@ export function construirTimeline(
    * recorrido que se borra solo.
    */
   recaladas: RecaladaViaje[] = [],
+  /**
+   * Los puertos de la ruta en orden de marcha (`journey.escalas`).
+   *
+   * Es la misma lista que dibuja el mapa, repartida por tramo y ordenada
+   * dentro de cada uno. Con ella el historial decide qué quedó atrás y en qué
+   * orden se tocó, en vez de volver a calcularlo por su cuenta y contradecir
+   * al mapa.
+   */
+  ruta: Escala[] = [],
 ): EventoViaje[] {
   const pol = (op.pol ?? "").trim();
   const pod = (op.pod ?? "").trim();
@@ -718,6 +728,16 @@ export function construirTimeline(
    * mostrando como pendiente, que es lo único que se sabe.
    */
   const quedoAtras = (puerto: string): boolean => {
+    /*
+     * Si el mapa lo ubica, manda el mapa: sabe en qué tramo cae el puerto y lo
+     * mide contra el final de ese tramo. Medir contra el POD, como abajo, falla
+     * cuando la ruta pasa de largo el destino y vuelve —A00047 sube a Amberes
+     * para bajar después a Leixões—.
+     */
+    const enRuta = ruta.find(
+      (e) => (e.tipo === "prevista" || e.tipo === "recalada") && mismoPuerto(e.nombre, puerto),
+    );
+    if (enRuta) return enRuta.cumplida;
     if (ais?.lat == null || ais?.lng == null) return false;
     const cd = getPortCoordinates(pod);
     const cp = getPortCoordinates(puerto);
@@ -922,8 +942,26 @@ export function construirTimeline(
    * Entonces la fecha ordena **dentro** de su lado: lo cumplido por debajo del
    * presente, lo pendiente por encima. El hito actual es la frontera.
    */
+  /*
+   * Lo cumplido en un puerto se ordena por la ruta, no por la fecha.
+   *
+   * Las recaladas no tienen fecha y se anclaban justo antes del presente; una
+   * parada ya pasada sí la tiene —la ETA que anunció el buque—, así que caía
+   * por debajo de todas ellas, pegada al zarpe: Rotterdam antes que Colón. Las
+   * dos cosas son puertos del mismo recorrido y el orden en que se tocaron es
+   * el de la ruta. Quedan justo antes del presente, en el orden del mapa; el
+   * zarpe y el stacking, que ocurren antes de cualquier puerto, siguen debajo
+   * por su fecha.
+   */
+  const posEnRuta = (ev: EventoViaje): number => {
+    if (!ev.lugar || !["RECALADA", "PARADA", "ANUNCIADO", "TRANSBORDO"].includes(ev.codigo)) return -1;
+    return ruta.findIndex((e) => e.tipo !== "origen" && e.tipo !== "destino" && mismoPuerto(e.nombre, ev.lugar));
+  };
+
   const clave = (ev: EventoViaje) => {
     if (ev.actual) return presente;
+    const i = ev.cumplido ? posEnRuta(ev) : -1;
+    if (i >= 0) return presente - 1 - (ruta.length - i);
     const base = ev.fecha ? ev.fecha.getTime() : presente;
     return ev.cumplido ? Math.min(base, presente - 1) : Math.max(base, presente + 1);
   };

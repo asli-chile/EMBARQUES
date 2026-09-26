@@ -852,6 +852,210 @@ function unirTramos(tramos: LngLat[][]): LngLat[] {
   return salida;
 }
 
+/* ------------------------------- Rastro real ------------------------------- */
+
+/** Posición guardada del buque, con el instante en que se tomó (ms). */
+export type PuntoRastro = LngLat & { at: number };
+
+/**
+ * Las posiciones reales que llevaron **esta** carga, por tramo (`orden` →
+ * puntos en orden de marcha). Un viaje directo es un solo tramo, el 1.
+ */
+export type RastroReal = Map<number, LngLat[]>;
+
+/**
+ * Lecturas mínimas para dibujar un tramo con el rastro real.
+ *
+ * Con una sola, la curva de siempre ya pasa por ella —es la posición actual—,
+ * así que el rastro no agregaría nada y el dibujo quedaría idéntico. Desde dos
+ * hay un camino que la curva no conoce.
+ */
+export const RASTRO_MIN_LECTURAS = 2;
+
+/**
+ * Salto entre dos lecturas que ya no es un día de navegación.
+ *
+ * Un portacontenedores hace unos 900 km diarios. Más de esto es que faltan
+ * lecturas —el chequeo diario no corrió, o la nave recién se encendió—, y
+ * unir esos dos puntos con una geodésica puede cruzar tierra. Ahí se usa la
+ * curva hacia el mar, que es el mismo relleno que cuando no hay rastro.
+ */
+const HUECO_RASTRO_KM = 1500;
+
+/**
+ * Cuánto puede alejarse `zarpe_real_at` del ETD sin dejar de ser creíble.
+ *
+ * Tiene que valer lo mismo que `ZARPE_CREIBLE_DIAS` en `recaladas.ts`, que no
+ * se importa desde acá porque ese módulo ya importa de este.
+ */
+const ZARPE_CREIBLE_DIAS = 7;
+
+/** Dos lecturas más cerca que esto son el buque quieto: repetirlas solo ensucia la línea. */
+const RASTRO_MISMO_PUNTO_KM = 1;
+
+function coordDePuerto(nombre: string | null | undefined): LngLat | null {
+  const c = getPortCoordinates((nombre ?? "").trim());
+  return c ? { lng: c[0], lat: c[1] } : null;
+}
+
+/** Inicio del día de una fecha `date`: la cota más temprana que ese día admite. */
+function inicioDelDia(dia: string | null | undefined): number | null {
+  if (!dia) return null;
+  const t = new Date(`${dia.slice(0, 10)}T00:00:00Z`).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+/** Un instante; si solo trae día, el final de ese día, para no cortar lo ocurrido en él. */
+function finDeInstante(v: string | null | undefined): number | null {
+  if (!v) return null;
+  const soloDia = /^\d{4}-\d{2}-\d{2}$/.test(v.trim());
+  const t = new Date(soloDia ? `${v.trim()}T23:59:59Z` : v).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+/**
+ * Reparte las posiciones guardadas entre las naves que llevaron la carga.
+ *
+ * `navitrack_ais_lecturas` cuelga del buque, no del embarque: un buque hace el
+ * viaje anterior para venir a buscar la carga y sigue a otro destino después
+ * de soltarla. Dibujar todas sus lecturas mezclaría tres viajes. Cada nave
+ * aporta solo el período en que la carga iba a bordo:
+ *
+ * - **Empieza** con el zarpe real del POL (`zarpe_real_at`) o, sin él, el día
+ *   del ETD. Lo anterior es el buque viniendo a buscarla.
+ * - **Pasa a la nave siguiente** en el transbordo: cuando consta que la nave
+ *   llegó al puerto de conexión (`recalado_at`), o si no, la llegada anunciada
+ *   más `GRACIA_POST_ETA_DIAS`, que es el mismo margen con que el chequeo
+ *   diario da por cerrado un tramo (`crearTramoCerrado`).
+ * - **Termina** en `arribo_at` si el embarque ya arribó. Arribado sin fecha no
+ *   hay cota que valga, y se deja la curva: el buque siguió navegando con otra
+ *   carga y sus lecturas no tienen dónde cortarse.
+ *
+ * Las fechas se refinan con la geometría, que es más precisa que cualquier
+ * anuncio: una nave empieza en su **última** lectura dentro del puerto de
+ * salida (antes estaba llegando o cargando) y termina en la **primera** dentro
+ * del puerto de llegada (después ya está en otra cosa). Así MSC BOSTON, que
+ * recibió la carga de A00051 en Rodman, no arrastra al rastro el tramo que hizo
+ * para llegar hasta ahí.
+ *
+ * Una nave del medio sin fecha de traspaso ni lectura en el puerto de conexión
+ * se queda sin rastro: no hay forma de saber cuáles de sus posiciones hablan de
+ * esta carga, y adivinar dibujaría una ruta real pero ajena.
+ */
+export function repartirRastro(
+  op: Pick<NavitrackOperacion, "nave" | "pol" | "pod" | "etd" | "zarpe_real_at" | "arribo_confirmado" | "arribo_at">,
+  tramos: Tramo[],
+  lecturasDe: (nave: string | null) => PuntoRastro[],
+  recaladas: { puerto: string; recalado_at?: string | null }[] = [],
+): RastroReal {
+  const salida: RastroReal = new Map();
+
+  type Eslabon = Pick<Tramo, "orden" | "nave" | "pol" | "pod" | "etd" | "eta" | "eta_hora">;
+  const cadena: Eslabon[] = tramos.length
+    ? [...tramos].sort((a, b) => a.orden - b.orden)
+    : [{ orden: 1, nave: op.nave, pol: op.pol, pod: op.pod, etd: op.etd, eta: null, eta_hora: null }];
+
+  const finViaje = op.arribo_confirmado ? finDeInstante(op.arribo_at) : null;
+  if (op.arribo_confirmado && finViaje == null) return salida;
+
+  /** Cuándo la nave del eslabón soltó la carga en su puerto de llegada. */
+  const entregaDe = (e: Eslabon): number | null => {
+    const pod = (e.pod ?? "").trim();
+    const llegada = recaladas.find((r) => r.recalado_at && mismoPuerto(r.puerto, pod))?.recalado_at;
+    const real = finDeInstante(llegada ?? null);
+    if (real != null) return real;
+    const anunciada = instanteAnunciado(e.eta, e.eta_hora);
+    return anunciada ? anunciada.getTime() + GRACIA_POST_ETA_DIAS * DAY_MS : null;
+  };
+
+  const cerca = (p: LngLat, puerto: LngLat | null) =>
+    puerto != null && haversineKm(p, puerto) < MISMO_PUERTO_KM;
+
+  /*
+   * El zarpe real manda solo si es creíble contra el ETD.
+   *
+   * Es el mismo freno de `registrarZarpeReal` (`ZARPE_CREIBLE_DIAS`): un zarpe
+   * que aparece semanas después del ETD no es un atraso, es el `atdUtc` de una
+   * escala intermedia. El 26-09-2026 A00045 quedó con zarpe "real" el 24-09
+   * cuando su buque ya estaba en el Canal de la Mancha; cortando ahí, el rastro
+   * se quedaba con 2 de sus 19 lecturas. Sin zarpe creíble se usa el día del
+   * ETD, y la última lectura en el POL afina el comienzo más abajo.
+   */
+  const etdDia = inicioDelDia(op.etd);
+  const zarpeReal = finDeInstante(op.zarpe_real_at);
+  const zarpeCreible =
+    zarpeReal != null && (etdDia == null || zarpeReal - etdDia <= ZARPE_CREIBLE_DIAS * DAY_MS);
+  let desde: number | null = zarpeCreible ? zarpeReal : etdDia;
+
+  cadena.forEach((e, i) => {
+    const ultimo = i === cadena.length - 1;
+    const hasta = ultimo ? finViaje : entregaDe(e);
+    // Sin traspaso fechado, el tramo siguiente arranca con su propia salida anunciada.
+    const inicio = desde ?? inicioDelDia(e.etd);
+    desde = hasta;
+    if (inicio == null || !e.nave) return;
+
+    const salidaPuerto = coordDePuerto(e.pol);
+    const llegadaPuerto = coordDePuerto(e.pod);
+
+    let puntos = lecturasDe(e.nave)
+      .filter((p) => isValidCoord(p) && p.at >= inicio && (hasta == null || p.at <= hasta))
+      .sort((a, b) => a.at - b.at);
+
+    let ultimaEnSalida = -1;
+    puntos.forEach((p, k) => {
+      if (cerca(p, salidaPuerto)) ultimaEnSalida = k;
+    });
+    if (ultimaEnSalida > 0) puntos = puntos.slice(ultimaEnSalida);
+
+    // El tramo en curso no termina en el puerto: el buque todavía no llega.
+    if (!ultimo || op.arribo_confirmado) {
+      const primeraEnLlegada = puntos.findIndex((p) => cerca(p, llegadaPuerto));
+      if (primeraEnLlegada >= 0) puntos = puntos.slice(0, primeraEnLlegada + 1);
+    }
+
+    const limpios: LngLat[] = [];
+    for (const p of puntos) {
+      const previo = limpios[limpios.length - 1];
+      if (previo && haversineKm(previo, p) < RASTRO_MISMO_PUNTO_KM) continue;
+      limpios.push({ lng: p.lng, lat: p.lat });
+    }
+    if (limpios.length) salida.set(e.orden, limpios);
+  });
+
+  return salida;
+}
+
+/** Entre dos lecturas: la geodésica si es un día de navegación, la curva si faltan días. */
+function pasoDeRastro(a: LngLat, b: LngLat): LngLat[] {
+  const km = haversineKm(a, b);
+  if (km > HUECO_RASTRO_KM) return curvaMaritima(a, b);
+  return greatCirclePath(a, b, Math.max(1, Math.min(32, Math.ceil(km / 50))));
+}
+
+/**
+ * La línea recorrida pasando por las posiciones reales.
+ *
+ * Lo que no tiene lecturas lo rellena la curva de siempre: del puerto de
+ * salida a la primera lectura (doblada por las escalas que quedaron antes de
+ * ella, que el rastro no alcanzó a ver) y de la última al destino del tramo o
+ * a la posición actual. El seguimiento de un embarque suele empezar con el
+ * viaje ya avanzado —BRUNELLA tiene lecturas desde el 13-09 y zarpó el 29-08—,
+ * así que sin ese relleno la línea nacería en el Caribe.
+ *
+ * El antimeridiano se resuelve igual que en la curva: cada paso se desenrolla
+ * solo (`greatCirclePath`) y `unirTramos` los alinea en la misma copia del
+ * mundo, así que dos lecturas a uno y otro lado del 180° no cruzan el mapa.
+ */
+function trazoReal(desde: LngLat, antes: LngLat[], puntos: LngLat[], hasta: LngLat | null): LngLat[] {
+  const guia = [desde, ...antes, puntos[0]];
+  const partes: LngLat[][] = guia.slice(0, -1).map((a, k) => curvaMaritima(a, guia[k + 1]));
+  for (let k = 0; k < puntos.length - 1; k += 1) partes.push(pasoDeRastro(puntos[k], puntos[k + 1]));
+  const fin = puntos[puntos.length - 1];
+  if (hasta && haversineKm(fin, hasta) >= RASTRO_MISMO_PUNTO_KM) partes.push(curvaMaritima(fin, hasta));
+  return unirTramos(partes);
+}
+
 /**
  * Viaje con transbordo: la ruta es la cadena de tramos, no una recta.
  *
@@ -882,6 +1086,8 @@ function viajePorTramos(
    */
   puertosPrevistos: string[] = [],
   puertosRecalados: string[] = [],
+  /** Posiciones reales por tramo, ya repartidas por `repartirRastro`. */
+  rastro: RastroReal | null = null,
 ): Journey | null {
   const ordenados = [...tramos].sort((a, b) => a.orden - b.orden);
 
@@ -1034,7 +1240,26 @@ function viajePorTramos(
         now,
       );
 
-  const anteriores = pasos.slice(0, indiceActual).map((_p, i) => curvaDePaso(i));
+  /**
+   * Lo recorrido en el tramo `i`: por las posiciones reales de su nave si hay
+   * suficientes, y si no, la curva de siempre (`sinRastro`).
+   *
+   * Cada tramo usa solo las lecturas de **su** nave: la que entregó la carga en
+   * el transbordo no aporta nada después, ni la que la recibió antes.
+   */
+  const recorridoDe = (i: number, hasta: LngLat, sinRastro: () => LngLat[]): LngLat[] => {
+    const real = rastro?.get(pasos[i].t.orden) ?? [];
+    if (real.length < RASTRO_MIN_LECTURAS) return sinRastro();
+    const avanceReal = haversineKm(pasos[i].desde, real[0]);
+    const antes = escalasDe(i)
+      .filter((x) => haversineKm(pasos[i].desde, x.coord) < avanceReal)
+      .map((x) => x.coord);
+    return trazoReal(pasos[i].desde, antes, real, hasta);
+  };
+
+  const anteriores = pasos
+    .slice(0, indiceActual)
+    .map((_p, i) => recorridoDe(i, pasos[i].hasta, () => curvaDePaso(i)));
   const posteriores = pasos.slice(indiceActual + 1).map((_p, i) => curvaDePaso(indiceActual + 1 + i));
   const actual = pasos[indiceActual];
 
@@ -1043,7 +1268,7 @@ function viajePorTramos(
 
   if (arribado) {
     // La cadena completa, de punta a punta: no queda nada por navegar.
-    traveled = unirTramos(pasos.map((_p, i) => curvaDePaso(i)));
+    traveled = unirTramos(pasos.map((_p, i) => recorridoDe(i, pasos[i].hasta, () => curvaDePaso(i))));
     remaining = [];
   } else if (isValidCoord(posicion)) {
     /*
@@ -1059,7 +1284,10 @@ function viajePorTramos(
     const avance = haversineKm(actual.desde, aqui);
     const atras = enCurso.filter((x) => haversineKm(actual.desde, x.coord) <= avance);
     const porDelante = enCurso.filter((x) => haversineKm(actual.desde, x.coord) > avance);
-    traveled = unirTramos([...anteriores, curvaPor(actual.desde, atras.map((x) => x.coord), aqui)]);
+    traveled = unirTramos([
+      ...anteriores,
+      recorridoDe(indiceActual, aqui, () => curvaPor(actual.desde, atras.map((x) => x.coord), aqui)),
+    ]);
     remaining = unirTramos([
       curvaPor(aqui, porDelante.map((x) => x.coord), actual.hasta),
       ...posteriores,
@@ -1125,10 +1353,26 @@ function viajePorTramos(
         tipo: x.previsto ? "prevista" : "recalada",
         // La carga sigue en el mismo buque: la nave no cambia acá.
         nave: null,
+        /*
+         * Quedó atrás si el buque ya está más cerca que ella del final **de su
+         * tramo**, no del destino del embarque.
+         *
+         * Medido contra el destino fallaba cuando la ruta sube más allá y
+         * vuelve: el A00047 (Valparaíso → Leixões) sube hasta Amberes para el
+         * transbordo, y con el buque a 36 km de Rotterdam, un poco al oeste,
+         * Rotterdam quedaba "más lejos de Leixões" que el buque y se daba por
+         * pasada. El historial la ponía junto al zarpe, antes que Colón.
+         *
+         * Una recalada ya consta que ocurrió; una escala de un tramo posterior
+         * todavía no puede haber ocurrido.
+         */
         cumplida:
           arribado ||
+          !x.previsto ||
           i < indiceActual ||
-          (frente != null && haversineKm(x.coord, ultimo.hasta) > haversineKm(frente, ultimo.hasta)),
+          (i === indiceActual &&
+            frente != null &&
+            haversineKm(x.coord, p.hasta) > haversineKm(frente, p.hasta)),
       });
     }
   });
@@ -1185,13 +1429,22 @@ export function buildJourney(
    * borraría solo cada vez que el buque toca un puerto nuevo.
    */
   puertosRecalados: string[] = [],
+  /**
+   * Posiciones reales guardadas, ya repartidas por nave (`repartirRastro`).
+   *
+   * Solo cambian la línea **recorrida**: lo que falta sigue siendo la curva
+   * calculada, porque el futuro no tiene lecturas. Null o sin lecturas
+   * suficientes, se dibuja como siempre. La flota no lo pasa: es una consulta
+   * por embarque y solo se hace para el que está abierto.
+   */
+  rastro: RastroReal | null = null,
 ): Journey {
   /*
    * Con tramos cargados, el viaje son ellos. Sin tramos es directo y vale lo
    * que dice la operación: es la misma regla de lectura que define la tabla.
    */
   if (tramos.length > 0) {
-    const porTramos = viajePorTramos(op, tramos, ais, now, puertosPrevistos, puertosRecalados);
+    const porTramos = viajePorTramos(op, tramos, ais, now, puertosPrevistos, puertosRecalados, rastro);
     if (porTramos) return porTramos;
   }
 
@@ -1216,6 +1469,8 @@ export function buildJourney(
    * describe esta carga. Ver la nota en `viajePorTramos`.
    */
   const arribado = Boolean(op.arribo_confirmado);
+  // Viaje directo: un solo tramo, el 1. Antes del zarpe no hay recorrido que dibujar.
+  const real = zarpado ? (rastro?.get(1) ?? []) : [];
   const position = arribado
     ? null
     : zarpado
@@ -1319,7 +1574,13 @@ export function buildJourney(
        * es coherente: una sola línea continua que pasa por donde está el buque.
        */
       const p = { lng: position.lng, lat: position.lat };
-      if (recaladas.length > 0) {
+      if (real.length >= RASTRO_MIN_LECTURAS) {
+        // Las recaladas posteriores a la primera lectura ya están en el rastro;
+        // solo las anteriores tienen que doblar el relleno desde el origen.
+        const lejosDelDestino = haversineKm(real[0], destino);
+        const antes = recaladas.map((r) => r.coord).filter((c) => haversineKm(c, destino) > lejosDelDestino);
+        traveled = trazoReal(origen, antes, real, p);
+      } else if (recaladas.length > 0) {
         const puntos = [origen, ...recaladas.map((r) => r.coord), p];
         traveled = unirTramos(
           puntos.slice(0, -1).map((desde, i) => curvaMaritima(desde, puntos[i + 1])),
@@ -1369,6 +1630,25 @@ export function buildJourney(
 
       // Lo que falta se mide desde el buque, no desde el punto teórico.
       remainingNm = haversineKm(p, destino) * KM_TO_NM;
+    } else if (arribado && real.length >= RASTRO_MIN_LECTURAS) {
+      /*
+       * Arribado: el viaje entero por donde navegó de verdad. `recaladas` viene
+       * vacía acá —se arma contra la posición, y sin buque no hay—, así que las
+       * escalas previas a la primera lectura salen directo de las guardadas.
+       */
+      const lejosDelDestino = haversineKm(real[0], destino);
+      const antes = puertosRecalados
+        .map(coordDePuerto)
+        .filter(
+          (c): c is LngLat =>
+            c != null &&
+            haversineKm(c, origen) >= MISMO_PUERTO_KM &&
+            haversineKm(c, destino) > lejosDelDestino,
+        )
+        .sort((a, b) => haversineKm(b, destino) - haversineKm(a, destino));
+      traveled = trazoReal(origen, antes, real, destino);
+      remaining = [];
+      remainingNm = 0;
     } else {
       const cut = Math.round(clamp01(f) * (full.length - 1));
       traveled = full.slice(0, cut + 1);

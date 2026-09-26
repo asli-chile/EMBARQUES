@@ -206,6 +206,17 @@ Tres reglas que no conviene tocar sin entender el costo:
   cada puerto desaparece del historial en cuanto el buque toca el siguiente. Lo
   hace el chequeo diario, con la lectura ya pagada, sin créditos extra.
 
+**El historial ordena los puertos con la ruta del mapa.** Si un puerto ya
+pasó, y en qué orden se tocó, lo decide `journey.escalas`, que
+`construirTimeline` recibe como último parámetro. No se calcula aparte. Antes
+el historial medía "quedó atrás" contra el POD, y eso falla cuando la ruta pasa
+de largo el destino y vuelve. El A00047 (Valparaíso → Leixões) sube a Amberes
+para el transbordo: con el buque a 36 km de Rotterdam, Rotterdam figuraba como
+pasada y se listaba junto al zarpe, antes que Colón. Ahora se mide contra el
+final **del tramo** en que cae el puerto. Tampoco se ordena por `recalado_at`:
+en las primeras recaladas guarda cuándo nos enteramos, y pone Caucedo antes que
+Posorja.
+
 Para reconstruir lo anterior a esto desde las lecturas ya guardadas:
 
 ```bash
@@ -272,8 +283,8 @@ Los frenos, todos en el servidor, porque la pantalla no puede decidir gastar:
 | `NAVITRACK_AIS_TTL_MIN` (360) | env | Ya no dispara gasto: solo sirve para decir cuánto falta para la próxima lectura del cron |
 
 `navitrack_ais_lecturas` guarda **una fila por llamada real**: contar filas es
-contar créditos. Como además guarda cada posición con su hora, es el insumo para
-dibujar en el futuro la derrota real en vez de la geodésica teórica.
+contar créditos. Como además guarda cada posición con su hora, es de donde sale
+la línea recorrida del mapa (ver "Lo recorrido es el camino real" más abajo).
 
 Si el proveedor falla o se acaban los créditos, se devuelve la última lectura
 conocida en vez de dejar la pantalla en blanco.
@@ -344,6 +355,63 @@ Dibujar la ruta como recta en Mercator haría que Asia–Chile cruce continentes
 usa círculo máximo, **desenrollando el antimeridiano**: sin eso, una ruta que
 pasa de +180 a −180 se dibuja como una línea que cruza el mundo al revés. Ver
 `greatCirclePath()`.
+
+Eso vale para lo que **falta** navegar. Lo ya navegado, desde el 26-09-2026, se
+dibuja con las posiciones reales.
+
+### Lo recorrido es el camino real
+
+En el mapa del embarque abierto, la línea sólida (`journey.traveled`) pasa por
+las posiciones que el chequeo diario ya guardó en `navitrack_ais_lecturas`.
+Antes era la curva teórica entre puertos, cortada en la posición de hoy. La
+punteada (`remaining`) sigue siendo la curva calculada: el futuro no tiene
+lecturas.
+
+- **Qué se consulta.** `NavitrackContent` lee las lecturas de tipo `posicion`
+  de todas las naves de la cadena, por IMO **y** por MMSI, porque conviven filas
+  guardadas con uno y con otro. Parte desde el ETD o `zarpe_real_at`, el que sea
+  más temprano. Solo se consulta el embarque abierto, nunca la flota. Es
+  lectura de base: no llama al proveedor ni gasta créditos.
+- **Qué lectura es de qué tramo.** Lo decide `repartirRastro()`
+  (`navitrack-model.ts`). Un buque hace el viaje anterior para venir a buscar la
+  carga y sigue a otro destino después de soltarla, así que cada nave aporta
+  solo su período:
+  - desde el zarpe (`zarpe_real_at` si es creíble, si no el día del ETD) o
+    desde el traspaso anterior;
+  - hasta el traspaso siguiente. Ese traspaso es el `recalado_at` del puerto de
+    conexión o, si no hay, la llegada anunciada más `GRACIA_POST_ETA_DIAS`;
+  - en un embarque arribado, hasta `arribo_at`.
+
+  Después la geometría afina el corte: cada nave empieza en su **última**
+  lectura dentro del puerto de salida y termina en la **primera** dentro del de
+  llegada. En A00051, MSC SERENA aporta cinco puntos hasta Rodman y MSC BOSTON
+  arranca en Rodman, sin el tramo que hizo para llegar ahí.
+- **Cuándo se usa.** Desde `RASTRO_MIN_LECTURAS` (2) lecturas por tramo. Con
+  una sola, la curva de siempre ya pasa por ella, y el dibujo queda idéntico
+  al anterior.
+- **Qué rellena la curva.** Del puerto de salida a la primera lectura (doblada
+  por las recaladas anteriores a ella), de la última al puerto de llegada del
+  tramo y los huecos de más de `HUECO_RASTRO_KM` (1.500 km) entre dos lecturas,
+  que son días sin chequeo y no un día de navegación. El seguimiento suele
+  empezar con el viaje avanzado: el GUAYAQUIL EXPRESS de A00045 zarpó el 28-08
+  y su primera lectura es del 12-09, en Caucedo.
+- **Antimeridiano.** Cada paso entre lecturas es un `greatCirclePath` y
+  `unirTramos` los alinea en la misma copia del mundo, igual que la curva.
+- **Lo que no cambia.** Progreso, millas restantes y marcadores. Las distancias
+  se siguen midiendo entre puertos, por la misma razón por la que no se miden
+  sobre la curva.
+
+**`zarpe_real_at` no se toma a ciegas.** El 26-09-2026 varios embarques
+quedaron con un "zarpe real" semanas después de su ETD: A00045 el 24-09, con
+el buque ya en el Canal de la Mancha. Ese valor era el `atdUtc` de una escala
+intermedia. `repartirRastro` le aplica el mismo freno que `registrarZarpeReal`
+(`ZARPE_CREIBLE_DIAS`, 7): pasado ese plazo desde el ETD, lo ignora y parte del
+ETD. Las dos constantes tienen que valer lo mismo. Viven separadas porque
+`recaladas.ts` importa del modelo y el modelo no puede importar de vuelta.
+
+Mientras llegan las lecturas, el mapa espera igual que con la primera lectura
+AIS. Sin esa espera, pintaba la curva y un instante después la cambiaba por el
+camino real, y se leía como si el buque hubiera cambiado de ruta.
 
 ---
 

@@ -33,7 +33,9 @@ import {
   buildJourney,
   mismoPuerto,
   parseAisSnapshot,
+  repartirRastro,
   NAVITRACK_TRAMO_SELECT,
+  type PuntoRastro,
   type Tramo,
   type AisSnapshot,
   type NaveIdent,
@@ -222,6 +224,17 @@ export function NavitrackContent() {
     consultadoAt: string | null;
   } | null>(null);
   const [aisCargando, setAisCargando] = useState(false);
+
+  /**
+   * Posiciones guardadas de las naves del embarque abierto, por `claveNave`.
+   *
+   * Etiquetadas con el embarque igual que las recaladas, y por lo mismo: el
+   * rastro de otro viaje no puede colarse en el mapa mientras llega el nuevo.
+   */
+  const [rastroDe, setRastroDe] = useState<{ opId: string | null; porNave: Map<string, PuntoRastro[]> }>({
+    opId: null,
+    porNave: new Map(),
+  });
 
   const [escalasDe, setEscalasDe] = useState<{ opId: string | null; filas: Escala[] }>({
     opId: null,
@@ -657,6 +670,90 @@ export function NavitrackContent() {
   }, [user, cargarRecaladas]);
 
   /**
+   * Por dónde navegó de verdad la carga del embarque abierto.
+   *
+   * Lee las posiciones que el chequeo diario ya pagó y guardó: no llama al
+   * proveedor ni gasta créditos. Solo para el embarque abierto, como el AIS:
+   * traerlas para la flota sería leer la tabla entera para dibujar un mapa que
+   * nadie está mirando.
+   *
+   * Se piden las de **todas** las naves de la cadena, por IMO y por MMSI a la
+   * vez —hay filas guardadas con uno y filas con el otro—. Qué lectura le toca a
+   * qué tramo no se decide acá sino en `repartirRastro`.
+   */
+  useEffect(() => {
+    if (!seleccion) return;
+    const opId = seleccion.id;
+    const vacio = () => setRastroDe({ opId, porNave: new Map() });
+
+    const cadena = (tramos.get(opId) ?? []).map((t) => t.nave);
+    const naveDeIdent = new Map<string, string>();
+    for (const nave of cadena.length ? cadena : [seleccion.nave]) {
+      const clave = claveNave(nave);
+      const ident = clave ? naves.get(clave) : undefined;
+      for (const id of [ident?.mmsi, ident?.imo]) {
+        const limpio = (id ?? "").trim();
+        if (limpio) naveDeIdent.set(limpio, clave);
+      }
+    }
+    /*
+     * La cota fina la pone `repartirRastro`; esta solo evita traer el viaje
+     * anterior. Por eso es la más temprana de las dos: un `zarpe_real_at` mal
+     * detectado cae semanas tarde, y cortando acá ya no habría cómo corregirlo.
+     */
+    const cotas = [
+      seleccion.etd ? `${seleccion.etd.slice(0, 10)}T00:00:00Z` : null,
+      seleccion.zarpe_real_at,
+    ].filter((c): c is string => Boolean(c));
+    const desde = cotas.length
+      ? new Date(Math.min(...cotas.map((c) => new Date(c).getTime()))).toISOString()
+      : null;
+    if (!supabase || !naveDeIdent.size || !desde) {
+      vacio();
+      return;
+    }
+
+    let vigente = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("navitrack_ais_lecturas")
+        .select("identificador, lat, lng, posicion_recibida_at, consultado_at")
+        .eq("tipo", "posicion")
+        .in("identificador", [...naveDeIdent.keys()])
+        .gte("consultado_at", desde)
+        .order("consultado_at", { ascending: true })
+        .limit(1000);
+      if (!vigente) return;
+      // Sin rastro el mapa cae a la curva de siempre: un error acá no es motivo para dejarlo en blanco.
+      if (error) {
+        vacio();
+        return;
+      }
+      const porNave = new Map<string, PuntoRastro[]>();
+      for (const l of (data ?? []) as {
+        identificador: string;
+        lat: number | null;
+        lng: number | null;
+        posicion_recibida_at: string | null;
+        consultado_at: string;
+      }[]) {
+        const clave = naveDeIdent.get(String(l.identificador).trim());
+        if (!clave || l.lat == null || l.lng == null) continue;
+        // La hora de la señal, no la de la consulta: una posición vieja releída hoy sigue siendo de ayer.
+        const at = new Date(l.posicion_recibida_at ?? l.consultado_at).getTime();
+        if (Number.isNaN(at)) continue;
+        const lista = porNave.get(clave) ?? [];
+        lista.push({ lng: Number(l.lng), lat: Number(l.lat), at });
+        porNave.set(clave, lista);
+      }
+      setRastroDe({ opId, porNave });
+    })();
+    return () => {
+      vigente = false;
+    };
+  }, [seleccion, tramos, naves, supabase]);
+
+  /**
    * No hay sondeo automático a propósito.
    *
    * Cada lectura del proveedor cuesta un crédito, y refrescar cada 5 minutos un
@@ -872,6 +969,16 @@ export function NavitrackContent() {
       .sort((a, b) => (a.recalado_at ?? "").localeCompare(b.recalado_at ?? ""))
       .map((r) => r.puerto);
 
+    const rastroListo = rastroDe.opId === seleccion.id;
+    const rastro = rastroListo
+      ? repartirRastro(
+          seleccion,
+          tramos.get(seleccion.id) ?? [],
+          (nave) => rastroDe.porNave.get(claveNave(nave)) ?? [],
+          recaladasUnicas,
+        )
+      : null;
+
     const calculado = buildJourney(
       seleccion,
       ais,
@@ -879,6 +986,7 @@ export function NavitrackContent() {
       tramos.get(seleccion.id) ?? [],
       previstos,
       recalados,
+      rastro,
     );
 
     /*
@@ -899,9 +1007,13 @@ export function NavitrackContent() {
      *
      * Los puertos, las fechas y el resto de la ficha se quedan: no dependen del
      * AIS y no hay razón para dejar el mapa en blanco.
+     *
+     * Lo mismo mientras llega el rastro real: sin esperarlo, el mapa pintaba la
+     * curva calculada y un instante después la cambiaba por el camino real, un
+     * salto que se lee como que el buque cambió de ruta.
      */
     const journey =
-      aisCargando && !ais
+      (aisCargando && !ais) || !rastroListo
         ? {
             ...calculado,
             position: null,
@@ -935,9 +1047,10 @@ export function NavitrackContent() {
         ahora,
         tramos.get(seleccion.id) ?? [],
         recaladasUnicas,
+        journey.escalas,
       ),
     };
-  }, [seleccion, ais, aisCargando, decisiones, ahora, tramos, recaladasUnicas, modo, modoDe]);
+  }, [seleccion, ais, aisCargando, decisiones, ahora, tramos, recaladasUnicas, rastroDe, modo, modoDe]);
 
   /*
    * Enlace profundo: `/navitrack?op=<referencia>`.
