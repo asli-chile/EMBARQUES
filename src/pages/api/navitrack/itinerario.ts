@@ -155,6 +155,24 @@ function instante(d: string | null, h: string | null): string | null {
   return `${d}T${h ?? "12:00:00"}Z`;
 }
 
+/**
+ * Separa el nombre de la nave del código de viaje, si viene pegado entre
+ * corchetes ("MSC ATHOS [MC633R]", como lo escriben algunas navieras y como
+ * lo devuelve el AIS). El código de viaje tiene su propio campo; dejarlo
+ * dentro del nombre hace que la misma nave entre al catálogo una vez por
+ * cada viaje que haga, en vez de una sola vez. Así quedaron "WEC DE HOOGH" y
+ * "WEC DE HOOGH [EH636B]" como dos naves distintas del catálogo, siendo la
+ * misma: se corrigió a mano el 26-09-2026, y esta función evita que se repita
+ * sin importar cómo se escriba el campo.
+ */
+function separarNaveYViaje(v: string | null | undefined): { nave: string | null; viaje: string | null } {
+  const t = (v ?? "").trim();
+  const m = t.match(/^(.*?)\s*\[([^\]]+)\]\s*$/);
+  if (!m) return { nave: t.toUpperCase() || null, viaje: null };
+  // El catálogo va en mayúsculas y la búsqueda de duplicados compara texto.
+  return { nave: m[1].trim().toUpperCase() || null, viaje: m[2].trim() || null };
+}
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   const supabase = createClient(cookies);
   const auth = await exigirDecisor(supabase);
@@ -199,12 +217,12 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const transbordos = modo === "con_transbordo" ? (body.transbordos ?? []) : [];
   const limpios = transbordos.map((t) => {
     const ident = (t.naveIdentificador ?? "").trim();
+    const { nave, viaje: viajeDelNombre } = separarNaveYViaje(t.nave);
     return {
       puerto: (t.puerto ?? "").trim(),
-      // El catálogo va en mayúsculas y la búsqueda de duplicados compara texto.
-      nave: (t.nave ?? "").trim().toUpperCase() || null,
+      nave,
       identificador: /^\d{7}$|^\d{9}$/.test(ident) ? ident : null,
-      viaje: (t.viaje ?? "").trim() || null,
+      viaje: (t.viaje ?? "").trim() || viajeDelNombre,
       llegada: dia(t.llegada),
       llegadaHora: hora(t.llegadaHora),
       zarpe: dia(t.zarpe),

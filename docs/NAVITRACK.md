@@ -534,7 +534,19 @@ Rodman") y el reporte diario la lista hasta que alguien la indique
 
 Las naves nuevas se agregan al catálogo **apagadas y sin gastar**: el
 seguimiento pasa a cada una el día en que su tramo se vuelve el vigente, y lo
-hace `sincronizarSeguimiento`, que también le busca el IMO si le falta.
+hace `sincronizarSeguimiento`, que también le busca el IMO si le falta. Eso
+corre una vez al día con el cron; si se acaba de cargar un itinerario y hace
+falta encenderlo ya, `GET /api/navitrack/chequeo-diario?sin_gasto=1` (con
+`x-cron-secret`) corre `sincronizarSeguimiento` de verdad sin consultar al
+proveedor, reutilizando lecturas ya guardadas.
+
+**El nombre de la nave no lleva el código de viaje.** Algunas navieras lo
+escriben pegado ("MSC ATHOS [MC633R]"), igual que el AIS. Si ese texto entra
+tal cual al catálogo, la misma nave se da de alta una vez por cada viaje que
+haga —así quedaron "WEC DE HOOGH" y "WEC DE HOOGH [EH636B]" como dos naves
+distintas el 26-09-2026, siendo la misma—. `separarNaveYViaje()` en
+`itinerario.ts` corta el código entre corchetes del nombre y lo manda al
+campo `viaje`, sin importar si el operador lo escribió junto o separado.
 
 `authenticated` no tiene `DELETE` sobre `navitrack_recaladas`, y está bien:
 desde el navegador nadie borra historia. Cuando un puerto deja de ser transbordo
