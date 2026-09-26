@@ -539,6 +539,8 @@ export const GET: APIRoute = async ({ request, url }) => {
           etaDeclarada: fecha(detalle.etaUtc),
           navStatus: str(detalle.navigationalStatus),
           recibidoAt: fecha(detalle.positionReceived),
+          lat: posicion?.lat ?? null,
+          lng: posicion?.lng ?? null,
           pol: op.pol,
           pod: op.pod,
         });

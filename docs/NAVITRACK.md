@@ -168,12 +168,21 @@ Son dos ejes y conviene no mezclarlos:
 
 Del AIS salen dos hechos por puerto, y se guardan una sola vez:
 
-- **Llegada** (`recalado_at`): el proveedor no la informa. `buscarLlegada()` la
-  aproxima con la primera lectura ya guardada que vio al buque detenido
-  (`moored`, `anchor`, `berth`) con ese puerto como destino, **antes del
-  zarpe**. Sin ninguna así —el buque pudo estar ahí un rato demasiado corto
-  para que el chequeo diario lo alcanzara a ver—, se usa el propio zarpe como
-  cota: nunca se afirma una llegada posterior a la salida.
+- **Llegada** (`recalado_at`): el proveedor no la informa. Se aproxima con la
+  primera lectura que ve al buque **detenido y con la posición dentro de**
+  `MISMO_PUERTO_KM` **del puerto declarado**. Las dos condiciones hacen falta:
+  un buque recién zarpado puede seguir mostrando `Moored` un rato mientras
+  suelta amarras, con el destino ya actualizado al próximo puerto —"detenido"
+  solo, sin mirar dónde, marcó a Callao como recalada real el mismo día en que
+  el A00052 zarpaba de San Antonio, a más de 2.000 km de ahí—. Sin coordenadas
+  del puerto no se puede comprobar nada, y se prefiere no afirmar antes que
+  afirmar sin poder verificarlo: la corrobora después `registrarRecalada`,
+  cuando conste que el buque ya zarpó de ahí.
+  `buscarLlegada()` hace lo mismo hacia atrás, en el historial ya guardado, si
+  el seguimiento de un embarque empezó después de un zarpe real. Sin ninguna
+  lectura que sirva —el buque pudo estar ahí un rato demasiado corto para que
+  el chequeo diario lo alcanzara a ver—, se usa el propio zarpe como cota:
+  nunca se afirma una llegada posterior a la salida.
 
   No siempre es "hoy": si el seguimiento de un embarque empieza después de que
   el buque ya zarpó de un puerto (transbordo cargado tarde, o embarque que

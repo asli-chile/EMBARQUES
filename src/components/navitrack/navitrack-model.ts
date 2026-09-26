@@ -105,7 +105,7 @@ const R_EARTH_KM = 6371;
  * dentro de él; además "Rotterdam" y "Rotterdam anch" son el mismo lugar con
  * dos nombres. 30 km cubre esa holgura sin tragarse puertos vecinos reales.
  */
-const MISMO_PUERTO_KM = 30;
+export const MISMO_PUERTO_KM = 30;
 const KM_TO_NM = 0.539957;
 const toRad = (d: number) => (d * Math.PI) / 180;
 const toDeg = (r: number) => (r * 180) / Math.PI;

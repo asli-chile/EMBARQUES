@@ -19,13 +19,14 @@
  * el siguiente.
  */
 
-import { mismoPuerto } from "@/components/navitrack/navitrack-model";
+import { getPortCoordinates } from "@/lib/ports-coordinates";
+import { haversineKm, mismoPuerto, MISMO_PUERTO_KM } from "@/components/navitrack/navitrack-model";
 import { estadoSegunItinerario, leerItinerario } from "@/lib/navitrack/itinerario";
 import { claveAis } from "@/lib/navitrack/ventana";
 
 type Cliente = { from: (tabla: string) => any };
 
-/** El buque está detenido en un puerto, no navegando hacia él. */
+/** El buque está detenido en algún lado, no navegando. Por sí solo no dice dónde. */
 function estaDetenido(navStatus: string | null | undefined): boolean {
   return /moor|anchor|berth/i.test(String(navStatus ?? ""));
 }
@@ -83,6 +84,28 @@ async function buscarLlegada(
   return null;
 }
 
+/**
+ * La posición de la lectura está de verdad cerca del puerto declarado.
+ *
+ * "Detenido" no alcanza por sí solo. Un buque que acaba de zarpar puede seguir
+ * mostrando `Moored` un rato mientras suelta amarras, con el destino **ya**
+ * cambiado al próximo puerto: "detenido + declara Callao" también describe a
+ * un buque parado en San Antonio que recién actualizó su destino. Sin este
+ * chequeo, el A00052 quedó con Callao marcado como recalada real el mismo día
+ * del zarpe desde San Antonio, a más de 2.000 km de distancia.
+ *
+ * Sin coordenadas del puerto no se puede comprobar nada, y no comprobar no es
+ * lo mismo que confirmar: se prefiere no afirmar la llegada antes que
+ * afirmarla sin poder verificarla. La corrobora entonces `registrarRecalada`,
+ * cuando el buque ya haya zarpado de ahí de verdad.
+ */
+function cercaDelPuerto(lat: number | null, lng: number | null, puerto: string): boolean {
+  if (lat == null || lng == null) return false;
+  const c = getPortCoordinates(puerto);
+  if (!c) return false;
+  return haversineKm({ lng, lat }, { lng: c[0], lat: c[1] }) < MISMO_PUERTO_KM;
+}
+
 /** Estados que todavía no dicen nada: los reemplaza el itinerario apenas existe. */
 const SIN_DECIDIR = ["anunciada", "por_verificar", "recalada"];
 
@@ -109,10 +132,13 @@ export async function registrarAnuncio(
     puertoDeclarado: string;
     nave: string | null;
     etaDeclarada: string | null;
-    /** Estado de navegación de la misma lectura: detenido frente al puerto = llegó. */
+    /** Estado de navegación de la misma lectura: detenido = parado en algún lado. */
     navStatus?: string | null;
     /** Cuándo se tomó la posición. Es la mejor aproximación a la hora de llegada. */
     recibidoAt?: string | null;
+    /** Posición de la misma lectura, para comprobar que "detenido" es aquí. */
+    lat?: number | null;
+    lng?: number | null;
     /** Extremos del embarque: ninguno de los dos es una escala. */
     pol: string | null;
     pod: string | null;
@@ -136,15 +162,22 @@ export async function registrarAnuncio(
   const segun = estadoSegunItinerario(itinerario, puerto);
 
   /*
-   * Detenido frente al puerto que declara: el buque llegó.
+   * Detenido y cerca del puerto que declara: el buque llegó.
    *
    * El proveedor no informa la hora de llegada, solo la de zarpe. La primera
-   * lectura que lo ve atracado o fondeado con ese destino es lo más cerca que
-   * se puede estar sin inventar el dato, y se guarda una sola vez.
+   * lectura que lo ve atracado o fondeado **en las coordenadas de ese
+   * puerto** es lo más cerca que se puede estar sin inventar el dato.
+   *
+   * Las dos condiciones hacen falta. Un buque recién zarpado puede seguir
+   * "Moored" un rato mientras suelta amarras, con el destino ya actualizado al
+   * próximo puerto: "detenido" solo, sin mirar dónde, marcó a Callao como
+   * recalada real el mismo día en que el A00052 zarpaba de San Antonio, a más
+   * de 2.000 km de ahí.
    */
-  const llegoAhora = estaDetenido(datos.navStatus)
-    ? (datos.recibidoAt ?? new Date().toISOString())
-    : null;
+  const llegoAhora =
+    estaDetenido(datos.navStatus) && cercaDelPuerto(datos.lat ?? null, datos.lng ?? null, puerto)
+      ? (datos.recibidoAt ?? new Date().toISOString())
+      : null;
 
   /*
    * El puerto ya anotado se busca por identidad de lugar, no por texto exacto.
