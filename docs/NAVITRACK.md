@@ -959,52 +959,91 @@ El detalle es una **pizarra de una sola pantalla**: en `lg` y superiores no hay
 scroll de página. El alto se reparte con flex y `min-h-0`:
 
 ```
-barra superior      shrink-0
-encabezado          shrink-0   identidad + etapa + avance + ruta/ETA
-historia del viaje  shrink-0   línea de tiempo horizontal + Itinerario
-bloque central      flex-1     [ mapa con pestañas | ETA + datos de la operación ]
-franja indicadores  shrink-0   6 o 7 tarjetas
+barra superior      shrink-0   volver + anterior/siguiente
+cabecera            shrink-0   identidad · etapa · avance · MN restantes · "Opciones"
+historial del viaje shrink-0   stepper horizontal
+bloque central      flex-1     [ mapa con pestañas | Información del embarque ]
 ```
+
+La **Información del embarque** (columna derecha) lleva, de arriba abajo:
+
+1. Un bloque de tres columnas: embarque, booking y cliente; ruta, nave y
+   viaje; ETA de destino y la llegada que anuncia el buque, **con el puerto al
+   que se refiere** (mientras declara Callao, esa hora es la de Callao).
+2. Desvío prometido contra real e incidencias, solo si hay algo que decir.
+3. Nueve indicadores: nave inicial, buque actual, velocidad; último puerto,
+   próximo puerto, puerto de destino; posición actual ("Ver en mapa" acerca el
+   mapa al buque), AIS y distancia restante.
 
 Reglas para no romperlo:
 
-- **Todo lo que se agregue arriba o abajo va `shrink-0`**; lo que debe absorber
-  el alto sobrante va `flex-1 min-h-0`. Sin `min-h-0` un hijo flex nunca se
-  encoge por debajo de su contenido y reaparece el scroll de página.
-- **Solo los datos de la operación scrollean por dentro** (en vertical), porque
-  es la única lista de largo variable de la columna. La historia del viaje se
-  desplaza en **horizontal** cuando no caben los hitos, y al abrirse se centra en
-  el hito actual. Si una sección nueva puede crecer, va dentro de una pestaña o
-  con su propio `overflow-y-auto`, nunca empujando la página.
+- **Todo lo que se agregue arriba va `shrink-0`**; lo que debe absorber el alto
+  sobrante va `flex-1 min-h-0`. Sin `min-h-0` un hijo flex nunca se encoge por
+  debajo de su contenido y reaparece el scroll de página.
+- **Solo la Información del embarque se desplaza por dentro** si la pantalla es
+  baja. El historial se desplaza en **horizontal** cuando no caben los hitos, y
+  al abrirse se centra en el actual. Si una sección nueva puede crecer, va en una
+  pestaña o con su propio `overflow-y-auto`, nunca empujando la página.
 - **Bajo `lg` la pizarra no cabe** y la vista vuelve a ser una columna con
-  scroll (`lg:overflow-hidden` en la raíz). Forzar la pizarra en un teléfono
-  produciría texto ilegible; esto es deliberado.
-- El panel izquierdo tiene pestañas (**Vista de ruta**, **Información del
-  buque**, y **Transbordo** solo cuando hay algo que resolver). Las pestañas son
-  el lugar donde va lo que no cabe: sumar una sección nueva ahí no le quita alto
-  a nada.
+  scroll (`lg:overflow-hidden` en la raíz). Forzarla en un teléfono produciría
+  texto ilegible; es deliberado.
+- El panel del mapa tiene pestañas: **Vista de ruta**, **Datos de la
+  operación**, **Información del buque**, **Escalas** (solo quien puede gastar)
+  y **Transbordo** (solo cuando hay algo que resolver). Son el lugar para lo que
+  no cabe: sumar una ahí no le quita alto a nada. La leyenda del mapa va en la
+  misma barra, no sobre el mapa, para no tapar la ruta.
+- **Lo que flota va en un portal.** El menú "Opciones" y la ventana de "Ver
+  JSON" se montan en `document.body`. Dentro de la ficha quedaban tapados:
+  cada tarjeta forma su propia capa (la animación de entrada deja un
+  `transform`) y la siguiente en la página se pinta encima, sin importar el
+  z-index. Al salir de la ficha pierden el tema, así que llevan su propio
+  envoltorio `dash-neon` con `data-theme`.
 
-**Cambios del 26-09-2026.**
+### Tres tonos, un solo significado
 
-- **La historia del viaje está sobre el mapa**, como línea horizontal: lo
-  cumplido a la izquierda, lo que falta a la derecha, el hito actual destacado
-  (`NavitrackTimelineHorizontal`). Antes era una lista vertical en la columna
-  derecha, de lo más nuevo a lo más viejo, que obligaba a leer el viaje al revés
-  del mapa. El orden y los sellos (real, confirmado, anunciado, estimado) no
-  cambiaron: salen de `construirTimeline`, igual que antes.
-- **La columna derecha muestra los datos de la operación**, agrupados en
-  Embarque, Carga y Fechas, con la lista de transbordos (anunciado contra real)
-  al final. Un dato vacío no se muestra y un grupo sin datos desaparece: una
-  grilla de guiones ocuparía el lugar sin decir nada. Quedan fuera montos,
-  márgenes y facturas, porque el cliente también mira esta ficha, y
-  `observaciones`, que es nota interna.
-- **Se retiró la franja inferior**: la nota de procedencia, "Última
-  actualización" y el botón "Cargar posición del buque" con su ventana
-  (`NavitrackCoordsManual`, eliminada). La procedencia de la posición la sigue
-  diciendo la tarjeta "Posición actual" (AIS satelital / posición calculada),
-  con la fecha exacta de la lectura. Las coordenadas cargadas antes **no se
-  borraron**: `resolvePosition` las sigue usando cuando no hay AIS, y la RPC
+En toda la ficha, `--estado-ok` es lo que ya pasó, `--dash-neon` es el
+presente y `--dash-muted` lo que falta. Los usa el stepper (nodo, riel y
+píldora), la barra de distancia y las barras de señal del AIS. Un color nuevo
+para cualquiera de esos tres estados rompería la lectura: se vería como un
+cuarto estado.
+
+- **Stepper del historial** (`NavitrackTimelineHorizontal`): nodo lleno con
+  tilde para lo cumplido, nodo en el acento con halo para el presente, anillo
+  claro para el **próximo** paso y anillo apagado para el resto. El riel entre
+  dos pasos toma el color de haber llegado al segundo; el tramo que entra al
+  presente se funde de `--estado-ok` al acento. Bajo cada paso, una píldora:
+  "Completado", "Actual" o la certeza (anunciado, estimado, confirmado). De
+  dónde salió un hito cumplido sigue a mano, al pasar el mouse sobre la
+  píldora. El orden y la certeza salen de `construirTimeline`, sin cambios.
+- **Señal AIS**: cuatro barras hasta 12 h desde la lectura, tres hasta 24 h, dos
+  hasta 48 h y una después. Miden qué tan fresco es el dato, no la calidad de
+  la señal, que el proveedor no informa. Una posición calculada no tiene
+  barras.
+- **Chips del mapa**: nombre del puerto y su fecha debajo. El origen muestra el
+  zarpe real o el ETD; el destino, la ETA comprometida; una escala, su llegada
+  real o la anunciada (`fechaDePuerto` en `NavitrackShipment.tsx`).
+
+**"Ver documentos (N)"** lleva a `/documentos/mis-documentos?op=<id>`, el mismo
+enlace que usan Mis Reservas y Registros. N es un conteo (`head: true`) sobre
+`documentos`: la lista la muestra Documentos, no esta ficha.
+
+### Lo que se retiró el 26-09-2026
+
+- **La franja inferior**: la nota de procedencia y el botón "Cargar posición del
+  buque" con su ventana (`NavitrackCoordsManual`, eliminada). La procedencia
+  la dice la tarjeta AIS ("Señal satelital" o "Sin señal satelital"), y la
+  última actualización está en la cabecera. Las coordenadas cargadas antes **no
+  se borraron**: `resolvePosition` las sigue usando cuando no hay AIS, y la RPC
   `sync_operaciones_tracking_manual` sigue en la base, sin nadie que la llame.
+- **La franja de indicadores bajo el mapa**: sus tarjetas pasaron a la grilla de
+  la Información del embarque. La nave inicial se muestra también en un viaje
+  directo, donde coincide con la actual: la grilla es de nueve y un hueco se
+  leería como un dato que falta.
+- **Los datos de la operación como columna**: pasaron a una pestaña del mapa.
+  Van agrupados en Embarque, Carga y Fechas, con la lista de transbordos
+  (anunciado contra real) al final. Un dato vacío no se muestra. Quedan fuera
+  montos, márgenes, facturas y `observaciones`, porque el cliente también mira
+  esta ficha.
 
 ---
 

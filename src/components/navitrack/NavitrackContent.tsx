@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
-import { getApiOriginPrefix } from "@/lib/basePath";
+import { getApiOriginPrefix, withBase } from "@/lib/basePath";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { ModuleSoftFallback } from "@/components/ui/ModuleSoftFallback";
 import "@/styles/tracking-brand.css";
@@ -233,6 +233,15 @@ export function NavitrackContent() {
   const [rastroDe, setRastroDe] = useState<{ opId: string | null; porNave: Map<string, PuntoRastro[]> }>({
     opId: null,
     porNave: new Map(),
+  });
+
+  /**
+   * Cuántos documentos tiene cargados el embarque abierto, para el botón que
+   * lleva a ellos. Etiquetado con el embarque, igual que el resto del detalle.
+   */
+  const [documentosDe, setDocumentosDe] = useState<{ opId: string | null; n: number | null }>({
+    opId: null,
+    n: null,
   });
 
   const [escalasDe, setEscalasDe] = useState<{ opId: string | null; filas: Escala[] }>({
@@ -665,6 +674,23 @@ export function NavitrackContent() {
     if (!user) return;
     void cargarRecaladas();
   }, [user, cargarRecaladas]);
+
+  // Solo el conteo (`head: true`): la lista la muestra Documentos, no esta ficha.
+  useEffect(() => {
+    if (!supabase || !seleccionId) return;
+    const opId = seleccionId;
+    let vigente = true;
+    void supabase
+      .from("documentos")
+      .select("id", { count: "exact", head: true })
+      .eq("operacion_id", opId)
+      .then(({ count, error }) => {
+        if (vigente) setDocumentosDe({ opId, n: error ? null : (count ?? 0) });
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [supabase, seleccionId]);
 
   /**
    * Por dónde navegó de verdad la carga del embarque abierto.
@@ -1243,6 +1269,8 @@ export function NavitrackContent() {
                   ? undefined
                   : (foco?: string | null) => setItinerarioAbierto({ foco: foco ?? null })
               }
+              documentosCount={documentosDe.opId === seleccion.id ? documentosDe.n : null}
+              documentosHref={`${withBase("/documentos/mis-documentos")}?op=${encodeURIComponent(seleccion.id)}`}
               avisoRecalada={avisoRecalada}
               op={seleccion}
               ais={ais}

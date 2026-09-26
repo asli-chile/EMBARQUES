@@ -108,7 +108,62 @@ type NavitrackMapProps = {
   vesselSpeed: number | null;
   theme: NeonTheme;
   labels: NavitrackMapLabels;
+  /**
+   * Fecha a mostrar bajo el nombre de cada puerto, ya formateada. La calcula
+   * la ficha, que es la que conoce el zarpe, las recaladas y los tramos; el
+   * mapa solo la pinta. Sin fecha, la etiqueta queda con el nombre.
+   */
+  fechaDePuerto?: (nombre: string) => string | null;
+  /** La ficha puede llevar la leyenda en su propia barra. */
+  mostrarLeyenda?: boolean;
+  /**
+   * Cada vez que cambia, el mapa se acerca al buque. Es la puerta para que un
+   * botón de afuera ("Ver en mapa") haga lo mismo que el clic sobre el barco.
+   */
+  enfocarSolicitud?: number;
 };
+
+/** Qué significa cada trazo y punto del mapa. Exportada para usarla fuera del mapa. */
+export function NavitrackLeyenda({
+  esReal,
+  labels,
+  className = "",
+}: {
+  esReal: boolean;
+  labels: Pick<NavitrackMapLabels, "recorrido" | "restante" | "posicionReal" | "posicionEstimada" | "puerto">;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-x-3.5 gap-y-1 ${className}`}>
+      <span className="nt-legend nt-legend--plana">
+        <span className="nt-legend-line nt-legend-line--done" aria-hidden />
+        {labels.recorrido}
+      </span>
+      <span className="nt-legend nt-legend--plana">
+        <span className="nt-legend-line nt-legend-line--todo" aria-hidden />
+        {labels.restante}
+      </span>
+      <span className="nt-legend nt-legend--plana">
+        <span className={`nt-legend-dot ${esReal ? "nt-legend-dot--real" : "nt-legend-dot--est"}`} aria-hidden />
+        {esReal ? labels.posicionReal : labels.posicionEstimada}
+      </span>
+      <span className="nt-legend nt-legend--plana">
+        <span className="nt-legend-dot nt-legend-dot--puerto" aria-hidden />
+        {labels.puerto}
+      </span>
+    </div>
+  );
+}
+
+/** Nombre del puerto y, debajo, su fecha: el chip dice dónde y cuándo. */
+function ChipPuerto({ nombre, fecha, className = "" }: { nombre: string; fecha: string | null; className?: string }) {
+  return (
+    <span className={`nt-map-chip ${className}`}>
+      <span className="block truncate">{nombre}</span>
+      {fecha && <span className="nt-map-chip-fecha block truncate">{fecha}</span>}
+    </span>
+  );
+}
 
 /** Lo que se usa de la instancia de MapLibre, sin arrastrar todo su tipo. */
 type MapaLibre = {
@@ -116,7 +171,16 @@ type MapaLibre = {
   fitBounds: (b: [[number, number], [number, number]], o?: object) => void;
 };
 
-export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }: NavitrackMapProps) {
+export function NavitrackMap({
+  journey,
+  vesselName,
+  vesselSpeed,
+  theme,
+  labels,
+  fechaDePuerto,
+  mostrarLeyenda = true,
+  enfocarSolicitud = 0,
+}: NavitrackMapProps) {
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -183,6 +247,15 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
 
   /** Vuelve a la ruta completa. */
   const verRutaCompleta = useCallback(() => setEnfocado(false), []);
+
+  // Un botón de la ficha pidió ver el buque: mismo gesto que el clic sobre él.
+  useEffect(() => {
+    if (enfocarSolicitud > 0 && ready) enfocarBuque();
+    // Solo reacciona a una solicitud nueva, no a cada cambio de posición.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enfocarSolicitud, ready]);
+
+  const fecha = (nombre: string) => fechaDePuerto?.(nombre) ?? null;
 
   const esReal = position?.source === "AIS";
 
@@ -420,7 +493,7 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
             {isValidCoord(origen.coord) && (
               <Marker longitude={origen.coord.lng} latitude={origen.coord.lat} anchor="center">
                 <div className="flex flex-col items-center gap-1">
-                  <span className="nt-map-chip">{origen.nombre || labels.origen}</span>
+                  <ChipPuerto nombre={origen.nombre || labels.origen} fecha={fecha(origen.nombre)} />
                   <span className="nt-port-dot nt-port-dot--pol" aria-hidden />
                 </div>
               </Marker>
@@ -429,7 +502,7 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
             {isValidCoord(destino.coord) && (
               <Marker longitude={destino.coord.lng} latitude={destino.coord.lat} anchor="center">
                 <div className="flex flex-col items-center gap-1">
-                  <span className="nt-map-chip">{destino.nombre || labels.destino}</span>
+                  <ChipPuerto nombre={destino.nombre || labels.destino} fecha={fecha(destino.nombre)} />
                   <span className="nt-port-dot nt-port-dot--pod" aria-hidden />
                 </div>
               </Marker>
@@ -453,7 +526,7 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
             {previstos.map((c) => (
               <Marker key={`prev-${c.nombre}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
                 <div className="flex flex-col items-center gap-1">
-                  <span className="nt-map-chip nt-map-chip--prevista">{c.nombre}</span>
+                  <ChipPuerto nombre={c.nombre} fecha={fecha(c.nombre)} className="nt-map-chip--prevista" />
                   <span className="nt-port-dot nt-port-dot--prevista" aria-hidden />
                 </div>
               </Marker>
@@ -462,10 +535,11 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
             {conexiones.map((c) => (
               <Marker key={`${c.nombre}-${c.coord.lng}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
                 <div className="flex flex-col items-center gap-1">
-                  <span className="nt-map-chip nt-map-chip--conexion">
-                    {c.nombre}
-                    {c.nave ? ` · ${c.nave}` : ""}
-                  </span>
+                  <ChipPuerto
+                    nombre={`${c.nombre}${c.nave ? ` · ${c.nave}` : ""}`}
+                    fecha={fecha(c.nombre)}
+                    className="nt-map-chip--conexion"
+                  />
                   <span
                     className={`nt-port-dot nt-port-dot--conexion${c.cumplida ? " is-cumplida" : ""}`}
                     aria-hidden
@@ -584,24 +658,9 @@ export function NavitrackMap({ journey, vesselName, vesselSpeed, theme, labels }
         </div>
       )}
 
-      {!mapError && (
-        <div className="pointer-events-none absolute bottom-2.5 left-2.5 z-[6] hidden flex-wrap items-center gap-1.5 sm:flex">
-          <span className="nt-legend">
-            <span className="nt-legend-line nt-legend-line--done" aria-hidden />
-            {labels.recorrido}
-          </span>
-          <span className="nt-legend">
-            <span className="nt-legend-line nt-legend-line--todo" aria-hidden />
-            {labels.restante}
-          </span>
-          <span className="nt-legend">
-            <span className={`nt-legend-dot ${esReal ? "nt-legend-dot--real" : "nt-legend-dot--est"}`} aria-hidden />
-            {esReal ? labels.posicionReal : labels.posicionEstimada}
-          </span>
-          <span className="nt-legend">
-            <span className="nt-legend-dot nt-legend-dot--puerto" aria-hidden />
-            {labels.puerto}
-          </span>
+      {!mapError && mostrarLeyenda && (
+        <div className="pointer-events-none absolute bottom-2.5 left-2.5 z-[6] hidden sm:block">
+          <NavitrackLeyenda esReal={esReal} labels={labels} className="nt-legend-caja" />
         </div>
       )}
     </div>

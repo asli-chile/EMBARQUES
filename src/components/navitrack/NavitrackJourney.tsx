@@ -4,8 +4,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import type { Locale } from "@/lib/i18n/translations";
 import { fmtFechaCorta, fmtFechaHora } from "./navitrack-format";
-import type { EventoViaje, NavitrackEtapa, TransbordoDecision } from "./navitrack-estado";
-import { ETAPA_META } from "./navitrack-estado";
+import type { EventoViaje, TransbordoDecision } from "./navitrack-estado";
 import type { Escala } from "./navitrack-model";
 
 type Textos = Record<string, string>;
@@ -40,7 +39,6 @@ const EVENTO_LABEL: Record<string, string> = {
 
 type TimelineProps = {
   eventos: EventoViaje[];
-  etapa: NavitrackEtapa;
   locale: Locale;
   tr: Textos;
 };
@@ -51,12 +49,6 @@ const CERTEZA_KEY: Record<EventoViaje["certeza"], string> = {
   ANUNCIADO: "certezaAnunciado",
   ESTIMADO: "certezaEstimado",
 };
-
-function claseCerteza(certeza: EventoViaje["certeza"]): string {
-  if (certeza === "REAL") return "nt-certainty--real";
-  if (certeza === "CONFIRMADO" || certeza === "ANUNCIADO") return "nt-certainty--confirmado";
-  return "";
-}
 
 /**
  * La fecha de un hito, con la precisión que el dato tiene.
@@ -69,21 +61,24 @@ function fechaDeEvento(ev: EventoViaje, locale: Locale): string | null {
   return conHora ? fmtFechaHora(ev.fecha, locale) : fmtFechaCorta(ev.fecha, locale);
 }
 
+/** En qué punto del viaje está un hito, que es lo que decide cómo se pinta. */
+type PasoEstado = "hecho" | "actual" | "proximo" | "pendiente";
+
 /**
- * La historia del viaje como una línea horizontal, de izquierda (lo que pasó)
+ * La historia del viaje como un stepper horizontal, de izquierda (lo que pasó)
  * a derecha (lo que falta).
  *
- * Va sobre el mapa y no al costado porque cuenta lo mismo que la ruta, en el
- * mismo sentido de lectura: un recorrido de un extremo al otro. En la columna
- * lateral era una lista vertical de lo más nuevo a lo más viejo, que obligaba a
- * leer el viaje al revés y le quitaba al mapa el espacio para los datos de la
- * operación.
+ * Va sobre el mapa porque cuenta lo mismo que la ruta y en el mismo sentido de
+ * lectura. Un riel continuo une los pasos y cambia de color con el avance: lo
+ * cumplido en el tono de "completo", el tramo que llega al presente fundido
+ * hacia el acento, y lo que falta apagado. El próximo paso lleva un anillo
+ * claro: es lo siguiente que va a pasar, y es lo que el ojo busca después del
+ * presente.
  *
  * Con muchos hitos se desplaza en horizontal, y al abrirse se centra en el hito
  * actual: lo que se quiere ver primero es dónde va la carga, no cómo empezó.
  */
-export function NavitrackTimelineHorizontal({ eventos, etapa, locale, tr }: TimelineProps) {
-  const tono = ETAPA_META[etapa].tono;
+export function NavitrackTimelineHorizontal({ eventos, locale, tr }: TimelineProps) {
   const contenedor = useRef<HTMLOListElement>(null);
 
   useEffect(() => {
@@ -95,66 +90,96 @@ export function NavitrackTimelineHorizontal({ eventos, etapa, locale, tr }: Time
     ol.scrollLeft = actual.offsetLeft - ol.clientWidth / 2 + actual.clientWidth / 2;
   }, [eventos]);
 
-  const hecho = (ev: EventoViaje | undefined) => Boolean(ev && (ev.cumplido || ev.actual));
+  const idxProximo = eventos.findIndex((e) => !e.cumplido && !e.actual);
+  const estadoDe = (i: number): PasoEstado => {
+    const ev = eventos[i];
+    if (ev.actual) return "actual";
+    if (ev.cumplido) return "hecho";
+    return i === idxProximo ? "proximo" : "pendiente";
+  };
+
+  /*
+   * El riel se arma con dos mitades por paso, una a cada lado del nodo. La
+   * mitad que entra a un paso toma el color de haber llegado a él: así el
+   * tramo hacia el presente puede fundirse de "completo" al acento sin que
+   * ningún tramo pinte algo que todavía no pasó.
+   */
+  const claseEntrada = (i: number): string => {
+    const e = estadoDe(i);
+    if (e === "hecho") return "nt-step-seg--hecho";
+    if (e === "actual") return "nt-step-seg--hacia";
+    if (e === "proximo" && eventos.some((x) => x.actual)) return "nt-step-seg--acento";
+    return "";
+  };
+  const claseSalida = (i: number): string => {
+    if (i + 1 >= eventos.length) return "";
+    const siguiente = claseEntrada(i + 1);
+    if (siguiente === "nt-step-seg--hacia") return "nt-step-seg--hecho";
+    return siguiente;
+  };
 
   return (
-    <ol
-      ref={contenedor}
-      aria-label={tr.historiaDesliza}
-      className={`nt-tone--${tono} relative flex overflow-x-auto pb-1`}
-    >
+    <ol ref={contenedor} aria-label={tr.historiaDesliza} className="relative flex overflow-x-auto pb-1">
       {eventos.map((ev, i) => {
+        const estado = estadoDe(i);
         const fecha = fechaDeEvento(ev, locale);
-        const vivo = ev.cumplido || ev.actual;
+        const certeza = tr[CERTEZA_KEY[ev.certeza]];
+        const pildora =
+          estado === "hecho" ? tr.pasoCompletado : estado === "actual" ? tr.pasoActual : certeza;
         return (
           <li
             key={`${ev.codigo}-${i}`}
             data-actual={ev.actual ? "true" : undefined}
-            className="flex min-w-[9.5rem] flex-1 flex-col items-center px-1"
+            className="flex min-w-[8.75rem] flex-1 flex-col items-center"
           >
-            <div className="flex w-full items-center">
-              <span
-                className={`nt-htl-seg ${i === 0 ? "nt-htl-seg--hidden" : hecho(ev) ? "nt-htl-seg--done" : ""}`}
-              />
-              <span className={`nt-tl-dot ${ev.actual ? "nt-tl-dot--now" : ev.cumplido ? "nt-tl-dot--done" : ""}`}>
-                <Icon
-                  icon={ev.cumplido && !ev.actual ? "lucide:check" : EVENTO_ICON[ev.codigo]}
-                  width={12}
-                  height={12}
-                  aria-hidden
-                />
+            <div className="relative flex h-9 w-full items-center justify-center">
+              {i > 0 && <span className={`nt-step-seg nt-step-seg--izq ${claseEntrada(i)}`} aria-hidden />}
+              {i < eventos.length - 1 && (
+                <span className={`nt-step-seg nt-step-seg--der ${claseSalida(i)}`} aria-hidden />
+              )}
+              <span className={`nt-step-node nt-step-node--${estado}`}>
+                {estado === "hecho" ? (
+                  <Icon icon="lucide:check" width={15} height={15} aria-hidden />
+                ) : estado === "actual" ? (
+                  <Icon icon={EVENTO_ICON[ev.codigo]} width={14} height={14} aria-hidden />
+                ) : (
+                  <span className="nt-step-node-core" aria-hidden />
+                )}
               </span>
-              <span
-                className={`nt-htl-seg ${
-                  i === eventos.length - 1 ? "nt-htl-seg--hidden" : hecho(eventos[i + 1]) ? "nt-htl-seg--done" : ""
-                }`}
-              />
             </div>
 
-            <div className="mt-1.5 flex w-full min-w-0 flex-col items-center text-center">
+            <div className="mt-2 flex w-full min-w-0 flex-col items-center px-1.5 text-center">
               <p
-                className={`max-w-full truncate text-[12.5px] font-bold leading-tight ${
-                  vivo ? "text-dash-fg" : "text-dash-muted"
+                className={`max-w-full truncate text-[13px] font-extrabold leading-tight ${
+                  estado === "pendiente" ? "text-dash-muted" : "text-dash-fg"
                 }`}
               >
                 {tr[EVENTO_LABEL[ev.codigo]] ?? ev.codigo}
               </p>
-              <span className={`nt-certainty mt-1 ${claseCerteza(ev.certeza)}`}>{tr[CERTEZA_KEY[ev.certeza]]}</span>
               {ev.lugar && (
-                <p className="mt-1 max-w-full truncate text-[11px] font-semibold text-dash-fg/85" title={ev.lugar}>
+                <p
+                  className="mt-0.5 max-w-full truncate text-[10.5px] font-semibold uppercase tracking-wide text-dash-muted"
+                  title={ev.lugar}
+                >
                   {ev.lugar}
                 </p>
               )}
-              {fecha && <p className="max-w-full truncate text-[11px] text-dash-muted tabular-nums">{fecha}</p>}
+              {fecha && (
+                <p className="max-w-full truncate text-[10.5px] uppercase text-dash-muted tabular-nums">{fecha}</p>
+              )}
               {/* Sin las dos naves, un transbordo no dice de qué buque a cuál pasó la carga. */}
               {ev.codigo === "TRANSBORDO" && ev.naveAnterior && (
                 <p
-                  className="max-w-full truncate text-[10.5px] text-dash-muted"
+                  className="max-w-full truncate text-[10px] text-dash-muted"
                   title={`${ev.naveAnterior} → ${ev.nave ?? tr.itNavePorConfirmar}`}
                 >
                   {ev.naveAnterior} → {ev.nave ?? <em>{tr.itNavePorConfirmar}</em>}
                 </p>
               )}
+              {/* Lo cumplido dice "completado"; de dónde salió el dato queda a mano, al pasar el mouse. */}
+              <span className={`nt-step-pill nt-step-pill--${estado} mt-1.5`} title={certeza}>
+                {pildora}
+              </span>
             </div>
           </li>
         );

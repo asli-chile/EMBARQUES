@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
 import type { Locale } from "@/lib/i18n/translations";
 import type { NeonTheme } from "@/lib/ui/neonTheme";
-import { NavitrackMap } from "./NavitrackMap";
+import { NavitrackLeyenda, NavitrackMap } from "./NavitrackMap";
 import { NavitrackJsonCrudo } from "./NavitrackJsonCrudo";
 import { NavieraLogo } from "./NavieraLogo";
 import { NavitrackCadena, NavitrackTimelineHorizontal, NavitrackTransbordo } from "./NavitrackJourney";
@@ -12,7 +13,7 @@ import { isoDePais, isoDePuerto } from "./navitrack-banderas";
 import type { ModoViaje, Recalada } from "./NavitrackItinerario";
 import { desvioEta, estadoDesvio, formatoDesvio, sentidoDesvio } from "@/lib/operaciones/desvioEta";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
-import { fmtFecha, fmtFechaHora, fmtNm, interpolar } from "./navitrack-format";
+import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 import {
   parseOpDate,
@@ -88,6 +89,7 @@ function Stat({
   valor,
   sub,
   extra,
+  pie,
   className,
 }: {
   icon: string;
@@ -95,6 +97,8 @@ function Stat({
   valor: React.ReactNode;
   sub?: string | null;
   extra?: React.ReactNode;
+  /** Algo bajo el valor: un botón o una barra. */
+  pie?: React.ReactNode;
   className?: string;
 }) {
   return (
@@ -106,6 +110,7 @@ function Stat({
         <span className="nt-stat-label block">{label}</span>
         <span className="nt-stat-value mt-0.5 block truncate tabular-nums">{valor}</span>
         {sub && <span className="nt-stat-sub mt-0.5 block truncate">{sub}</span>}
+        {pie}
       </span>
       {extra}
     </div>
@@ -184,7 +189,7 @@ function BotonCopiar({ texto, tr }: { texto: string; tr: Textos }) {
 
 /* --------------------------------- Vista ----------------------------------- */
 
-type Pestana = "ruta" | "buque" | "escalas" | "transbordo";
+type Pestana = "ruta" | "datos" | "buque" | "escalas" | "transbordo";
 
 export type Escala = {
   puerto: string | null;
@@ -221,6 +226,10 @@ type ShipmentProps = {
    * Ausente para quien no decide.
    */
   onEditarItinerario?: (foco?: string | null) => void;
+  /** Documentos cargados de este embarque. Null mientras no se sabe. */
+  documentosCount: number | null;
+  /** Enlace a Documentos, ya abierto en este embarque. */
+  documentosHref: string;
   /** Resultado de la última decisión, para confirmarla en pantalla. */
   avisoRecalada: string | null;
   op: NavitrackOperacion;
@@ -281,6 +290,8 @@ export function NavitrackShipment({
   recaladas,
   modoViaje,
   onEditarItinerario,
+  documentosCount,
+  documentosHref,
   avisoRecalada,
   eventos,
   decision,
@@ -318,6 +329,65 @@ export function NavitrackShipment({
 
   const [pestana, setPestana] = useState<Pestana>("ruta");
   const [jsonAbierto, setJsonAbierto] = useState(false);
+  /*
+   * Menú "Opciones": dónde abrirlo, o null si está cerrado.
+   *
+   * Se monta en `body` con posición fija bajo el botón, no dentro de la
+   * cabecera. Adentro quedaba tapado por el historial del viaje: cada tarjeta
+   * forma su propia capa (la animación de entrada deja un `transform`), y la
+   * que viene después en la página se pinta encima sin importar el z-index del
+   * menú. Es el mismo arreglo que la ventana de "Ver JSON".
+   */
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+  const menuAbierto = menuPos != null;
+  const setMenuAbierto = (abrir: boolean) => {
+    if (!abrir) return setMenuPos(null);
+    const r = menuRef.current?.getBoundingClientRect();
+    if (r) setMenuPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
+  };
+  /** Se incrementa para pedirle al mapa que se acerque al buque. */
+  const [enfocarSolicitud, setEnfocarSolicitud] = useState(0);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * Se cierra al hacer clic afuera, con Escape, o si la página se desplaza o
+   * cambia de tamaño: con posición fija, el menú quedaría flotando lejos del
+   * botón que lo abrió.
+   */
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const cerrar = () => setMenuPos(null);
+    const alClic = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!menuRef.current?.contains(t) && !menuPanelRef.current?.contains(t)) cerrar();
+    };
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cerrar();
+    };
+    document.addEventListener("mousedown", alClic);
+    document.addEventListener("keydown", alTeclear);
+    window.addEventListener("resize", cerrar);
+    window.addEventListener("scroll", cerrar, true);
+    return () => {
+      document.removeEventListener("mousedown", alClic);
+      document.removeEventListener("keydown", alTeclear);
+      window.removeEventListener("resize", cerrar);
+      window.removeEventListener("scroll", cerrar, true);
+    };
+  }, [menuAbierto]);
+
+  const relativos = {
+    haceMenosDeUnMinuto: tr.haceMenosDeUnMinuto,
+    haceMinutos: tr.haceMinutos,
+    haceHoras: tr.haceHoras,
+    haceDias: tr.haceDias,
+    haceUnMinuto: tr.haceUnMinuto,
+    haceUnaHora: tr.haceUnaHora,
+    haceUnDia: tr.haceUnDia,
+  };
+  const actualizado = fmtRelativo(journey.position?.at ?? null, relativos);
+  const actualizadoExacto = fmtFechaHora(journey.position?.at ?? null, locale);
   // Si la sospecha se resuelve estando en esa pestaña, no dejar una vista vacía.
   useEffect(() => {
     if (pestana === "transbordo" && !mostrarTransbordo) setPestana("ruta");
@@ -526,6 +596,36 @@ export function NavitrackShipment({
     .map((g) => ({ ...g, datos: g.datos.filter(([, v]) => v != null && v !== "") }))
     .filter((g) => g.datos.length > 0);
 
+  /*
+   * Fecha bajo cada puerto del mapa: lo ocurrido si consta, si no lo anunciado.
+   *
+   * El origen lleva el zarpe real o el ETD; el destino, la ETA comprometida; una
+   * escala, su llegada real o la anunciada por el buque; un transbordo sin
+   * recalada, la llegada que anunció la naviera para ese tramo.
+   */
+  const fechaDePuerto = (nombre: string): string | null => {
+    if (!nombre) return null;
+    if (mismoPuerto(nombre, journey.origen.nombre)) {
+      return fmtFecha(op.zarpe_real_at ? new Date(op.zarpe_real_at) : parseOpDate(op.etd), locale);
+    }
+    if (mismoPuerto(nombre, journey.destino.nombre)) return etaErp;
+    const r = recaladas.find((x) => mismoPuerto(x.puerto, nombre));
+    if (r?.recalado_at) return fmtFecha(new Date(r.recalado_at), locale);
+    if (r?.eta_anunciada) return fmtFecha(new Date(r.eta_anunciada), locale);
+    const t = tramos.find((x) => mismoPuerto(x.pod, nombre));
+    return t?.eta ? fmtFecha(parseOpDate(t.eta), locale) : null;
+  };
+
+  /*
+   * Qué tan fresca es la señal: cuatro barras hasta 12 h, una pasado dos días.
+   *
+   * El chequeo diario lee una vez al día, así que "fresca" se mide en horas y
+   * no en minutos. Una posición calculada no tiene señal: ninguna barra.
+   */
+  const edadH = journey.position?.at ? (Date.now() - journey.position.at.getTime()) / 3_600_000 : null;
+  const nivelSenal =
+    !esReal || edadH == null ? 0 : edadH <= 12 ? 4 : edadH <= 24 ? 3 : edadH <= 48 ? 2 : 1;
+
   const mapLabels = {
     origen: tr.origen,
     destino: tr.destino,
@@ -545,6 +645,9 @@ export function NavitrackShipment({
 
   const pestanas: { id: Pestana; label: string; icon: string }[] = [
     { id: "ruta", label: tr.tabRuta, icon: "lucide:map" },
+    ...(gruposDatos.length || transbordosDelViaje.length
+      ? [{ id: "datos" as const, label: tr.datosOperacion, icon: "lucide:clipboard-list" }]
+      : []),
     { id: "buque", label: tr.tabBuque, icon: "lucide:ship" },
     // Escalas le pide al proveedor el historial del buque: es la consulta más
     // cara del plan, así que la ve quien puede gastarla.
@@ -557,9 +660,9 @@ export function NavitrackShipment({
   ];
 
   return (
-    <div className="motion-view-section flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 pb-5 sm:gap-2 sm:p-2.5 lg:overflow-hidden">
-      {/* Barra superior: salir del detalle y refrescar. */}
-      <div className="flex shrink-0 items-center justify-between gap-2 max-sm:order-1">
+    <div className="motion-view-section flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3 pb-5 sm:p-2.5 lg:overflow-hidden">
+      {/* Barra superior: salir del detalle y recorrer la lista sin volver a ella. */}
+      <div className="flex shrink-0 items-center justify-between gap-2">
         <button
           type="button"
           onClick={onBack}
@@ -568,112 +671,68 @@ export function NavitrackShipment({
           <Icon icon="lucide:arrow-left" width={16} height={16} aria-hidden />
           <span className="max-sm:sr-only">{tr.volverEmbarques}</span>
         </button>
-        <div className="flex items-center gap-2">
-          {/* Recorrer la lista sin volver a ella: es el gesto de revisar la flota. */}
-          {indiceEnLista >= 0 && totalEnLista > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={onAnterior}
-                disabled={indiceEnLista <= 0}
-                title={tr.anteriorEmbarque}
-                aria-label={tr.anteriorEmbarque}
-                className="dash-control motion-interactive inline-flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
-              >
-                <Icon icon="lucide:chevron-left" width={15} height={15} aria-hidden />
-              </button>
-              <span className="min-w-[3.5rem] text-center text-[12.5px] font-semibold text-dash-muted tabular-nums sm:min-w-[4.5rem] sm:text-[11px]">
-                {interpolar(tr.posicionLista, {
-                  i: String(indiceEnLista + 1),
-                  n: String(totalEnLista),
-                })}
-              </span>
-              <button
-                type="button"
-                onClick={onSiguiente}
-                disabled={indiceEnLista >= totalEnLista - 1}
-                title={tr.siguienteEmbarque}
-                aria-label={tr.siguienteEmbarque}
-                className="dash-control motion-interactive inline-flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
-              >
-                <Icon icon="lucide:chevron-right" width={15} height={15} aria-hidden />
-              </button>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refrescando}
-            className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-2 text-[12px] font-semibold disabled:opacity-60"
-          >
-            <Icon
-              icon="lucide:refresh-cw"
-              width={14}
-              height={14}
-              className={refrescando ? "animate-spin" : ""}
-              aria-hidden
-            />
-            <span className="max-sm:sr-only">{tr.refresh}</span>
-          </button>
-
-          {/*
-            * Solo personal interno: es la respuesta cruda del proveedor, sin
-            * traducir. Muestra la última lectura ya guardada; no gasta nada.
-            */}
-          {!soloLectura && (
+        {indiceEnLista >= 0 && totalEnLista > 1 && (
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setJsonAbierto(true)}
-              title={tr.jsonTitulo}
-              className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-2 text-[12px] font-semibold"
+              onClick={onAnterior}
+              disabled={indiceEnLista <= 0}
+              title={tr.anteriorEmbarque}
+              aria-label={tr.anteriorEmbarque}
+              className="dash-control motion-interactive inline-flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
             >
-              <Icon icon="lucide:code-2" width={14} height={14} aria-hidden />
-              <span className="max-sm:sr-only">{tr.jsonBoton}</span>
+              <Icon icon="lucide:chevron-left" width={15} height={15} aria-hidden />
             </button>
-          )}
-        </div>
+            <span className="min-w-[3.5rem] text-center text-[12.5px] font-semibold text-dash-muted tabular-nums sm:min-w-[4.5rem] sm:text-[11px]">
+              {interpolar(tr.posicionLista, {
+                i: String(indiceEnLista + 1),
+                n: String(totalEnLista),
+              })}
+            </span>
+            <button
+              type="button"
+              onClick={onSiguiente}
+              disabled={indiceEnLista >= totalEnLista - 1}
+              title={tr.siguienteEmbarque}
+              aria-label={tr.siguienteEmbarque}
+              className="dash-control motion-interactive inline-flex h-9 w-9 items-center justify-center disabled:opacity-35 sm:h-7 sm:w-7"
+            >
+              <Icon icon="lucide:chevron-right" width={15} height={15} aria-hidden />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Encabezado: identidad, etapa y avance en una sola lectura. */}
-      <header
-        className={`dash-card dash-card-static nt-tone--${meta.tono} shrink-0 px-3.5 py-3 max-sm:order-2 max-sm:px-4 max-sm:py-4`}
-      >
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 max-sm:flex-col max-sm:items-stretch">
-          <div className="flex min-w-0 flex-1 items-center gap-3 max-sm:w-full">
-            <NavieraLogo nombre={op.naviera} logoUrl={navieraLogoUrl} size={44} />
+      {/*
+        * Cabecera: identidad, etapa y avance en una sola fila.
+        *
+        * La ruta, la nave y la ETA bajaron a "Información del embarque": acá
+        * queda lo que responde "¿cuál es y cómo va?" de un vistazo.
+        */}
+      <header className={`dash-card dash-card-static nt-tone--${meta.tono} shrink-0 px-4 py-3`}>
+        <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
+          <div className="flex min-w-0 items-center gap-3.5 max-sm:w-full">
+            <NavieraLogo nombre={op.naviera} logoUrl={navieraLogoUrl} size={52} />
             <div className="min-w-0">
-              <p className="text-[11.5px] font-bold uppercase tracking-[0.12em] text-dash-muted sm:text-[10px]">
-                {tr.embarque}
-              </p>
+              <p className="nt-eyebrow">{tr.embarque}</p>
               <div className="flex items-center gap-1.5">
-                <h1 className="dash-title truncate text-xl font-extrabold tracking-tight sm:text-2xl">
+                <h1 className="dash-title truncate text-xl font-extrabold tracking-tight sm:text-[1.6rem] sm:leading-tight">
                   {titulo}
                 </h1>
                 <BotonCopiar texto={titulo} tr={tr} />
               </div>
-              {/* Booking y cliente son lo que se busca al identificar un embarque:
-                  van con etiqueta y valor destacado, no fundidos en una línea gris.
-                  La naviera no se repite acá porque ya la dice su marca al lado. */}
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 max-sm:flex-col max-sm:items-start">
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[13px]">
                 {op.booking && (
                   <span className="inline-flex min-w-0 items-baseline gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-dash-muted sm:text-[9.5px]">
-                      {tr.booking}
-                    </span>
-                    <span className="truncate text-[13.5px] font-bold text-dash-fg tabular-nums">
-                      {op.booking}
-                    </span>
+                    <span className="nt-eyebrow">{tr.booking}</span>
+                    <span className="truncate font-bold text-dash-fg tabular-nums">{op.booking}</span>
                   </span>
                 )}
+                {op.booking && op.cliente && <span className="text-dash-muted" aria-hidden>|</span>}
                 {op.cliente && (
                   <span className="inline-flex min-w-0 items-baseline gap-1.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-dash-muted sm:text-[9.5px]">
-                      {tr.cliente}
-                    </span>
-                    <span className="truncate text-[13.5px] font-bold text-dash-fg">
-                      {op.cliente}
-                    </span>
+                    <span className="nt-eyebrow">{tr.cliente}</span>
+                    <span className="truncate font-bold text-dash-fg">{op.cliente}</span>
                   </span>
                 )}
               </div>
@@ -682,11 +741,8 @@ export function NavitrackShipment({
 
           <div className="shrink-0 max-sm:w-full">
             {/*
-              * El estado es el punto de entrada a la decisión.
-              *
-              * Cuando hay una recalada por verificar, lo que la pantalla está
-              * afirmando es discutible, así que el propio estado se vuelve el
-              * botón para resolverlo: es donde el operador ya está mirando.
+              * Cuando falta algo del itinerario, el propio estado es el botón
+              * para resolverlo: es donde el operador ya está mirando.
               */}
             {pendienteItinerario ? (
               <button
@@ -718,141 +774,279 @@ export function NavitrackShipment({
                   )}
                   {tr[ETAPA_LABEL_KEY[estado.etapa]]}
                 </span>
-                <p className="mt-1 text-center text-[12.5px] text-dash-muted sm:text-[11px]">
-                  {tr[ETAPA_SUB_KEY[estado.etapa]]}
-                </p>
+                <p className="mt-1 text-center text-[11.5px] text-dash-muted">{tr[ETAPA_SUB_KEY[estado.etapa]]}</p>
               </>
             )}
           </div>
 
-          <div className="min-w-[min(100%,260px)] flex-1">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-[12.5px] text-dash-muted">
-                <span className="nt-accent-fg text-base font-extrabold tabular-nums">
-                  {pct == null ? "—" : `${pct}%`}
-                </span>{" "}
-                {tr.delTrayecto}
-              </p>
-              {restantes && (
-                <p className="text-[12.5px] font-semibold text-dash-muted tabular-nums sm:text-[11px]">
-                  {interpolar(tr.restanNm, { nm: restantes })}
-                </p>
-              )}
-            </div>
+          <div className="min-w-[min(100%,240px)] flex-1">
+            <p className="text-[13px] text-dash-muted">
+              <span className="nt-accent-fg text-lg font-extrabold tabular-nums">{pct == null ? "—" : `${pct}%`}</span>{" "}
+              {tr.delTrayecto}
+            </p>
             <div className="nt-head-rail mt-1.5">
               <div className="nt-head-rail-fill" style={{ width: `${pct ?? 0}%` }} />
             </div>
           </div>
-        </div>
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-dash-border pt-2.5">
-          <p className="flex min-w-0 items-center gap-2 text-[14px] font-bold text-dash-fg">
-            {/* SVG, no emoji: en Windows el emoji de bandera se ve como "CL". */}
-            {banderaPol && (
-              <Icon icon={`circle-flags:${banderaPol.toLowerCase()}`} width={15} height={15} aria-hidden />
-            )}
-            <span className="truncate">{journey.origen.nombre || "—"}</span>
-            <Icon icon="lucide:arrow-right" width={15} height={15} className="shrink-0 text-dash-muted" aria-hidden />
-            {banderaPod && (
-              <Icon icon={`circle-flags:${banderaPod.toLowerCase()}`} width={15} height={15} aria-hidden />
-            )}
-            <span className="truncate">{journey.destino.nombre || "—"}</span>
-          </p>
-          {etaErp && (
-            <p className="flex items-baseline gap-1.5">
-              <span className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                {tr.colEta}
-              </span>
-              <span className="text-[14px] font-extrabold text-dash-fg tabular-nums">{etaErp}</span>
-            </p>
-          )}
-          {op.viaje && (
-            <p className="text-[12.5px] text-dash-muted sm:text-[11.5px]">
-              {tr.viaje} <span className="font-semibold text-dash-fg">{op.viaje}</span>
-            </p>
-          )}
+          <div className="flex shrink-0 items-center gap-4 max-sm:w-full max-sm:justify-between">
+            <div className="text-right max-sm:text-left">
+              {restantes && (
+                <p className="text-[14px] font-bold text-dash-fg tabular-nums">
+                  {interpolar(tr.restanNm, { nm: restantes })}
+                </p>
+              )}
+              {actualizado && (
+                <p className="mt-0.5 flex items-center justify-end gap-1.5 text-[11.5px] text-dash-muted max-sm:justify-start">
+                  <Icon icon="lucide:refresh-cw" width={12} height={12} aria-hidden />
+                  {tr.ultimaActualizacion}:{" "}
+                  <span className="nt-tip" data-tip={actualizadoExacto ?? ""}>
+                    {actualizado}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            {/*
+              * Las acciones de la ficha, juntas en un menú.
+              *
+              * Ninguna es la razón por la que alguien abre el embarque: se usan
+              * a veces, y sueltas en la cabecera le quitaban lugar a lo que sí
+              * se mira siempre.
+              */}
+            <div ref={menuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuAbierto(!menuAbierto)}
+                aria-haspopup="menu"
+                aria-expanded={menuAbierto}
+                className="dash-control motion-interactive inline-flex h-11 items-center gap-2 px-3.5 text-[13px] font-bold"
+              >
+                <Icon icon="lucide:more-vertical" width={16} height={16} aria-hidden />
+                {tr.opciones}
+              </button>
+              {menuPos &&
+                typeof document !== "undefined" &&
+                createPortal(
+                  /* Fuera de la ficha se pierde el tema: el envoltorio lo trae consigo. */
+                  <div
+                    className="dash-neon tracking-brand navitrack"
+                    data-theme={theme}
+                    style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 300, background: "none", minHeight: 0 }}
+                  >
+                    <div ref={menuPanelRef} role="menu" className="nt-menu" style={{ position: "static" }}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        disabled={refrescando}
+                        onClick={() => {
+                          setMenuAbierto(false);
+                          onRefresh();
+                        }}
+                        className="nt-menu-item"
+                      >
+                        <Icon
+                          icon="lucide:refresh-cw"
+                          width={14}
+                          height={14}
+                          className={refrescando ? "animate-spin" : ""}
+                          aria-hidden
+                        />
+                        {tr.refresh}
+                      </button>
+                      {onEditarItinerario && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuAbierto(false);
+                            onEditarItinerario();
+                          }}
+                          className="nt-menu-item"
+                        >
+                          <Icon icon="lucide:route" width={14} height={14} aria-hidden />
+                          {tr.itEditar}
+                        </button>
+                      )}
+                      {/* La respuesta cruda del proveedor es para personal interno. */}
+                      {!soloLectura && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setMenuAbierto(false);
+                            setJsonAbierto(true);
+                          }}
+                          className="nt-menu-item"
+                        >
+                          <Icon icon="lucide:code-2" width={14} height={14} aria-hidden />
+                          {tr.jsonBoton}
+                        </button>
+                      )}
+                    </div>
+                  </div>,
+                  document.body,
+                )}
+            </div>
+          </div>
         </div>
       </header>
 
       {/*
-        * Historia del viaje, de lado a lado sobre el mapa.
+        * Historial del viaje, de lado a lado sobre el mapa.
         *
         * Se lee en el mismo sentido que la ruta: lo cumplido a la izquierda, lo
-        * que falta a la derecha. Ocupa un alto fijo y no le quita al mapa más
-        * de lo que le quitaba la nota de procedencia que había abajo.
+        * que falta a la derecha.
         */}
-      <section className="dash-card dash-card-static shrink-0 overflow-hidden max-sm:order-3">
-        <div className="dash-section-head flex items-center gap-2 px-3.5 py-1.5">
-          <Icon icon="lucide:history" width={14} height={14} className="text-dash-neon" aria-hidden />
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-dash-fg">{tr.historiaViaje}</h2>
-          {/*
-            * Confirmación de la última decisión: dice a qué nave pasó la carga,
-            * así que va junto a la historia y no en un aviso que se esfuma.
-            */}
+      <section className="dash-card dash-card-static shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 pt-3">
+          <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-dash-fg">{tr.historiaViaje}</h2>
+          {/* Confirmación de la última decisión: dice a qué nave pasó la carga. */}
           {avisoRecalada && (
             <p className="min-w-0 truncate rounded-md border border-dash-neon/35 bg-dash-neon/10 px-2 py-0.5 text-[11px] text-dash-fg">
               {avisoRecalada}
             </p>
           )}
-          {/* Lo que agrega —una escala, un transbordo— es historia del viaje. */}
-          {onEditarItinerario && (
-            <button
-              type="button"
-              onClick={() => onEditarItinerario()}
-              className="dash-control motion-interactive ml-auto inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
-            >
-              <Icon icon="lucide:route" width={12} height={12} aria-hidden />
-              {tr.itEditar}
-            </button>
-          )}
         </div>
-        <div className="px-2 py-2.5">
-          <NavitrackTimelineHorizontal eventos={eventos} etapa={estado.etapa} locale={locale} tr={tr} />
+        <div className="px-2 pb-3 pt-1.5">
+          <NavitrackTimelineHorizontal eventos={eventos} locale={locale} tr={tr} />
         </div>
       </section>
 
       {/*
-        * Bloque central: se queda con el alto que sobra.
+        * Bloque central: mapa a la izquierda, información a la derecha.
         *
         * `flex-1 min-h-0` es lo que sostiene la pizarra de escritorio, donde no
         * hay scroll de página y este bloque absorbe el alto sobrante. En el
-        * teléfono la vista es una columna con scroll, y ahí esa misma pareja
-        * autoriza a encogerse por debajo del contenido: el mapa pedía 52dvh y
-        * la tarjeta, que recorta, lo dejaba en una franja. Bajo `sm` toma su
-        * alto natural y el scroll hace el resto.
+        * teléfono la vista es una columna con scroll y cada tarjeta toma su alto
+        * natural.
         */}
-      <div className="grid grid-cols-1 gap-3 max-sm:order-5 sm:min-h-0 sm:flex-1 sm:gap-2 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-2.5 sm:min-h-0 sm:flex-1 lg:grid-cols-[1.22fr_1fr]">
         <section className="dash-card dash-card-static flex flex-col overflow-hidden sm:min-h-0">
-          <div className="dash-section-head flex shrink-0 items-center gap-1 overflow-x-auto px-2 py-1.5">
-            {pestanas.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                role="tab"
-                aria-selected={pestana === p.id}
-                onClick={() => setPestana(p.id)}
-                className="nt-tab"
-              >
-                <Icon icon={p.icon} width={14} height={14} aria-hidden />
-                {p.label}
-              </button>
-            ))}
+          <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 px-3 py-2.5">
+            <div role="tablist" className="flex items-center gap-1.5 overflow-x-auto">
+              {pestanas.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={pestana === p.id}
+                  onClick={() => setPestana(p.id)}
+                  className="nt-tab"
+                >
+                  <Icon icon={p.icon} width={15} height={15} aria-hidden />
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {/* La leyenda va en la barra y no sobre el mapa: no tapa la ruta. */}
+            {pestana === "ruta" && (
+              <NavitrackLeyenda esReal={esReal} labels={mapLabels} className="ml-auto max-xl:hidden" />
+            )}
           </div>
 
           {pestana === "ruta" && (
-            <div className="relative h-[52dvh] min-h-[300px] w-full shrink-0 lg:h-auto lg:min-h-0 lg:flex-1">
+            <div className="relative h-[52dvh] min-h-[300px] w-full shrink-0 border-t border-dash-border lg:h-auto lg:min-h-0 lg:flex-1">
               <NavitrackMap
                 journey={journey}
                 vesselName={journey.naveActual ?? op.nave ?? ""}
                 vesselSpeed={ais?.speed ?? null}
                 theme={theme}
                 labels={mapLabels}
+                fechaDePuerto={fechaDePuerto}
+                mostrarLeyenda={false}
+                enfocarSolicitud={enfocarSolicitud}
               />
             </div>
           )}
 
+          {pestana === "datos" && (
+            <div className="min-h-0 flex-1 overflow-y-auto border-t border-dash-border px-4 py-3.5">
+              {gruposDatos.map((g, gi) => (
+                <section key={g.titulo} className={gi > 0 ? "mt-3.5 border-t border-dash-border pt-3" : ""}>
+                  <p className="nt-eyebrow pb-2">{g.titulo}</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3">
+                    {g.datos.map(([label, valor]) => (
+                      <Dato key={label} label={label} valor={valor} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+
+              {/*
+                * Los transbordos, con lo prometido y lo ocurrido.
+                *
+                * El historial ya cuenta que hubo un cambio de nave; esta lista
+                * dice lo que él no alcanza: qué anunció la naviera para cada
+                * transbordo y qué hizo de verdad el buque según el AIS.
+                */}
+              {transbordosDelViaje.length > 0 && (
+                <section className="mt-4">
+                  <p className="pb-1.5 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
+                    {tr.itTransbordosTitulo}
+                  </p>
+                  <ul className="divide-y divide-dash-border rounded-lg border border-dash-border">
+                    {transbordosDelViaje.map((x) => {
+                      const faltaNave = !x.nave && x.llego;
+                      const d = desvioDe({ pod: x.puerto, eta: x.llegada, eta_hora: x.llegadaHora });
+                      return (
+                        <li key={x.puerto} className="px-2.5 py-2">
+                          <div className="flex items-center gap-2">
+                            <Icon
+                              icon="lucide:git-branch"
+                              width={13}
+                              height={13}
+                              className={faltaNave ? "shrink-0 text-amber-400" : "shrink-0 text-dash-muted"}
+                              aria-hidden
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[12.5px] font-bold text-dash-fg">{x.puerto}</span>
+                              <span className="block truncate text-[10.5px] text-dash-muted">
+                                {(x.naveAnterior ?? "—") + " → "}
+                                {x.nave ?? <em>{tr.itNavePorConfirmar}</em>}
+                              </span>
+                            </span>
+                            {faltaNave && onEditarItinerario ? (
+                              <button
+                                type="button"
+                                onClick={() => onEditarItinerario(x.puerto)}
+                                className="dash-control motion-interactive shrink-0 px-2 py-1 text-[11px] font-bold"
+                              >
+                                {tr.itIndicarNave}
+                              </button>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 pl-5 text-[10.5px] text-dash-muted tabular-nums">
+                            <span>
+                              {tr.recaladaAnunciado}:{" "}
+                              {x.llegada
+                                ? `${fmtFecha(parseOpDate(x.llegada), locale) ?? "—"}${
+                                    x.llegadaHora ? ` ${x.llegadaHora.slice(0, 5)} UTC` : ""
+                                  }`
+                                : "—"}
+                            </span>
+                            <span>
+                              {tr.itLlego}:{" "}
+                              {x.real?.recalado_at ? (fmtFechaHora(new Date(x.real.recalado_at), locale) ?? "—") : "—"}
+                            </span>
+                            {x.real?.zarpe_at && (
+                              <span>
+                                {tr.itZarpo}: {fmtFechaHora(new Date(x.real.zarpe_at), locale) ?? "—"}
+                              </span>
+                            )}
+                            {d && <span className="font-bold text-dash-fg">{d}</span>}
+                          </p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+            </div>
+          )}
+
           {pestana === "buque" && (
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5">
+            <div className="min-h-0 flex-1 overflow-y-auto border-t border-dash-border px-4 py-3.5">
               <div className="flex items-center gap-3">
                 <NavieraLogo nombre={op.naviera} logoUrl={navieraLogoUrl} size={40} />
                 <div className="min-w-0">
@@ -979,7 +1173,7 @@ export function NavitrackShipment({
           )}
 
           {pestana === "transbordo" && (
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3.5">
+            <div className="min-h-0 flex-1 overflow-y-auto border-t border-dash-border px-4 py-3.5">
               <NavitrackTransbordo
                 naveActual={op.nave ?? ""}
                 puerto={ais?.destination ?? decision?.puerto ?? ""}
@@ -996,413 +1190,373 @@ export function NavitrackShipment({
           )}
         </section>
 
-        <div className="flex min-h-0 min-w-0 flex-col gap-2">
-          {/* Llegada estimada: el dato más consultado, con su contraste al lado. */}
-          <section className={`dash-card dash-card-static nt-tone--${etaTono} shrink-0 overflow-hidden`}>
-            <div className="dash-section-head flex items-center gap-2 px-3.5 py-2">
-              <Icon icon="lucide:calendar-clock" width={14} height={14} className="text-dash-neon" aria-hidden />
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-dash-fg">
-                {tr.llegadaEstimada}
-              </h2>
-            </div>
-            <div className="flex flex-wrap items-start justify-between gap-3 px-3.5 py-3 max-sm:flex-col max-sm:gap-2.5">
-              <div className="min-w-0">
-                <p className="text-xl font-extrabold leading-none tracking-tight text-dash-fg tabular-nums">
-                  {etaErp ?? "—"}
-                </p>
-                <p className="mt-1 truncate text-[12.5px] text-dash-muted sm:text-[11.5px]">
-                  {[journey.destino.nombre, op.pais].filter(Boolean).join(", ") || "—"}
-                </p>
-              </div>
-              {etaAis && (
-                <div className="shrink-0 text-right max-sm:w-full max-sm:border-t max-sm:border-dash-border max-sm:pt-2.5 max-sm:text-left">
-                  {/*
-                    * La etiqueta nombra el puerto al que se refiere esa hora.
-                    *
-                    * "ETA del buque" a secas, junto al ETA de Hamburgo, se lee
-                    * como si ambas fechas hablaran del mismo destino. Y no:
-                    * mientras el buque anuncia Callao, esa hora es la llegada a
-                    * Callao. Sin el puerto al lado, el dato engaña.
-                    */}
-                  <p className="text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                    {proximoPuerto && estado.eta.deltaHoras == null
-                      ? `${tr.etaAisA} ${proximoPuerto.nombre}`
-                      : tr.etaAis}
-                  </p>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                    <p className="text-[13.5px] font-bold text-dash-fg tabular-nums sm:text-[12.5px]">
-                      {etaAis}
-                    </p>
-                    {delta && (
-                      <span className="nt-accent-fg inline-block rounded-md border border-[color-mix(in_srgb,var(--nt-accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--nt-accent)_14%,transparent)] px-1.5 py-0.5 text-[11.5px] font-extrabold tabular-nums">
-                        {delta}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/*
-              * Prometido contra real.
-              *
-              * Solo aparece cuando el embarque arribó con fecha: antes no hay
-              * nada que comparar, y un cero mientras navega se leería como que
-              * va en hora. Las dos referencias van juntas a propósito —la
-              * promesa de la reserva y el ETA vigente— porque el segundo suele
-              * haberse movido detrás del primero, y esa distancia es la que
-              * explica por qué un atraso grande no se vio venir.
-              */}
-            {(() => {
-              const d = desvioEta(op);
-              if (!d) return null;
-              const sentido = sentidoDesvio(d.dias);
-              /* `parseOpDate` sitúa a mediodía: una columna `date` no se corre
-                 de día por zona horaria, y `arribo_at` ya viene a mediodía. */
-              const fecha = (v: string | null) => fmtFecha(parseOpDate(v), locale) ?? "—";
-              const fila = (etiqueta: string, valor: string, extra?: string) => (
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-dash-muted">
-                    {etiqueta}
-                  </span>
-                  <span className="min-w-0 text-right">
-                    <span className="text-[13px] font-bold text-dash-fg tabular-nums">{valor}</span>
-                    {extra && (
-                      <span className="ml-1.5 text-[11.5px] text-dash-muted tabular-nums">{extra}</span>
-                    )}
-                  </span>
-                </div>
-              );
-
-              return (
-                <div className="border-t border-dash-border px-3.5 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
-                    {tr.desvioTitulo}
-                  </p>
-                  <div className="mt-2 space-y-1.5">
-                    {fila(tr.desvioEtaReserva, fecha(op.eta_original))}
-                    {fila(
-                      tr.desvioEtaVigente,
-                      fecha(op.eta),
-                      d.diasReprogramado != null && d.diasReprogramado !== 0
-                        ? tr.desvioReprogramado.replace("{{dias}}", formatoDesvio(d.diasReprogramado))
-                        : tr.desvioSinReprogramar,
-                    )}
-                    {fila(tr.desvioArriboReal, fecha(op.arribo_at))}
-                  </div>
-
-                  <div
-                    className={`estado--${estadoDesvio(d.dias)} mt-2.5 flex items-center gap-2 rounded-lg px-2.5 py-2`}
-                    style={{
-                      border: "1px solid color-mix(in srgb, var(--estado) 38%, transparent)",
-                      background: "color-mix(in srgb, var(--estado) 12%, transparent)",
-                    }}
-                  >
-                    <span className="estado-chip shrink-0 rounded-md border px-1.5 py-0.5 text-[12px] font-extrabold tabular-nums">
-                      {formatoDesvio(d.dias)}
-                    </span>
-                    <span className="min-w-0 text-[12px] leading-snug text-dash-fg">
-                      {sentido === "en_fecha"
-                        ? tr.desvioEnFecha
-                        : (sentido === "adelanto" ? tr.desvioAdelanto : tr.desvioAtraso).replace(
-                            "{{dias}}",
-                            String(Math.abs(d.dias)),
-                          )}
-                    </span>
-                  </div>
-
-                  {/* Una promesa reconstruida no puede presentarse como promesa. */}
-                  {d.heredada && (
-                    <p className="mt-2 text-[11.5px] leading-snug text-dash-muted">
-                      <Icon icon="lucide:info" width={12} height={12} className="mr-1 inline align-[-2px]" aria-hidden />
-                      {tr.desvioHeredado}
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
-
-            {/* Incidencias en línea: visibles sin robarle alto al resto. */}
-            {alertas.length > 0 && (
-              <div className="space-y-1 border-t border-dash-border px-2.5 py-2">
-                {alertas.map((a) => (
-                  <div
-                    key={a.codigo}
-                    className={`nt-tone--${ALERTA_TONO[a.severidad]} flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--nt-accent)_38%,transparent)] bg-[color-mix(in_srgb,var(--nt-accent)_10%,transparent)] px-2.5 py-1.5`}
-                  >
-                    <Icon
-                      icon={ALERTA_ICON[a.codigo]}
-                      width={14}
-                      height={14}
-                      className="nt-accent-fg shrink-0"
-                      aria-hidden
-                    />
-                    <p className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-dash-fg">
-                      {tr[ALERTA_TITULO[a.codigo]]}
-                    </p>
-                    {a.accionable && (
-                      <button
-                        type="button"
-                        onClick={() => setPestana("transbordo")}
-                        className="shrink-0 text-[11px] font-bold nt-accent-fg underline-offset-2 hover:underline"
-                      >
-                        {tr.verDetalle}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/*
-            * Datos de la operación: lo que se pregunta por teléfono.
-            *
-            * Ocupa el lugar que dejó la historia del viaje, que subió sobre el
-            * mapa. Es la columna de largo variable, así que es la que se
-            * desplaza por dentro.
-            */}
-          <section className="dash-card dash-card-static flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="dash-section-head flex shrink-0 items-center gap-2 px-3.5 py-2">
-              <Icon icon="lucide:clipboard-list" width={14} height={14} className="text-dash-neon" aria-hidden />
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-dash-fg">
-                {tr.datosOperacion}
-              </h2>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">
-              {gruposDatos.map((g, gi) => (
-                <section key={g.titulo} className={gi > 0 ? "mt-3.5 border-t border-dash-border pt-3" : ""}>
-                  <p className="pb-2 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                    {g.titulo}
-                  </p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                    {g.datos.map(([label, valor]) => (
-                      <Dato key={label} label={label} valor={valor} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-
-              {/*
-                * Los transbordos, con lo prometido y lo ocurrido.
-                *
-                * La historia de arriba ya cuenta que hubo un cambio de nave;
-                * esta lista dice lo que ella no alcanza: qué anunció la naviera
-                * para cada transbordo y qué hizo de verdad el buque según el AIS.
-                */}
-              {transbordosDelViaje.length > 0 && (
-                <section className="mt-4">
-                  <p className="pb-1.5 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
-                    {tr.itTransbordosTitulo}
-                  </p>
-                  <ul className="divide-y divide-dash-border rounded-lg border border-dash-border">
-                    {transbordosDelViaje.map((x) => {
-                      const faltaNave = !x.nave && x.llego;
-                      const d = desvioDe({ pod: x.puerto, eta: x.llegada, eta_hora: x.llegadaHora });
-                      return (
-                        <li key={x.puerto} className="px-2.5 py-2">
-                          <div className="flex items-center gap-2">
-                            <Icon
-                              icon="lucide:git-branch"
-                              width={13}
-                              height={13}
-                              className={faltaNave ? "shrink-0 text-amber-400" : "shrink-0 text-dash-muted"}
-                              aria-hidden
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[12.5px] font-bold text-dash-fg">{x.puerto}</span>
-                              <span className="block truncate text-[10.5px] text-dash-muted">
-                                {(x.naveAnterior ?? "—") + " → "}
-                                {x.nave ?? <em>{tr.itNavePorConfirmar}</em>}
-                              </span>
-                            </span>
-                            {faltaNave && onEditarItinerario ? (
-                              <button
-                                type="button"
-                                onClick={() => onEditarItinerario(x.puerto)}
-                                className="dash-control motion-interactive shrink-0 px-2 py-1 text-[11px] font-bold"
-                              >
-                                {tr.itIndicarNave}
-                              </button>
-                            ) : null}
-                          </div>
-                          <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 pl-5 text-[10.5px] text-dash-muted tabular-nums">
-                            <span>
-                              {tr.recaladaAnunciado}:{" "}
-                              {x.llegada
-                                ? `${fmtFecha(parseOpDate(x.llegada), locale) ?? "—"}${
-                                    x.llegadaHora ? ` ${x.llegadaHora.slice(0, 5)} UTC` : ""
-                                  }`
-                                : "—"}
-                            </span>
-                            <span>
-                              {tr.itLlego}:{" "}
-                              {x.real?.recalado_at ? (fmtFechaHora(new Date(x.real.recalado_at), locale) ?? "—") : "—"}
-                            </span>
-                            {x.real?.zarpe_at && (
-                              <span>
-                                {tr.itZarpo}: {fmtFechaHora(new Date(x.real.zarpe_at), locale) ?? "—"}
-                              </span>
-                            )}
-                            {d && <span className="font-bold text-dash-fg">{d}</span>}
-                          </p>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
-            </div>
-          </section>
-        </div>
-      </div>
-
-      {/* Franja de indicadores: lo que un operador mira de reojo. */}
-      <div
-        className={`shrink-0 gap-2.5 max-sm:order-4 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:gap-2 sm:grid sm:grid-cols-3 ${
-          hayCadena ? "xl:grid-cols-7" : "xl:grid-cols-6"
-        }`}
-      >
-        {/* En un transbordo, de dónde salió la carga es parte de la historia. */}
-        {tramoInicial && (
-          <Stat
-            className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-            icon="lucide:package-open"
-            label={tr.cadenaInicial}
-            valor={tramoInicial.nave || "—"}
-            sub={
-              [
-                tramoInicial.pol,
-                tramoInicial.etd ? fmtFecha(parseOpDate(tramoInicial.etd), locale) : null,
-                // Cuánto se corrió la entrega respecto de lo que anunció la naviera.
-                desvioDe(tramoInicial),
-              ]
-                .filter(Boolean)
-                .join(" · ") || null
-            }
-          />
-        )}
-
         {/*
-          * Buque actual: el del tramo en curso, no el de `operaciones.nave`.
-          *
-          * Con transbordo esa columna guarda el primer barco, que soltó la
-          * carga hace semanas. Decir que la carga "va en MSC SENEGAL" cuando
-          * está en MSC RITA V es falso, aunque el dato exista.
+          * Información del embarque: todo lo que se pregunta por teléfono, en
+          * una tarjeta. Es la columna de largo variable, así que es la que se
+          * desplaza por dentro si la pantalla es baja.
           */}
-        <Stat
-          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-          icon="lucide:ship"
-          label={tr.buqueActual}
-          valor={journey.naveActual || op.nave || "—"}
-          sub={
-            [
-              op.naviera,
-              journey.viajeActual,
-              naveIdent?.imo ? `IMO ${naveIdent.imo}` : null,
-            ]
-              .filter(Boolean)
-              .join(" · ") || null
-          }
-        />
-        <Stat
-          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-          icon="lucide:gauge"
-          label={tr.velocidad}
-          valor={<Velocidad nudos={ais?.speed} tr={tr} />}
-          sub={ais?.course != null ? `${tr.rumbo} ${Math.round(ais.course)}°` : null}
-        />
-        {/*
-          * Último y próximo puerto son los del **tramo en curso**.
-          *
-          * En un viaje con transbordo, el puerto de embarque original y el
-          * destino final no son de dónde viene ni a dónde va el buque hoy: la
-          * carga ya pasó por dos puertos de conexión. Lo que el AIS declare
-          * manda por sobre lo calculado, porque es el dato del propio barco.
-          */}
-        <Stat
-          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-          icon="lucide:anchor"
-          label={tr.ultimoPuerto}
-          valor={ais?.lastPort || tramoEnCurso?.pol || journey.origen.nombre || "—"}
-          /*
-           * Cuando el puerto lo pone el AIS, va sin fecha.
-           *
-           * El ETD del tramo es el zarpe del **origen**: mostrarlo bajo un
-           * puerto que el buque tocó a media ruta juntaba dos puertos y dos
-           * semanas distintas en una línea. El `atdUtc` del proveedor tampoco
-           * sirve —ver la nota en `parseAisSnapshot`: no acompaña a `lastPort`—,
-           * así que acá no hay fecha que decir y se calla, que es lo único
-           * honesto. La fecha del tramo se sigue usando cuando el puerto es el
-           * calculado, donde sí le corresponde.
-           */
-          sub={
-            ais?.lastPort
-              ? null
-              : tramoEnCurso?.etd
-                ? `${tr.evZarpe}: ${fmtFecha(parseOpDate(tramoEnCurso.etd), locale) ?? "—"}`
-                : etdFmt
-                  ? `${tr.evZarpe}: ${etdFmt}`
-                  : null
-          }
-        />
-        {/*
-          * Próximo puerto y puerto de destino son dos datos distintos y hasta
-          * ahora se mostraban como uno solo.
-          *
-          * El próximo es el que **declara el buque** y cambia en cada escala;
-          * el de destino es el que se comprometió con el cliente y no cambia.
-          * Mostrar Hamburgo como "próximo puerto" mientras el barco navega
-          * hacia Callao es decir algo que no es cierto.
-          */}
-        <Stat
-          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-          icon="lucide:navigation"
-          label={tr.proximoPuerto}
-          valor={proximoPuerto?.nombre || tr.proximoPuertoSinDato}
-          sub={
-            proximoPuerto?.eta
-              ? `${tr.colEta}: ${fmtFechaHora(proximoPuerto.eta, locale) ?? "—"}`
-              : proximoPuerto
-                ? tr.proximoPuertoSegunBuque
-                : null
-          }
-        />
-        <Stat
-          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-          icon="lucide:map-pin"
-          label={tr.puertoDestino}
-          valor={journey.destino.nombre || "—"}
-          sub={
-            tramoEnCurso?.eta
-              ? `${tr.colEta}: ${fmtFecha(parseOpDate(tramoEnCurso.eta), locale) ?? "—"}`
-              : etaErp
-                ? `${tr.colEta}: ${etaErp}`
-                : null
-          }
-        />
-        <Stat
-          className="max-sm:w-[58vw] max-sm:min-w-[190px] max-sm:shrink-0 max-sm:snap-start"
-          icon="lucide:crosshair"
-          label={tr.posicionActual}
-          valor={
-            journey.position
-              ? `${journey.position.lat.toFixed(3)}, ${journey.position.lng.toFixed(3)}`
-              : "—"
-          }
-          sub={fmtFechaHora(journey.position?.at ?? null, locale) ?? null}
-          extra={
-            <span
-              className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-bold ${
-                esReal
-                  ? "border-[color-mix(in_srgb,var(--trk-vessel)_45%,transparent)] text-[var(--trk-vessel)]"
-                  : "border-dash-border text-dash-muted"
-              }`}
+        <section className={`dash-card dash-card-static flex min-h-0 flex-col overflow-hidden nt-tone--${etaTono}`}>
+          <div className="flex shrink-0 items-center gap-2.5 px-4 py-2.5">
+            <Icon icon="lucide:ship" width={18} height={18} className="text-dash-neon" aria-hidden />
+            <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-dash-fg">{tr.infoEmbarque}</h2>
+            <a
+              href={documentosHref}
+              className="dash-control motion-interactive ml-auto inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold"
             >
-              {esReal ? tr.aisSatelital : tr.posicionCalculada}
-            </span>
-          }
-        />
+              <Icon icon="lucide:folder-open" width={14} height={14} aria-hidden />
+              {tr.verDocumentos}
+              {documentosCount != null && <span className="tabular-nums">({documentosCount})</span>}
+            </a>
+          </div>
+
+          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto border-t border-dash-border p-3">
+            <div className="nt-info-bloque grid grid-cols-1 sm:grid-cols-3">
+              <div className="nt-info-col space-y-2.5 px-3.5 py-3">
+                <div className="min-w-0">
+                  <p className="nt-eyebrow">{tr.embarque}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="truncate text-[15px] font-extrabold text-dash-fg">{titulo}</p>
+                    <BotonCopiar texto={titulo} tr={tr} />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <p className="nt-eyebrow">{tr.booking}</p>
+                  <p className="truncate text-[15px] font-extrabold text-dash-fg tabular-nums">{op.booking || "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="nt-eyebrow">{tr.cliente}</p>
+                  <p className="truncate text-[15px] font-extrabold text-dash-fg">{op.cliente || "—"}</p>
+                </div>
+              </div>
+
+              <div className="nt-info-col space-y-2.5 px-3.5 py-3">
+                <div className="min-w-0">
+                  <p className="nt-eyebrow">{tr.fichaRuta}</p>
+                  <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[13px] font-extrabold text-dash-fg">
+                    {/* SVG, no emoji: en Windows el emoji de bandera se ve como "CL". */}
+                    {banderaPol && (
+                      <Icon icon={`circle-flags:${banderaPol.toLowerCase()}`} width={16} height={16} aria-hidden />
+                    )}
+                    <span className="truncate">{journey.origen.nombre || "—"}</span>
+                    <Icon icon="lucide:arrow-right" width={14} height={14} className="shrink-0 text-dash-muted" aria-hidden />
+                    {banderaPod && (
+                      <Icon icon={`circle-flags:${banderaPod.toLowerCase()}`} width={16} height={16} aria-hidden />
+                    )}
+                    <span className="truncate">{journey.destino.nombre || "—"}</span>
+                  </p>
+                </div>
+                <div className="min-w-0">
+                  <p className="nt-eyebrow">{tr.fichaNave}</p>
+                  {/* La nave que lleva la carga ahora, que con transbordo no es `op.nave`. */}
+                  <p className="truncate text-[15px] font-extrabold text-dash-fg">{journey.naveActual || op.nave || "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="nt-eyebrow">{tr.viaje}</p>
+                  <p className="truncate text-[15px] font-extrabold text-dash-fg">{journey.viajeActual || op.viaje || "—"}</p>
+                </div>
+              </div>
+
+              <div className="nt-info-col space-y-3 px-3.5 py-3">
+                <div className="flex gap-2.5">
+                  <span className="nt-stat-icon !h-9 !w-9">
+                    <Icon icon="lucide:calendar-days" width={16} height={16} aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="nt-eyebrow">{tr.etaDestino}</p>
+                    <p className="text-[16px] font-extrabold leading-tight text-dash-fg tabular-nums">{etaErp ?? "—"}</p>
+                    <p className="truncate text-[11.5px] uppercase text-dash-muted">
+                      {[journey.destino.nombre, op.pais].filter(Boolean).join(", ") || "—"}
+                    </p>
+                  </div>
+                </div>
+                {/*
+                  * La llegada que anuncia el buque, con el puerto al que se
+                  * refiere: mientras declara Callao, esa hora es la de Callao,
+                  * no la del destino. Sin el puerto al lado, el dato engaña.
+                  */}
+                {etaAis && (
+                  <div className="flex gap-2.5">
+                    <span className="nt-stat-icon !h-9 !w-9">
+                      <Icon icon="lucide:calendar-clock" width={16} height={16} aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="nt-eyebrow truncate">
+                        {proximoPuerto && estado.eta.deltaHoras == null
+                          ? `${tr.etaAisA} ${proximoPuerto.nombre}`
+                          : tr.etaAis}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-[14px] font-extrabold text-dash-fg tabular-nums">{etaAis}</p>
+                        {delta && (
+                          <span className="nt-accent-fg rounded-md border border-[color-mix(in_srgb,var(--nt-accent)_45%,transparent)] bg-[color-mix(in_srgb,var(--nt-accent)_14%,transparent)] px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums">
+                            {delta}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Prometido contra real, e incidencias: solo aparecen cuando hay algo que decir. */}
+            <div className="nt-info-bloque overflow-hidden empty:hidden [&>*:first-child]:border-t-0">
+              {/*
+                * Prometido contra real.
+                *
+                * Solo aparece cuando el embarque arribó con fecha: antes no hay
+                * nada que comparar, y un cero mientras navega se leería como que
+                * va en hora. Las dos referencias van juntas a propósito —la
+                * promesa de la reserva y el ETA vigente— porque el segundo suele
+                * haberse movido detrás del primero, y esa distancia es la que
+                * explica por qué un atraso grande no se vio venir.
+                */}
+              {(() => {
+                const d = desvioEta(op);
+                if (!d) return null;
+                const sentido = sentidoDesvio(d.dias);
+                /* `parseOpDate` sitúa a mediodía: una columna `date` no se corre
+                   de día por zona horaria, y `arribo_at` ya viene a mediodía. */
+                const fecha = (v: string | null) => fmtFecha(parseOpDate(v), locale) ?? "—";
+                const fila = (etiqueta: string, valor: string, extra?: string) => (
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-dash-muted">
+                      {etiqueta}
+                    </span>
+                    <span className="min-w-0 text-right">
+                      <span className="text-[13px] font-bold text-dash-fg tabular-nums">{valor}</span>
+                      {extra && (
+                        <span className="ml-1.5 text-[11.5px] text-dash-muted tabular-nums">{extra}</span>
+                      )}
+                    </span>
+                  </div>
+                );
+
+                return (
+                  <div className="border-t border-dash-border px-3.5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-dash-muted">
+                      {tr.desvioTitulo}
+                    </p>
+                    <div className="mt-2 space-y-1.5">
+                      {fila(tr.desvioEtaReserva, fecha(op.eta_original))}
+                      {fila(
+                        tr.desvioEtaVigente,
+                        fecha(op.eta),
+                        d.diasReprogramado != null && d.diasReprogramado !== 0
+                          ? tr.desvioReprogramado.replace("{{dias}}", formatoDesvio(d.diasReprogramado))
+                          : tr.desvioSinReprogramar,
+                      )}
+                      {fila(tr.desvioArriboReal, fecha(op.arribo_at))}
+                    </div>
+
+                    <div
+                      className={`estado--${estadoDesvio(d.dias)} mt-2.5 flex items-center gap-2 rounded-lg px-2.5 py-2`}
+                      style={{
+                        border: "1px solid color-mix(in srgb, var(--estado) 38%, transparent)",
+                        background: "color-mix(in srgb, var(--estado) 12%, transparent)",
+                      }}
+                    >
+                      <span className="estado-chip shrink-0 rounded-md border px-1.5 py-0.5 text-[12px] font-extrabold tabular-nums">
+                        {formatoDesvio(d.dias)}
+                      </span>
+                      <span className="min-w-0 text-[12px] leading-snug text-dash-fg">
+                        {sentido === "en_fecha"
+                          ? tr.desvioEnFecha
+                          : (sentido === "adelanto" ? tr.desvioAdelanto : tr.desvioAtraso).replace(
+                              "{{dias}}",
+                              String(Math.abs(d.dias)),
+                            )}
+                      </span>
+                    </div>
+
+                    {/* Una promesa reconstruida no puede presentarse como promesa. */}
+                    {d.heredada && (
+                      <p className="mt-2 text-[11.5px] leading-snug text-dash-muted">
+                        <Icon icon="lucide:info" width={12} height={12} className="mr-1 inline align-[-2px]" aria-hidden />
+                        {tr.desvioHeredado}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Incidencias en línea: visibles sin robarle alto al resto. */}
+              {alertas.length > 0 && (
+                <div className="space-y-1 border-t border-dash-border px-2.5 py-2">
+                  {alertas.map((a) => (
+                    <div
+                      key={a.codigo}
+                      className={`nt-tone--${ALERTA_TONO[a.severidad]} flex items-center gap-2 rounded-lg border border-[color-mix(in_srgb,var(--nt-accent)_38%,transparent)] bg-[color-mix(in_srgb,var(--nt-accent)_10%,transparent)] px-2.5 py-1.5`}
+                    >
+                      <Icon
+                        icon={ALERTA_ICON[a.codigo]}
+                        width={14}
+                        height={14}
+                        className="nt-accent-fg shrink-0"
+                        aria-hidden
+                      />
+                      <p className="min-w-0 flex-1 truncate text-[11.5px] font-semibold text-dash-fg">
+                        {tr[ALERTA_TITULO[a.codigo]]}
+                      </p>
+                      {a.accionable && (
+                        <button
+                          type="button"
+                          onClick={() => setPestana("transbordo")}
+                          className="shrink-0 text-[11px] font-bold nt-accent-fg underline-offset-2 hover:underline"
+                        >
+                          {tr.verDetalle}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Indicadores: lo que un operador mira de reojo. */}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <Stat
+                icon="lucide:anchor"
+                label={tr.cadenaInicial}
+                valor={(tramoInicial?.nave ?? op.nave) || "—"}
+                sub={
+                  [
+                    tramoInicial?.pol ?? op.pol,
+                    fmtFecha(parseOpDate(tramoInicial?.etd ?? op.etd), locale),
+                    // Cuánto se corrió la entrega respecto de lo que anunció la naviera.
+                    tramoInicial ? desvioDe(tramoInicial) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || null
+                }
+              />
+              {/*
+                * Buque actual: el del tramo en curso, no el de `operaciones.nave`.
+                * Con transbordo esa columna guarda el primer barco, que soltó la
+                * carga hace semanas.
+                */}
+              <Stat
+                icon="lucide:ship"
+                label={tr.buqueActual}
+                valor={journey.naveActual || op.nave || "—"}
+                sub={
+                  [op.naviera, journey.viajeActual, naveIdent?.imo ? `IMO ${naveIdent.imo}` : null]
+                    .filter(Boolean)
+                    .join(" · ") || null
+                }
+              />
+              <Stat
+                icon="lucide:gauge"
+                label={tr.velocidad}
+                valor={<Velocidad nudos={ais?.speed} tr={tr} />}
+                sub={ais?.course != null ? `${tr.rumbo} ${Math.round(ais.course)}°` : null}
+              />
+              {/*
+                * Último y próximo puerto son los del tramo en curso: lo que el
+                * AIS declare manda, porque es el dato del propio barco. Cuando el
+                * puerto lo pone el AIS va sin fecha: su `atdUtc` no acompaña a
+                * `lastPort` y no hay fecha honesta que decir.
+                */}
+              <Stat
+                icon="lucide:anchor"
+                label={tr.ultimoPuerto}
+                valor={ais?.lastPort || tramoEnCurso?.pol || journey.origen.nombre || "—"}
+                sub={
+                  ais?.lastPort
+                    ? null
+                    : tramoEnCurso?.etd
+                      ? `${tr.evZarpe}: ${fmtFecha(parseOpDate(tramoEnCurso.etd), locale) ?? "—"}`
+                      : etdFmt
+                        ? `${tr.evZarpe}: ${etdFmt}`
+                        : null
+                }
+              />
+              {/* El próximo es el que declara el buque; el destino, el comprometido con el cliente. */}
+              <Stat
+                icon="lucide:navigation"
+                label={tr.proximoPuerto}
+                valor={proximoPuerto?.nombre || tr.proximoPuertoSinDato}
+                sub={
+                  proximoPuerto?.eta
+                    ? `${tr.colEta}: ${fmtFechaHora(proximoPuerto.eta, locale) ?? "—"}`
+                    : proximoPuerto
+                      ? tr.proximoPuertoSegunBuque
+                      : null
+                }
+              />
+              <Stat
+                icon="lucide:map-pin"
+                label={tr.puertoDestino}
+                valor={journey.destino.nombre || "—"}
+                sub={
+                  tramoEnCurso?.eta
+                    ? `${tr.colEta}: ${fmtFecha(parseOpDate(tramoEnCurso.eta), locale) ?? "—"}`
+                    : etaErp
+                      ? `${tr.colEta}: ${etaErp}`
+                      : null
+                }
+              />
+              <Stat
+                icon="lucide:crosshair"
+                label={tr.posicionActual}
+                valor={
+                  journey.position
+                    ? `${journey.position.lat.toFixed(3)}, ${journey.position.lng.toFixed(3)}`
+                    : "—"
+                }
+                pie={
+                  journey.position ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPestana("ruta");
+                        setEnfocarSolicitud((n) => n + 1);
+                      }}
+                      className="dash-control motion-interactive mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold"
+                    >
+                      {tr.verEnMapa}
+                    </button>
+                  ) : null
+                }
+              />
+              {/*
+                * La procedencia de la posición, dicha como un dato más y no como
+                * una advertencia. Las barras miden qué tan fresca es la lectura;
+                * una posición calculada no tiene señal que medir.
+                */}
+              <Stat
+                icon="lucide:satellite-dish"
+                label={tr.aisTitulo}
+                valor={esReal ? tr.aisSenal : tr.aisSinSenal}
+                sub={
+                  esReal && actualizado
+                    ? interpolar(tr.aisActualizado, { hace: actualizado })
+                    : tr.posicionCalculada
+                }
+                extra={
+                  <span className="nt-senal shrink-0" aria-hidden>
+                    {[1, 2, 3, 4].map((b) => (
+                      <span key={b} className={b <= nivelSenal ? "is-on" : ""} style={{ height: `${b * 25}%` }} />
+                    ))}
+                  </span>
+                }
+              />
+              <Stat
+                icon="lucide:route"
+                label={tr.distanciaRestante}
+                valor={restantes ? `${restantes} ${tr.unidadMillas}` : "—"}
+                sub={pct != null ? interpolar(tr.pctTrayecto, { pct: String(pct) }) : null}
+                pie={
+                  pct != null ? (
+                    <span className="nt-mini-rail mt-1.5 block">
+                      <span style={{ width: `${pct}%` }} />
+                    </span>
+                  ) : null
+                }
+              />
+            </div>
+          </div>
+        </section>
       </div>
 
       {jsonAbierto && (
