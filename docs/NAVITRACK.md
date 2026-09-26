@@ -551,6 +551,12 @@ Mario en copia— cada vez que alguien probaba algo a mano. Con `esPrueba`, el
 destinatario pasa a ser Rodrigo (`?correo=` para probar contra otro) y no hay
 copia: probar no debería avisarle al resto del equipo.
 
+**`sin_gasto=1` sí consulta el saldo.** `my-credits` no cuesta créditos (ver
+el comentario de `consultarSaldo()` en `saldo.ts`), así que no hay nada que
+ahorrarse ocultándolo. Hasta el 26-09-2026 la corrida de prueba pasaba
+`undefined` en su lugar, como si fuera un gasto más, y el reporte mostraba
+"sin dato" donde debía decir el saldo real.
+
 **El nombre de la nave no lleva el código de viaje.** Algunas navieras lo
 escriben pegado ("MSC ATHOS [MC633R]"), igual que el AIS. Si ese texto entra
 tal cual al catálogo, la misma nave se da de alta una vez por cada viaje que

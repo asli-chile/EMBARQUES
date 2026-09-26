@@ -622,7 +622,13 @@ export const GET: APIRoute = async ({ request, url }) => {
    * Va al final y fuera de cualquier condición, así que también sale cuando la
    * corrida fracasó a medias.
    */
-  const saldoFinal = await consultarSaldo(esPrueba ? undefined : apiKey);
+  /*
+   * El saldo se consulta también en prueba: `my-credits` no cuesta nada (ver
+   * el comentario de `consultarSaldo`), así que no había motivo para
+   * ocultarlo. Antes se saltaba en `esPrueba` como si fuera un gasto más, y
+   * la corrida de prueba mostraba "sin dato" donde debía decir el saldo real.
+   */
+  const saldoFinal = await consultarSaldo(apiKey);
 
   const problemas: string[] = [];
   for (const f of sinRespuesta) problemas.push(`${f.nave}: ${f.motivo}`);
