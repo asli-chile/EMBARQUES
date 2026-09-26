@@ -325,6 +325,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     pol: string | null;
     lat: number | null;
     lng: number | null;
+    atdUtc: string | null;
   }[] = [];
 
   const resultado = {
@@ -602,6 +603,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         lat: posicion?.lat ?? null,
         lng: posicion?.lng ?? null,
         recibidoAt: fecha(detalle.positionReceived),
+        atdUtc: fecha(detalle.atdUtc),
       });
       if (zarpeReal === "nueva") resultado.zarpesReales += 1;
       diagZarpe.push({
@@ -610,6 +612,7 @@ export const GET: APIRoute = async ({ request, url }) => {
         pol: op.pol,
         lat: posicion?.lat ?? null,
         lng: posicion?.lng ?? null,
+        atdUtc: fecha(detalle.atdUtc),
       });
     }
   }));

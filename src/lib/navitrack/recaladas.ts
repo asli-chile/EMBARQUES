@@ -312,18 +312,25 @@ export async function registrarRecalada(
 }
 
 /**
- * El zarpe real del puerto de origen, detectado por posición.
+ * El zarpe real del puerto de origen.
  *
  * `operaciones.etd` es la fecha planificada de la reserva; puede moverse por
  * clima o cupo en el puerto. El historial del viaje solo la mostraba a ella,
  * nunca la confirmaba con lo que ve el AIS —el mismo hueco que ya se cerró
  * para los transbordos (anunciado vs. real) y el arribo.
  *
- * Se usa posición y no `atdUtc`: ese campo quedó documentado como poco
- * confiable para emparejarlo con un puerto en particular (ver el comentario
+ * **Que zarpó** se decide por posición y no por `atdUtc`: ese campo quedó
+ * documentado como poco confiable para emparejarlo con un puerto en
+ * particular en viajes ya avanzados, con varias escalas (ver el comentario
  * de `AisSnapshot.departedAt`). La primera lectura que ve al buque **fuera**
- * del radio de su puerto de origen es la evidencia de que zarpó; no hace
- * falta más.
+ * del radio de su puerto de origen es la evidencia; no hace falta más.
+ *
+ * **A qué hora** sí se prefiere `atdUtc`, cuando la misma lectura lo trae y es
+ * anterior al momento en que se tomó la posición: acá no hay ambigüedad de
+ * puerto que resolver —es el primer zarpe del viaje, no una escala en el
+ * medio de varias—, y el proveedor lo entrega con precisión de minutos. Sin
+ * él, se usa cuándo se tomó esa posición, que es una aproximación acotada por
+ * cuán seguido corre el chequeo diario, no el instante exacto del zarpe.
  *
  * Se guarda en `operaciones.zarpe_real_at`, no en `navitrack_recaladas`: esa
  * tabla es el historial de puertos intermedios, y el zarpe de origen no es
@@ -336,8 +343,10 @@ export async function registrarZarpeReal(
     pol: string | null;
     lat: number | null;
     lng: number | null;
-    /** Cuándo se tomó esta posición: es lo más cerca que se puede estar del zarpe real. */
+    /** Cuándo se tomó esta posición: respaldo si no hay `atdUtc` que sirva. */
     recibidoAt: string | null;
+    /** `atdUtc` de la misma lectura, si el proveedor lo entrega. */
+    atdUtc: string | null;
   },
   // "sin_pol" y "cerca" son diagnóstico, no casos que deban preocupar por sí
   // solos: dicen por qué esta llamada no escribió nada.
@@ -347,9 +356,19 @@ export async function registrarZarpeReal(
   // Sigue cerca del origen: nada que registrar todavía.
   if (cercaDelPuerto(datos.lat, datos.lng, pol)) return "cerca";
 
+  /*
+   * `atdUtc` vale solo si es anterior a esta lectura. Si fuera posterior,
+   * describiría un hecho que todavía no pasó cuando se tomó la posición —un
+   * dato inconsistente que no conviene mostrar como si fuera el real.
+   */
+  const recibido = datos.recibidoAt ? new Date(datos.recibidoAt).getTime() : null;
+  const atd = datos.atdUtc ? new Date(datos.atdUtc).getTime() : null;
+  const zarpeReal =
+    atd != null && recibido != null && atd <= recibido ? datos.atdUtc : (datos.recibidoAt ?? new Date().toISOString());
+
   const { data } = await supabase
     .from("operaciones")
-    .update({ zarpe_real_at: datos.recibidoAt ?? new Date().toISOString() })
+    .update({ zarpe_real_at: zarpeReal })
     .eq("id", datos.operacionId)
     // La primera lectura que lo vio zarpado es la que vale: no se pisa.
     .is("zarpe_real_at", null)

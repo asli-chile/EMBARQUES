@@ -34,15 +34,21 @@ export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[75] flex items-start justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-6">
+    <div className="fixed inset-0 z-[75] flex items-start justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6">
+      {/*
+        * Alto acotado con `flex flex-col`, no un `overflow-y-auto` en el
+        * fondo: así el encabezado —con el botón de cerrar— queda fijo pase lo
+        * que pase con el JSON de abajo, en vez de desplazarse junto con un
+        * texto que puede ser largo y quedar fuera de la vista.
+        */}
       <section
         role="dialog"
         aria-modal="true"
         aria-label={tr.jsonTitulo}
-        className="motion-panel dash-card dash-card-static w-full max-w-2xl overflow-hidden"
+        className="motion-panel dash-card dash-card-static flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden"
         data-state="open"
       >
-        <header className="dash-section-head flex items-start justify-between gap-3 px-4 py-3">
+        <header className="dash-section-head flex shrink-0 items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-[15px] font-bold tracking-tight text-dash-fg">{tr.jsonTitulo}</h2>
             <p className="mt-0.5 truncate text-[12px] text-dash-muted">
@@ -67,7 +73,7 @@ export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
           </button>
         </header>
 
-        <div className="px-4 pb-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {texto ? (
             <>
               <div className="flex justify-end pb-2">
@@ -80,7 +86,7 @@ export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
                   {copiado ? tr.jsonCopiado : tr.jsonCopiar}
                 </button>
               </div>
-              <pre className="max-h-[60vh] overflow-auto rounded-lg border border-dash-border bg-dash-control/60 p-3 text-[11.5px] leading-snug text-dash-fg">
+              <pre className="overflow-auto rounded-lg border border-dash-border bg-dash-control/60 p-3 text-[11.5px] leading-snug text-dash-fg">
                 {texto}
               </pre>
             </>

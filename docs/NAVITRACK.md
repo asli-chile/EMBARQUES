@@ -645,21 +645,31 @@ mostraba esa fecha y nunca la confirmaba con lo que ve el AIS —el mismo hueco
 que ya se había cerrado para los transbordos y el arribo, pero que faltaba
 para el zarpe de origen—.
 
-`registrarZarpeReal()` (en `recaladas.ts`) lo detecta **por posición**, no por
-`atdUtc`: la primera lectura que ve al buque fuera del radio de `MISMO_PUERTO_KM`
-de su POL es la evidencia de que zarpó. Se guarda una sola vez, en
-`operaciones.zarpe_real_at` (migración `20260926000001`) — no en
-`navitrack_recaladas`, porque esa tabla es el historial de puertos
-intermedios y el zarpe de origen no es una escala.
+`registrarZarpeReal()` (en `recaladas.ts`) separa dos preguntas:
 
-Por qué no `atdUtc`: ese campo del proveedor quedó documentado como poco
-confiable para emparejarlo con un puerto en particular (ver el comentario de
-`AisSnapshot.departedAt` en `navitrack-model.ts`): en la serie guardada, un
-buque declaró dos puertos de procedencia distintos con el mismo `atdUtc`, así
-que a lo más uno de los dos emparejamientos era cierto. La posición, en
-cambio, es el mismo método ya usado para corregir la detección de llegadas
-(ver "Del AIS salen dos hechos por puerto" más arriba): no se afirma nada que
-no se pueda verificar con coordenadas.
+- **Que zarpó**, por posición: la primera lectura que ve al buque fuera del
+  radio de `MISMO_PUERTO_KM` de su POL. No se usa `atdUtc` para esto: quedó
+  documentado como poco confiable para emparejarlo con un puerto en particular
+  en viajes ya avanzados (ver el comentario de `AisSnapshot.departedAt`) — un
+  buque declaró dos puertos de procedencia distintos con el mismo `atdUtc`, así
+  que a lo más uno de los dos emparejamientos era cierto.
+- **A qué hora**, por `atdUtc` cuando la misma lectura lo trae y es anterior al
+  momento en que se tomó la posición. Acá sí es seguro: es el **primer** zarpe
+  del viaje, no una escala en el medio de varias, así que no hay puerto con el
+  que confundirlo. Sin él, se usa cuándo se tomó esa posición —una
+  aproximación acotada por cuán seguido corre el chequeo diario, no el
+  instante exacto—.
+
+Se guarda una sola vez, en `operaciones.zarpe_real_at` (migración
+`20260926000001`) — no en `navitrack_recaladas`, porque esa tabla es el
+historial de puertos intermedios y el zarpe de origen no es una escala.
+
+**El caso que lo hizo evidente:** el chequeo diario detectó el zarpe de A00052
+el 26-sept a las 10:48 (cuándo se tomó esa lectura), mientras el JSON de la
+misma lectura decía `atdUtc: Sep 25, 2026 18:17 UTC` —el zarpe real, trece
+horas antes—. La ficha mostraba una hora distinta de la que el propio botón
+"Ver JSON" tenía delante. Corregido usando `atdUtc` cuando es seguro hacerlo,
+como se explica arriba.
 
 El hito "Zarpe" en Historia del viaje pasa de `certeza: "ESTIMADO"` (la fecha
 de la reserva, sin hora) a `certeza: "REAL"` (`zarpe_real_at`, con hora)
