@@ -334,12 +334,23 @@ export const GET: APIRoute = async ({ request, url }) => {
      * el viaje pegado al nombre ("CMA CGM ESTELLE V.0FABCS1MA"), igual que hace
      * la consulta de embarques de más abajo con su `ilike`.
      *
-     * No es un error ni un hueco: es una nave cuya carga no zarpó, o ya llegó. Se
-     * anota para que el reporte lo diga —una nave que deja de aparecer sin
-     * explicación se lee como que falló—.
+     * No es un error ni un hueco: es una nave cuya carga no zarpó, o ya llegó.
+     * Se anota con el motivo real —no siempre es "no zarpó"—, para que el
+     * reporte lo diga: una nave que deja de aparecer sin explicación se lee
+     * como que falló, y una que aparece con el motivo equivocado se lee como
+     * que el sistema se confundió con el estado del embarque.
      */
     if (!naveEnVentana(nave.nombre, ventana)) {
-      fueraDeVentanaNaves.push(nave.nombre as string);
+      const razon = ventana.motivoPorClave.get(claveDeNave(nave.nombre));
+      const etiqueta =
+        razon === "cerrada"
+          ? "ya cerrada o arribada"
+          : razon === "sin_etd"
+            ? "sin fecha de zarpe cargada"
+            : razon === "no_zarpa"
+              ? "aún no zarpa"
+              : "sin operación viva asociada";
+      fueraDeVentanaNaves.push(`${nave.nombre} (${etiqueta})`);
       return;
     }
 

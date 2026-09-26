@@ -478,9 +478,14 @@ una carga que zarpó de verdad, solo porque nadie cargó su ETA, es peor que el
 crédito que cuesta. El chequeo los nombra en el reporte (`enVentanaSinEta`) para
 que el hueco se vea en vez de costar en silencio.
 
-Las naves saltadas se nombran en el reporte ("Todavía sin zarpar") y quedan en
-`navitrack_corridas.detalle`: una nave que desaparece del correo sin explicación
-se lee como que falló.
+Las naves saltadas se nombran en el reporte ("Sin consultar hoy") con el motivo
+entre paréntesis, y quedan en `navitrack_corridas.detalle`: una nave que
+desaparece del correo sin explicación se lee como que falló. El motivo lo da
+`razonFueraDeVentana()` en `ventana.ts` —`no_zarpa`, `sin_etd` o `cerrada`—,
+repitiendo los mismos niveles de `enVentanaDeSeguimiento` para explicar por qué
+falló cada uno. Hasta el 26-09-2026 el rótulo era siempre "Todavía sin zarpar",
+también para la nave excluida por el motivo contrario: el CMA CGM CARL ANTOINE
+de A00046 salía así con la operación en `OPERACION_CERRADA` desde que arribó.
 
 La actualización manual (`/api/navitrack/actualizar`) ya lo hacía bien: su
 `planificar()` solo apunta a las naves cuya carga zarpó.

@@ -22,7 +22,9 @@ import {
   GRACIA_POST_ETA_DIAS,
   llegoAlPod,
   mismoPuerto,
+  parseOpDate,
 } from "@/components/navitrack/navitrack-model";
+import { ESTADO_META, normalizarEstado } from "@/lib/operaciones/estados";
 
 type Cliente = { from: (tabla: string) => any };
 
@@ -55,6 +57,21 @@ export type Ventana = {
    * no hay buque cuya lectura hable de ella.
    */
   vigentePorOp: Map<string, string | null>;
+  /**
+   * Por qué cada nave excluida no entró a la ventana (`claveDeNave`).
+   *
+   * Solo tiene entrada la nave que **ninguna** de sus operaciones metió en
+   * ventana. Si una nave tiene una operación cerrada y otra que aún no zarpa,
+   * manda "no_zarpa": es el motivo que todavía puede cambiar hoy.
+   */
+  motivoPorClave: Map<string, MotivoFueraDeVentana>;
+};
+
+/** Cuál de dos motivos prevalece cuando una nave acumula más de uno. */
+const PRIORIDAD_MOTIVO: Record<MotivoFueraDeVentana, number> = {
+  no_zarpa: 0,
+  sin_etd: 1,
+  cerrada: 2,
 };
 
 type TramoMinimo = { operacion_id: string; orden: number; nave: string | null; pod: string | null; eta: string | null };
@@ -106,6 +123,51 @@ export function claveAis(v: unknown): string {
     s = s.slice(0, s.length - ultimo.length).trim();
   }
   return s;
+}
+
+/** Por qué una operación no abre la ventana de seguimiento hoy. */
+export type MotivoFueraDeVentana = "no_zarpa" | "sin_etd" | "cerrada";
+
+/**
+ * Explica lo que `enVentanaDeSeguimiento` solo responde con `false`.
+ *
+ * El reporte diario listaba **toda** nave excluida bajo el mismo rótulo,
+ * "todavía sin zarpar", y esa frase solo es cierta para el nivel de apertura.
+ * Una nave puede quedar fuera por el motivo contrario y exactamente opuesto:
+ * porque su operación **ya cerró** —se marcó un estado final, se vio llegar
+ * al POD, o venció el plazo de gracia—. El CMA CGM CARL ANTOINE de A00046
+ * decía "aún no zarpa" en el correo del 26-09-2026 con la operación en
+ * `OPERACION_CERRADA` desde que arribó: lo contrario de lo que decía.
+ *
+ * Repite, paso a paso, los mismos niveles que `enVentanaDeSeguimiento`: el
+ * primero que se cumple explica la exclusión. No se llama para una operación
+ * que sí está en ventana —ahí no hay nada que explicar—.
+ */
+export function razonFueraDeVentana(
+  op: {
+    estado_operacion: string | null;
+    arribo_confirmado: boolean | null;
+    etd: string | null;
+    eta: string | null;
+  },
+  now: Date,
+  llegoAlPodOp: boolean,
+): MotivoFueraDeVentana {
+  const codigo = normalizarEstado(op.estado_operacion);
+  if ((codigo && ESTADO_META[codigo].esFinal) || op.arribo_confirmado) return "cerrada";
+
+  const etd = parseOpDate(op.etd);
+  if (!etd) return "sin_etd";
+
+  const apertura = new Date(etd);
+  apertura.setHours(0, 0, 0, 0);
+  if (now.getTime() < apertura.getTime()) return "no_zarpa";
+
+  if (llegoAlPodOp) return "cerrada";
+
+  // Sin ETA, el nivel 3 no cierra nunca: si llegamos hasta acá sin haber
+  // vuelto true arriba, la operación seguiría en ventana y no se llama a esto.
+  return "cerrada";
 }
 
 /**
@@ -227,6 +289,7 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
   const ops = new Set<string>();
   const sinEta: string[] = [];
   const vigentePorOp = new Map<string, string | null>();
+  const motivoPorClave = new Map<string, MotivoFueraDeVentana>();
 
   for (const o of (opsRes.data ?? []) as {
     id: string;
@@ -242,7 +305,27 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
     const cadena = tramosPorOp.get(o.id);
     const naveFinal = cadena?.length ? (cadena[cadena.length - 1].nave ?? o.nave) : o.nave;
     const llego = llegoAlPod(ultimaPorNave.get(claveAis(naveFinal)) ?? null, o.pod);
-    if (!enVentanaDeSeguimiento(o, ahora, { llegoAlPod: llego })) continue;
+
+    /*
+     * La misma nave que entraría a `claves` si esta operación abriera ventana.
+     *
+     * Se calcula siempre, esté o no en ventana: es la clave con la que se
+     * anota el motivo cuando queda afuera.
+     */
+    const vigente = naveVigenteDe(o.id);
+    const k = vigente ? claveDeNave(vigente.nave) : claveDeNave(o.nave);
+
+    if (!enVentanaDeSeguimiento(o, ahora, { llegoAlPod: llego })) {
+      if (k) {
+        const razon = razonFueraDeVentana(o, ahora, llego);
+        const previa = motivoPorClave.get(k);
+        if (!previa || PRIORIDAD_MOTIVO[razon] < PRIORIDAD_MOTIVO[previa]) {
+          motivoPorClave.set(k, razon);
+        }
+      }
+      continue;
+    }
+
     ops.add(o.id);
     if (!o.eta) sinEta.push(`${o.ref_asli ?? o.id} (${o.nave ?? "sin nave"})`);
 
@@ -258,13 +341,15 @@ export async function calcularVentana(supabase: Cliente, ahora = new Date()): Pr
      * `sincronizarSeguimiento` apaga la nave que entregó, pero esto la volvía a
      * encender por la puerta de atrás en la misma corrida.
      */
-    const vigente = naveVigenteDe(o.id);
     // Tramo vigente sin nave: la carga espera en el transbordo y no hay buque
     // al que valga la pena preguntarle por ella.
-    const k = vigente ? claveDeNave(vigente.nave) : claveDeNave(o.nave);
     vigentePorOp.set(o.id, k || null);
     if (k) claves.add(k);
   }
 
-  return { claves, ops, sinEta, ultimaPorNave, vigentePorOp };
+  // Una operación en ventana borra cualquier motivo anotado para su nave: si
+  // alguna otra operación sí la necesita hoy, no está "fuera" de nada.
+  for (const k of claves) motivoPorClave.delete(k);
+
+  return { claves, ops, sinEta, ultimaPorNave, vigentePorOp, motivoPorClave };
 }
