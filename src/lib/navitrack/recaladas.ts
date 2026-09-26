@@ -21,12 +21,66 @@
 
 import { mismoPuerto } from "@/components/navitrack/navitrack-model";
 import { estadoSegunItinerario, leerItinerario } from "@/lib/navitrack/itinerario";
+import { claveAis } from "@/lib/navitrack/ventana";
 
 type Cliente = { from: (tabla: string) => any };
 
 /** El buque está detenido en un puerto, no navegando hacia él. */
 function estaDetenido(navStatus: string | null | undefined): boolean {
   return /moor|anchor|berth/i.test(String(navStatus ?? ""));
+}
+
+/**
+ * La llegada real de un buque a un puerto, buscada en lo ya guardado.
+ *
+ * El AIS nunca informa una llegada, solo el zarpe (`atdUtc`, exacto) y el
+ * destino que declara en cada lectura. Sin esto, `registrarRecalada` fechaba
+ * la llegada con "cuándo nos enteramos nosotros" —la primera vez que el
+ * chequeo diario vio ese puerto como `lastPort`—, y si el seguimiento de ese
+ * embarque empezó después de que el buque ya había zarpado, la llegada
+ * quedaba **después** del zarpe: el MSC BRUNELLA zarpó de Colón el 13-sept a
+ * las 04:07 y el sistema anotó su llegada el 17, porque recién ese día se
+ * puso a mirar ese embarque.
+ *
+ * Se busca entre las lecturas que ya se pagaron: la primera que declaró ese
+ * puerto como destino con el buque detenido (fondeado o atracado), anterior
+ * al zarpe. No siempre hay una —el buque puede haber estado ahí un momento
+ * demasiado corto para que el chequeo diario lo alcanzara a ver—, y en ese
+ * caso no hay nada mejor que decir.
+ */
+async function buscarLlegada(
+  supabase: Cliente,
+  nave: string | null,
+  puerto: string,
+  antesDe: string | null,
+): Promise<string | null> {
+  const clave = claveAis(nave);
+  if (!clave) return null;
+  const tope = antesDe ? new Date(antesDe).getTime() : null;
+
+  const { data } = await supabase
+    .from("navitrack_ais_lecturas")
+    .select("nave_nombre, destino, nav_status, posicion_recibida_at, consultado_at")
+    .eq("tipo", "posicion")
+    .order("consultado_at", { ascending: true })
+    .limit(2000);
+
+  for (const l of (data ?? []) as {
+    nave_nombre: string | null;
+    destino: string | null;
+    nav_status: string | null;
+    posicion_recibida_at: string | null;
+    consultado_at: string;
+  }[]) {
+    if (claveAis(l.nave_nombre) !== clave) continue;
+    if (!mismoPuerto(l.destino, puerto)) continue;
+    if (!estaDetenido(l.nav_status)) continue;
+    const cuando = l.posicion_recibida_at ?? l.consultado_at;
+    if (tope != null && new Date(cuando).getTime() >= tope) continue;
+    // Ordenadas ascendente: la primera que calza es la más cercana a la llegada real.
+    return cuando;
+  }
+  return null;
 }
 
 /** Estados que todavía no dicen nada: los reemplaza el itinerario apenas existe. */
@@ -183,11 +237,27 @@ export async function registrarRecalada(
     mismoPuerto(r.puerto, puerto),
   );
 
+  /*
+   * La llegada nunca queda después del zarpe.
+   *
+   * Se busca primero en el historial ya guardado; si no hay nada, la mejor
+   * fecha disponible es el propio zarpe (el buque no puede haber llegado
+   * después de irse). Usar "ahora" a secas fue el error: si el seguimiento de
+   * este embarque empezó después del zarpe, "ahora" cae después de una fecha
+   * que ya pasó, y la ficha mostraba un zarpe anterior a la llegada.
+   */
+  const llegadaCalculada = async () => {
+    const historica = await buscarLlegada(supabase, datos.nave, puerto, datos.zarpeAt);
+    if (historica) return historica;
+    if (!datos.zarpeAt) return ahora;
+    return ahora <= datos.zarpeAt ? ahora : datos.zarpeAt;
+  };
+
   if (existente) {
     const cambios: Record<string, unknown> = {
       // La primera vez que consta la parada es la que vale: releer la misma
       // lectura mañana no la convierte en una escala más reciente.
-      recalado_at: existente.recalado_at ?? ahora,
+      recalado_at: existente.recalado_at ?? (await llegadaCalculada()),
       zarpe_at: datos.zarpeAt,
       visto_at: ahora,
     };
@@ -202,7 +272,7 @@ export async function registrarRecalada(
     nave: datos.nave,
     estado: segun ?? "recalada",
     decidido_at: segun ? ahora : null,
-    recalado_at: ahora,
+    recalado_at: await llegadaCalculada(),
     zarpe_at: datos.zarpeAt,
   });
   return "nueva";

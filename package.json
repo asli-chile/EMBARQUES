@@ -12,6 +12,7 @@
     "ais:resolver-naves": "node scripts/resolver-naves-imo.mjs",
     "ais:excel": "node scripts/exportar-naves-ais.mjs",
     "navitrack:recaladas": "tsx scripts/navitrack-recaladas-historicas.ts",
+    "navitrack:llegadas": "tsx scripts/navitrack-llegadas-corregir.ts",
     "db:temporadas-mover": "node scripts/temporadas-mover-operaciones.mjs",
     "seed:operaciones": "node scripts/csv-to-operaciones-sql.mjs",
     "import:migracion-legacy": "node --env-file=.env scripts/import-migracion-legacy-json.mjs",

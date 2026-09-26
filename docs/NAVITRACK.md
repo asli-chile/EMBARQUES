@@ -168,10 +168,22 @@ Son dos ejes y conviene no mezclarlos:
 
 Del AIS salen dos hechos por puerto, y se guardan una sola vez:
 
-- **Llegada** (`recalado_at`): el proveedor no la informa. Se toma la primera
-  lectura que ve al buque detenido (`moored`, `anchor`, `berth`) con ese puerto
-  como destino; si nunca se lo vio así, la primera vez que figura como
-  `lastPort`, que es posterior al zarpe.
+- **Llegada** (`recalado_at`): el proveedor no la informa. `buscarLlegada()` la
+  aproxima con la primera lectura ya guardada que vio al buque detenido
+  (`moored`, `anchor`, `berth`) con ese puerto como destino, **antes del
+  zarpe**. Sin ninguna así —el buque pudo estar ahí un rato demasiado corto
+  para que el chequeo diario lo alcanzara a ver—, se usa el propio zarpe como
+  cota: nunca se afirma una llegada posterior a la salida.
+
+  No siempre es "hoy": si el seguimiento de un embarque empieza después de que
+  el buque ya zarpó de un puerto (transbordo cargado tarde, o embarque que
+  entró recién a la ventana), la primera lectura que **el chequeo diario**
+  procesa para ese puerto puede ser de varios días después del zarpe real. Ahí
+  es donde entra la búsqueda hacia atrás: sin ella, la llegada quedaba fechada
+  con "cuándo nos enteramos" y podía caer después del zarpe. Ocurrió en once
+  filas —el MSC BRUNELLA zarpó de Colón el 13-sept a las 04:07 y el sistema
+  anotó su llegada el 17—, corregidas con
+  `npm run navitrack:llegadas -- --aplicar`.
 - **Zarpe** (`zarpe_at`): `atdUtc`, que viene junto a `lastPort` y es exacto.
 
 Tres reglas que no conviene tocar sin entender el costo:
