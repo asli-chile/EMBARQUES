@@ -671,6 +671,19 @@ horas antes—. La ficha mostraba una hora distinta de la que el propio botón
 "Ver JSON" tenía delante. Corregido usando `atdUtc` cuando es seguro hacerlo,
 como se explica arriba.
 
+**Cuando la detección llega semanas tarde, no se afirma nada.** El primer
+día que se desplegó esta función, siete embarques que ya llevaban semanas
+navegando quedaron con "zarpó hoy": A00047 mostró "Zarpe REAL · 26-sept" con
+su ETD del 29-ago al lado, en la misma pantalla —28 días de diferencia—.
+`registrarZarpeReal()` primero busca hacia atrás, en las lecturas ya
+guardadas, la más antigua que ya vio al buque lejos de su POL (mismo método
+que `buscarLlegada()`); si ni así la fecha queda a menos de
+`ZARPE_CREIBLE_DIAS` (7) del ETD, no escribe nada. Es la señal de que el
+seguimiento de ese embarque empezó mucho después del zarpe real, y afirmar
+"real" ahí sería inventar una precisión que no existe: el hito sigue
+mostrando el ETD como estimado, que es lo que se mostraba antes de que esta
+función existiera.
+
 El hito "Zarpe" en Historia del viaje pasa de `certeza: "ESTIMADO"` (la fecha
 de la reserva, sin hora) a `certeza: "REAL"` (`zarpe_real_at`, con hora)
 apenas se detecta — la misma distinción visual que ya existe para las
