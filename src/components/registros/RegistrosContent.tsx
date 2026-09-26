@@ -1562,6 +1562,12 @@ export function RegistrosContent() {
       } else if (field === "contenedor") {
         dbValue = normalizarContenedor(String(e.newValue ?? "")) || null;
         if (dbValue !== e.newValue) e.node.setDataValue("contenedor", dbValue ?? "");
+      } else if (field === "viaje") {
+        /* El viaje va en mayúsculas: la base lo impone con un trigger
+           (20260926000001_viaje_mayusculas); acá se refleja en la celda al
+           instante en vez de esperar a recargar. */
+        dbValue = String(e.newValue ?? "").trim().toUpperCase() || null;
+        if (dbValue !== e.newValue) e.node.setDataValue("viaje", dbValue ?? "");
       }
 
       const updates: Record<string, unknown> = { [field]: dbValue };
@@ -1576,7 +1582,7 @@ export function RegistrosContent() {
           e.node.setDataValue("pais", destino.pais);
         }
       } else if (field === "nave") {
-        const viajeParseado = parseViajeFromNave(String(e.newValue ?? ""));
+        const viajeParseado = parseViajeFromNave(String(e.newValue ?? "")).toUpperCase();
         if (viajeParseado && !String(e.data.viaje ?? "").trim()) {
           updates.viaje = viajeParseado;
           e.node.setDataValue("viaje", viajeParseado);

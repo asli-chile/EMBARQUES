@@ -111,7 +111,7 @@ const GRUPOS: Grupo[] = [
     campos: [
       { key: "naviera", labelKey: "colCarrier" },
       { key: "nave", labelKey: "colVessel" },
-      { key: "viaje", labelKey: "colViaje" },
+      { key: "viaje", labelKey: "colViaje", mayus: true },
       { key: "booking", labelKey: "colBooking", mono: true },
       { key: "pol", labelKey: "colPOL" },
       { key: "etd", labelKey: "colETD", formato: "fecha" },

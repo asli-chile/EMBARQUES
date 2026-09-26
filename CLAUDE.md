@@ -921,4 +921,9 @@ de verdad desde el navegador.
   se usa `normalizarContenedor()` de `src/lib/contenedor.ts` (misma regla) para
   mostrar el formato al salir del campo. El campo admite varios contenedores
   separados por `|`, `,`, `;` o salto de línea: se corrige cada uno por separado
+- **Número de viaje**: siempre en mayúsculas y sin espacios en los bordes
+  (`nx635r` → `NX635R`). Lo impone un trigger en `operaciones`, `itinerarios`,
+  `navitrack_tramos` y `proformas` (`20260926000001_viaje_mayusculas.sql`), así
+  que vale para cualquier pantalla y la importación. No toca puntos, guiones ni
+  espacios intermedios: son parte del código que publica la naviera
 - **Numeración facturas transporte**: formato `TRAxxxx` (TRA0001, TRA0002...)
