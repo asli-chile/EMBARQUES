@@ -686,7 +686,7 @@ const ReservaCard = memo(function ReservaCard({
           <CardDetail label={tr.cardCitation} value={fmtDateTime(op.citacion)} />
           <CardDetail label={tr.cardStackingStart} value={fmtDateTime(op.inicio_stacking)} />
           <CardDetail label={tr.cardStackingEnd} value={fmtDateTime(op.fin_stacking)} />
-          <CardDetail label={tr.colTransport} value={transportLabel} />
+          {!isCliente && <CardDetail label={tr.colTransport} value={transportLabel} />}
           {op.booking_doc_url && (
             <div className="col-span-2 min-w-0">
               <a
@@ -1033,21 +1033,23 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           />
         </div>
       </td>
-      <td className="px-3 py-2 text-center">
-        {op.tipo_reserva_transporte === "asli" ? (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-dash-neon/15 text-dash-fg border border-dash-border">
-            ASLI
-          </span>
-        ) : op.tipo_reserva_transporte === "externa" ? (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-            {typeExternal}
-          </span>
-        ) : (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-transparent text-dash-muted border border-dashed border-dash-border">
-            {typePendiente}
-          </span>
-        )}
-      </td>
+      {!isCliente && (
+        <td className="px-3 py-2 text-center">
+          {op.tipo_reserva_transporte === "asli" ? (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-dash-neon/15 text-dash-fg border border-dash-border">
+              ASLI
+            </span>
+          ) : op.tipo_reserva_transporte === "externa" ? (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
+              {typeExternal}
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium bg-transparent text-dash-muted border border-dashed border-dash-border">
+              {typePendiente}
+            </span>
+          )}
+        </td>
+      )}
       <td className="px-2 py-2 text-center">
         <div className="flex items-center justify-center gap-1.5">
           <button
@@ -1672,8 +1674,8 @@ export function MisReservasContent() {
     });
   }, []);
 
-  /* Casilla (solo personal interno) + 13 columnas de datos. */
-  const tableColCount = isCliente ? 13 : 14;
+  /* Casilla + columna de transporte (solo personal interno) + resto de columnas de datos. */
+  const tableColCount = isCliente ? 12 : 14;
 
   /*
    * Una reserva desplegada a la vez, con la mecánica compartida con
@@ -2593,7 +2595,9 @@ export function MisReservasContent() {
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="solicitud_ventana" label={tr.colTipoOperacion} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-                    <th className="sticky top-0 z-20 bg-dash-control px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colTransport}</th>
+                    {!isCliente && (
+                      <th className="sticky top-0 z-20 bg-dash-control px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colTransport}</th>
+                    )}
                     <th className="sticky top-0 z-20 bg-dash-control px-3 py-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-dash-muted border-b border-dash-border">{tr.colActions}</th>
                   </tr>
                 </thead>

@@ -157,6 +157,7 @@ const GRUPOS: Grupo[] = [
     id: "transporte",
     tituloKey: "detalleTransporte",
     icono: "lucide:truck",
+    interno: true,
     campos: [
       { key: "transporte", labelKey: "colTransportCompany" },
       { key: "chofer", labelKey: "colDriverName" },
