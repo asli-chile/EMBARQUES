@@ -11,6 +11,7 @@ import { HeaderChrome } from "./HeaderChrome";
 import { ViewAsControl } from "./ViewAsControl";
 import { AppMobileNav } from "./AppMobileNav";
 import { ClaudeUsoIndicator } from "./ClaudeUsoIndicator";
+import { DeployIndicator } from "./DeployIndicator";
 import { useLocale } from "@/lib/i18n";
 
 /**
@@ -82,6 +83,9 @@ export function Header({ pathname = "" }: { pathname?: string } = {}) {
           />
         </a>
         <div className="h-full w-4 shrink-0 self-stretch" data-tauri-drag-region aria-hidden />
+        <div className="absolute left-full top-1/2 -translate-y-1/2">
+          <DeployIndicator />
+        </div>
       </div>
 
       {/*

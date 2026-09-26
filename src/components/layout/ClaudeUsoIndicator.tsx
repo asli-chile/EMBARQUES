@@ -4,6 +4,7 @@ import { es, enUS } from "date-fns/locale";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
+import { esDueno } from "@/lib/herramientas-dueno";
 
 /**
  * Uso del plan de Claude de Rodrigo, junto al logo.
@@ -16,7 +17,6 @@ import { createClient } from "@/lib/supabase/client";
  * Se decide por el correo del usuario autenticado, no por el perfil efectivo:
  * "ver como" no debe esconderlo ni mostrárselo a otro. La barrera real es RLS.
  */
-const CORREO = "rodrigo.caceres@asli.cl";
 const REFRESCO_MS = 30_000;
 /**
  * Pasado esto sin noticias del widget, el dato se muestra como viejo. El widget
@@ -63,7 +63,7 @@ export function ClaudeUsoIndicator() {
   const { user } = useAuth();
   const { t, locale } = useLocale();
   const tr = t.claudeUso;
-  const habilitado = (user?.email ?? "").trim().toLowerCase() === CORREO;
+  const habilitado = esDueno(user?.email);
 
   const [uso, setUso] = useState<Uso | null>(null);
   const [ahora, setAhora] = useState(() => Date.now());

@@ -79,6 +79,16 @@ export const translations = {
       ventanaNueva: "Ventana nueva",
       sinNoticias: "El widget del PC no envía datos hace",
     },
+    deployIndicador: {
+      aria: "Estado del deploy",
+      titulo: "Último deploy",
+      listo: "Listo",
+      desplegando: "Desplegando…",
+      fallo: "Falló",
+      esperandoVercel: "Esperando a Vercel",
+      commitHace: "Commit hace",
+      limiteGithub: "GitHub limitó las consultas; se retoma a las",
+    },
     marketingOficina: {
       title: "Oficina de marketing",
       subtitle: "Piezas gráficas para redes sociales, listas para publicar.",
@@ -3490,6 +3500,16 @@ export const translations = {
       reiniciaEn: "Resets in",
       ventanaNueva: "New window",
       sinNoticias: "The desktop widget hasn't reported for",
+    },
+    deployIndicador: {
+      aria: "Deploy status",
+      titulo: "Latest deploy",
+      listo: "Ready",
+      desplegando: "Deploying…",
+      fallo: "Failed",
+      esperandoVercel: "Waiting for Vercel",
+      commitHace: "Committed",
+      limiteGithub: "GitHub rate-limited requests; resumes at",
     },
     marketingOficina: {
       title: "Marketing office",
