@@ -704,11 +704,13 @@ Tres cosas que no hace, y conviene no prometer:
   posición a las otras que sigue llevando. Sí la apaga cuando **no le queda
   ninguna**, contando los dos caminos por los que una carga apunta a un buque —la
   columna `operaciones.nave` y `navitrack_tramos`—; si no, quedaría pagando un
-  crédito diario por un viaje ajeno. Se comprueba solo al confirmar un arribo, no
-  en cada corrida, para no tocar una nave que alguien puso a mano en la lista sin
-  carga todavía. `sincronizarSeguimiento` no cubre este caso: solo actúa sobre
-  cadenas de transbordo y nunca apaga una nave sin sucesor. Deshacer el arribo la
-  vuelve a encender, si tiene identificador con el que consultarla.
+  crédito diario por un viaje ajeno. Se comprueba al confirmar el arribo, para
+  que el efecto se vea al instante y no haya que esperar al chequeo diario.
+  Deshacer el arribo la vuelve a encender, si tiene identificador con el que
+  consultarla. Desde el 26-09-2026, `sincronizarSeguimiento` hace la misma
+  comprobación en cada corrida —tenga o no cadena de transbordo—, así que una
+  nave sin ninguna carga viva no se queda encendida más de un ciclo aunque
+  nadie confirme el arribo a mano.
 - **No avisa al cliente.** `arribo_avisado_at` existe desde la migración de
   estados y nadie lo escribe todavía.
 

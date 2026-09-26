@@ -10,16 +10,20 @@
  * Esta función corrige ese desfase. Es el traspaso: apaga el buque que soltó la
  * carga y enciende el que la lleva ahora.
  *
+ * También apaga cualquier nave que se quedó **sin ninguna** carga viva,
+ * tenga o no cadena de transbordo. Un embarque directo —la mayoría— no pasa
+ * por el traspaso: si es la única operación de esa nave y cierra, nada volvía
+ * a tocarla. El CMA CGM CARL ANTOINE de A00046 quedó así encendido desde que
+ * arribó, y el chequeo diario lo repetía cada mañana en el reporte como
+ * "fuera de ventana (cerrada)" sin que apagarlo lo sacara de la lista: nada lo
+ * apagaba de verdad. Corregido el 26-09-2026.
+ *
  * Se ejecuta antes de gastar —en el chequeo diario y en la actualización
  * manual—, así el desfase nunca dura más de un ciclo, aunque los tramos se
  * hayan cargado por fuera de la pantalla.
  *
- * Dos límites deliberados:
- *
- * - Solo actúa sobre cadenas de transbordo. Nunca apaga una nave por su cuenta
- *   si no hay un sucesor al que traspasarle el seguimiento: el resto de la
- *   lista blanca es decisión del usuario y no se toca.
- * - Nunca enciende una nave sin IMO ni MMSI, porque no se podría consultar.
+ * Un límite deliberado: nunca enciende una nave sin IMO ni MMSI, porque no se
+ * podría consultar.
  */
 
 import { mismoPuerto } from "@/components/navitrack/navitrack-model";
@@ -259,6 +263,23 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
       await supabase.from("naves").update({ tracking_activo: false }).eq("id", vieja.id);
       apagadas.add(vieja.nombre);
     }
+  }
+
+  /*
+   * Cualquier nave encendida sin ninguna carga viva se apaga, tenga o no
+   * cadena de transbordo.
+   *
+   * Lo de arriba solo suelta la nave que **entregó** dentro de un transbordo.
+   * Un embarque sin cadena —la mayoría— no pasa por ahí nunca: si es su única
+   * operación y cierra, nada volvía a tocar esa nave. Quedaba encendida para
+   * siempre, y el chequeo diario la seguía nombrando cada mañana como "fuera
+   * de ventana (cerrada)" sin que apagarla la sacara de la lista. El CMA CGM
+   * CARL ANTOINE de A00046 llevaba así desde que arribó.
+   */
+  for (const [k, n] of porClave) {
+    if (!n.tracking_activo || conCargaViva.has(k) || apagadas.has(n.nombre)) continue;
+    await supabase.from("naves").update({ tracking_activo: false }).eq("id", n.id);
+    apagadas.add(n.nombre);
   }
 
   return {
