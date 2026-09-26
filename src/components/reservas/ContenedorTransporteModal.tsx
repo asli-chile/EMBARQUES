@@ -279,45 +279,48 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
   return (
     // Sin onClick acá a propósito: el modal no se cierra al hacer clic afuera,
     // solo con la X del header.
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+    <div
+      className="dash-neon fixed inset-0 z-50 flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      data-theme={theme}
+    >
       <div
-        className="dash-neon relative flex w-full max-w-2xl max-h-[88vh] flex-col overflow-hidden rounded-2xl border border-dash-border bg-[var(--dash-bg)] shadow-2xl"
-        data-theme={theme}
+        className="dash-card motion-enter-lift relative flex w-full max-w-2xl max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="contenedor-transporte-title"
       >
+        <div className="h-[3px] shrink-0 bg-gradient-to-r from-dash-neon to-dash-neon-hot" />
+
         {/* Header */}
-        <header className="relative shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_72%,transparent)]">
-          <div className="h-[3px] bg-gradient-to-r from-dash-neon via-dash-neon to-dash-neon-hot" />
-          <div className="flex items-center justify-between gap-4 px-5 py-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 id="contenedor-transporte-title" className="text-base font-bold tracking-tight text-dash-fg sm:text-lg">
-                  {isEdit ? tr.editContainerModal : tr.addContainerModal}
-                </h3>
-                <span className="rounded-md border border-dash-neon/30 bg-dash-neon/10 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-dash-fg">
-                  {refLabel}
-                </span>
-              </div>
-              <p className="mt-0.5 truncate text-xs font-medium text-dash-muted">
-                {op.cliente ?? "—"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="motion-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:border-dash-neon/40 hover:text-dash-fg"
-              aria-label={tr.close}
-            >
-              <Icon icon="lucide:x" width={18} height={18} />
-            </button>
+        <header className="flex shrink-0 items-start gap-4 px-6 pt-6 pb-5 sm:px-8">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_rgba(45,212,191,0.5)]">
+            <Icon icon="typcn:box" width={24} height={24} className="text-dash-neon" />
           </div>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h3 id="contenedor-transporte-title" className="text-lg font-bold tracking-tight text-dash-fg sm:text-xl">
+              {isEdit ? tr.editContainerModal : tr.addContainerModal}
+            </h3>
+            <p className="mt-1 font-mono text-sm font-semibold tracking-wider text-dash-neon/90">
+              {refLabel}
+              <span className="mx-2 text-dash-muted/50">·</span>
+              <span className="font-sans font-medium tracking-normal text-dash-muted">
+                {op.cliente ?? "—"}
+              </span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="motion-interactive -mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dash-muted transition-colors hover:bg-dash-control hover:text-dash-fg"
+            aria-label={tr.close}
+          >
+            <Icon icon="lucide:x" width={18} height={18} />
+          </button>
         </header>
 
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="space-y-4 px-5 py-4">
+          <div className="space-y-4 px-6 pb-6 sm:px-8">
             {error && (
               <div className="motion-enter-lift flex items-start gap-2.5 rounded-xl border border-red-400/35 bg-red-500/15 px-4 py-3 text-xs font-medium text-dash-fg">
                 <Icon icon="lucide:alert-circle" width={16} height={16} className="mt-0.5 shrink-0 text-red-400" />
@@ -465,7 +468,7 @@ export function ContenedorTransporteModal({ op, supabase, onClose, onSaved }: Pr
 
         {/* Guardar/Cancelar: solo si hay cambios pendientes */}
         {isDirty ? (
-          <footer className="motion-enter-lift shrink-0 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_85%,transparent)] px-5 py-3">
+          <footer className="motion-enter-lift shrink-0 border-t border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_85%,transparent)] px-6 py-4 backdrop-blur-md sm:px-8">
             <div className="flex justify-end gap-2">
               <button
                 type="button"
