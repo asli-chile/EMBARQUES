@@ -722,10 +722,15 @@ export function SeccionesOperacion({
                   return (
                     <div
                       key={c.key}
-                      className={`min-w-0 rounded-lg px-2.5 py-1.5 ${
+                      /* Tres estados de un vistazo: cambio sin guardar en
+                         teal, dato cargado en oliva (el "completo" de la barra
+                         de avance), vacío sin fondo. */
+                      className={`min-w-0 rounded-lg border-l-2 px-2.5 py-1.5 ${
                         pendiente
-                          ? "estado--curso bg-[color-mix(in_srgb,var(--estado)_12%,transparent)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--estado)_45%,transparent)]"
-                          : ""
+                          ? "estado--curso border-[var(--estado)] bg-[color-mix(in_srgb,var(--estado)_12%,transparent)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--estado)_45%,transparent)]"
+                          : sinDato
+                            ? "border-transparent"
+                            : "estado--ok border-[color-mix(in_srgb,var(--estado)_70%,transparent)] bg-[color-mix(in_srgb,var(--estado)_9%,transparent)]"
                       }`}
                     >
                       {/* La etiqueta de un campo vacío se apaga con su valor:
