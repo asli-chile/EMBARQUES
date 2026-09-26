@@ -599,7 +599,9 @@ export const GET: APIRoute = async ({ request, url }) => {
        */
       const zarpeReal = await registrarZarpeReal(supabase, {
         operacionId: op.id,
+        nave: String(op.nave ?? nave.nombre),
         pol: op.pol,
+        etd: op.etd,
         lat: posicion?.lat ?? null,
         lng: posicion?.lng ?? null,
         recibidoAt: fecha(detalle.positionReceived),

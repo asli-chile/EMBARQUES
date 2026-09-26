@@ -312,6 +312,18 @@ export async function registrarRecalada(
 }
 
 /**
+ * Cuánto puede alejarse una fecha detectada del ETD sin dejar de ser creíble.
+ *
+ * Un zarpe se atrasa por clima o cupo en el puerto: unos días son normales.
+ * Que aparezca semanas después no es un zarpe tardío, es que el chequeo
+ * diario recién empezó a mirar este embarque —o esta función recién se
+ * desplegó— mucho después de que el buque ya se había ido. Afirmar "real" con
+ * esa fecha sería inventar una precisión que no existe: mejor seguir
+ * mostrando el ETD como estimado, que es lo que se mostraba antes.
+ */
+const ZARPE_CREIBLE_DIAS = 7;
+
+/**
  * El zarpe real del puerto de origen.
  *
  * `operaciones.etd` es la fecha planificada de la reserva; puede moverse por
@@ -322,15 +334,23 @@ export async function registrarRecalada(
  * **Que zarpó** se decide por posición y no por `atdUtc`: ese campo quedó
  * documentado como poco confiable para emparejarlo con un puerto en
  * particular en viajes ya avanzados, con varias escalas (ver el comentario
- * de `AisSnapshot.departedAt`). La primera lectura que ve al buque **fuera**
- * del radio de su puerto de origen es la evidencia; no hace falta más.
+ * de `AisSnapshot.departedAt`). Que el buque esté **fuera** del radio de su
+ * puerto de origen es la evidencia; no hace falta más.
  *
- * **A qué hora** sí se prefiere `atdUtc`, cuando la misma lectura lo trae y es
- * anterior al momento en que se tomó la posición: acá no hay ambigüedad de
- * puerto que resolver —es el primer zarpe del viaje, no una escala en el
- * medio de varias—, y el proveedor lo entrega con precisión de minutos. Sin
- * él, se usa cuándo se tomó esa posición, que es una aproximación acotada por
- * cuán seguido corre el chequeo diario, no el instante exacto del zarpe.
+ * **Cuándo** se busca primero hacia atrás, en las lecturas ya guardadas, la
+ * más antigua que ya lo vio afuera —el mismo método de `buscarLlegada()`—.
+ * Si esa fecha no alcanza (`ZARPE_CREIBLE_DIAS` es el freno), es señal de que
+ * el seguimiento de este embarque empezó mucho después de que el buque ya
+ * había zarpado: siete embarques que ya llevaban semanas navegando cuando esta
+ * función se desplegó quedaron con "zarpó hoy" en vez de su fecha real —el
+ * A00047 decía 26-sept, veintiocho días después de su ETD del 29-ago—. En ese
+ * caso no se afirma nada: se deja `zarpe_real_at` sin tocar y el hito sigue
+ * mostrando el ETD como estimado, que es lo honesto.
+ *
+ * `atdUtc` de la lectura de hoy se usa como último refinamiento, solo si cae
+ * dentro de lo creíble: es más preciso que "cuándo se tomó la posición", pero
+ * acá no hay ambigüedad de puerto que resolver —es el primer zarpe del viaje,
+ * no una escala en el medio de varias—.
  *
  * Se guarda en `operaciones.zarpe_real_at`, no en `navitrack_recaladas`: esa
  * tabla es el historial de puertos intermedios, y el zarpe de origen no es
@@ -340,21 +360,26 @@ export async function registrarZarpeReal(
   supabase: Cliente,
   datos: {
     operacionId: string;
+    /** Nombre de la nave, para buscar su historial de posiciones. */
+    nave: string | null;
     pol: string | null;
+    etd: string | null;
     lat: number | null;
     lng: number | null;
-    /** Cuándo se tomó esta posición: respaldo si no hay `atdUtc` que sirva. */
+    /** Cuándo se tomó esta posición: respaldo si no hay nada mejor. */
     recibidoAt: string | null;
     /** `atdUtc` de la misma lectura, si el proveedor lo entrega. */
     atdUtc: string | null;
   },
-  // "sin_pol" y "cerca" son diagnóstico, no casos que deban preocupar por sí
-  // solos: dicen por qué esta llamada no escribió nada.
-): Promise<"nueva" | "ya_tenia" | "sin_pol" | "cerca"> {
+  // Los cuatro últimos son diagnóstico: dicen por qué esta llamada no escribió
+  // nada, no un problema por sí solos.
+): Promise<"nueva" | "ya_tenia" | "sin_pol" | "cerca" | "sin_evidencia" | "no_creible"> {
   const pol = (datos.pol ?? "").trim();
   if (!pol) return "sin_pol";
   // Sigue cerca del origen: nada que registrar todavía.
   if (cercaDelPuerto(datos.lat, datos.lng, pol)) return "cerca";
+
+  const historico = await buscarZarpeHistorico(supabase, datos.nave, pol);
 
   /*
    * `atdUtc` vale solo si es anterior a esta lectura. Si fuera posterior,
@@ -363,18 +388,58 @@ export async function registrarZarpeReal(
    */
   const recibido = datos.recibidoAt ? new Date(datos.recibidoAt).getTime() : null;
   const atd = datos.atdUtc ? new Date(datos.atdUtc).getTime() : null;
-  const zarpeReal =
+  const deHoy =
     atd != null && recibido != null && atd <= recibido ? datos.atdUtc : (datos.recibidoAt ?? new Date().toISOString());
+
+  const candidato = historico ?? deHoy;
+  if (!candidato) return "sin_evidencia";
+
+  const etd = datos.etd ? new Date(`${datos.etd}T00:00:00Z`) : null;
+  if (etd) {
+    const diasDesdeEtd = (new Date(candidato).getTime() - etd.getTime()) / 86_400_000;
+    if (diasDesdeEtd > ZARPE_CREIBLE_DIAS) return "no_creible";
+  }
 
   const { data } = await supabase
     .from("operaciones")
-    .update({ zarpe_real_at: zarpeReal })
+    .update({ zarpe_real_at: candidato })
     .eq("id", datos.operacionId)
     // La primera lectura que lo vio zarpado es la que vale: no se pisa.
     .is("zarpe_real_at", null)
     .select("id");
 
   return (data ?? []).length > 0 ? "nueva" : "ya_tenia";
+}
+
+/** La lectura más antigua ya guardada que vio al buque fuera de su puerto de origen. */
+async function buscarZarpeHistorico(
+  supabase: Cliente,
+  nave: string | null,
+  pol: string,
+): Promise<string | null> {
+  const clave = claveAis(nave);
+  if (!clave) return null;
+
+  const { data } = await supabase
+    .from("navitrack_ais_lecturas")
+    .select("nave_nombre, lat, lng, posicion_recibida_at, consultado_at")
+    .eq("tipo", "posicion")
+    .order("consultado_at", { ascending: true })
+    .limit(2000);
+
+  for (const l of (data ?? []) as {
+    nave_nombre: string | null;
+    lat: number | null;
+    lng: number | null;
+    posicion_recibida_at: string | null;
+    consultado_at: string;
+  }[]) {
+    if (claveAis(l.nave_nombre) !== clave) continue;
+    if (cercaDelPuerto(l.lat, l.lng, pol)) continue;
+    // Ordenadas ascendente: la primera que calza es la más antigua guardada.
+    return l.posicion_recibida_at ?? l.consultado_at;
+  }
+  return null;
 }
 
 export type TransbordoSinNave = {
