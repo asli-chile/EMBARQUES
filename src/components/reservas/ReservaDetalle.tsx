@@ -773,18 +773,12 @@ export function SeccionesOperacion({
   /* Los grupos van en el orden del viaje, así que se leen como pasos
      numerados unidos por una espina punteada —la misma ruta de la cabecera—.
      Cada paso se pliega: plegado muestra en una línea lo que tiene cargado,
-     así compacto no significa esconder. Los que no tienen nada arrancan
-     plegados, para que la ficha abra mostrando lo que sí hay. */
-  /* `null` = todavía rige la regla (vacíos plegados). Se recalcula en cada
-     render porque la operación completa llega después de abrir la ficha: fijarla
-     al montar plegaría pasos que un instante después tienen datos. Desde el
-     primer clic manda lo que eligió la persona. */
-  const [elegidos, setElegidos] = useState<Set<string> | null>(null);
-  const porDefecto = new Set(grupos.filter((g) => g.campos.every((c) => vacio(fila[c.key]))).map((g) => g.id));
-  const plegados = elegidos ?? porDefecto;
+     así compacto no significa esconder. Todos arrancan plegados: la ficha
+     abre como un índice del viaje y se despliega lo que se quiere mirar. */
+  const [plegados, setPlegados] = useState<Set<string>>(() => new Set(grupos.map((g) => g.id)));
   const alternar = (id: string) =>
-    setElegidos((prev) => {
-      const next = new Set(prev ?? porDefecto);
+    setPlegados((prev) => {
+      const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
