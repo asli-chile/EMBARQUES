@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import type { Locale } from "@/lib/i18n/translations";
 import type { NeonTheme } from "@/lib/ui/neonTheme";
 import { NavitrackMap } from "./NavitrackMap";
+import { NavitrackJsonCrudo } from "./NavitrackJsonCrudo";
 import { NavieraLogo } from "./NavieraLogo";
 import { NavitrackCadena, NavitrackTimeline, NavitrackTransbordo } from "./NavitrackJourney";
 import { isoDePais, isoDePuerto } from "./navitrack-banderas";
@@ -225,6 +226,8 @@ type ShipmentProps = {
   avisoRecalada: string | null;
   op: NavitrackOperacion;
   ais: AisSnapshot | null;
+  /** La lectura del proveedor sin traducir, para el botón "Ver JSON". */
+  aisCrudo: { crudo: Record<string, unknown> | null; consultadoAt: string | null } | null;
   journey: Journey;
   estado: EstadoEmbarque;
   alertas: Alerta[];
@@ -270,6 +273,7 @@ export function NavitrackShipment({
   puedeGastar = false,
   op,
   ais,
+  aisCrudo,
   journey,
   estado,
   alertas,
@@ -314,6 +318,7 @@ export function NavitrackShipment({
     !soloLectura && (estado.transbordoSospechado || decision?.estado === "confirmado");
 
   const [pestana, setPestana] = useState<Pestana>("ruta");
+  const [jsonAbierto, setJsonAbierto] = useState(false);
   // Si la sospecha se resuelve estando en esa pestaña, no dejar una vista vacía.
   useEffect(() => {
     if (pestana === "transbordo" && !mostrarTransbordo) setPestana("ruta");
@@ -568,6 +573,22 @@ export function NavitrackShipment({
             />
             <span className="max-sm:sr-only">{tr.refresh}</span>
           </button>
+
+          {/*
+            * Solo personal interno: es la respuesta cruda del proveedor, sin
+            * traducir. Muestra la última lectura ya guardada; no gasta nada.
+            */}
+          {!soloLectura && (
+            <button
+              type="button"
+              onClick={() => setJsonAbierto(true)}
+              title={tr.jsonTitulo}
+              className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-2 text-[12px] font-semibold"
+            >
+              <Icon icon="lucide:code-2" width={14} height={14} aria-hidden />
+              <span className="max-sm:sr-only">{tr.jsonBoton}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1359,6 +1380,10 @@ export function NavitrackShipment({
           )}
         </div>
       </div>
+
+      {jsonAbierto && (
+        <NavitrackJsonCrudo datos={aisCrudo} tr={tr} onCerrar={() => setJsonAbierto(false)} />
+      )}
     </div>
   );
 }

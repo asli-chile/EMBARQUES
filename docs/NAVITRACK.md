@@ -237,6 +237,17 @@ cron      -> proveedor -> 1 crédito por nave con tracking_activo, y guarda la f
 forzar=1  -> proveedor -> acto deliberado de quien puede gastar
 ```
 
+**Botón "Ver JSON" en la ficha del embarque.** Junto a "Actualizar", solo para
+personal interno (`!soloLectura`). Muestra la respuesta completa del
+proveedor tal cual —`navitrack_ais_lecturas.crudo`—, sin traducir a los campos
+que arma el resto de la pantalla; no dispara ninguna consulta, es la misma
+lectura que ya está guardada. Para quien puede gastar viene de `vessel.ts`
+(que ya la trae en cada respuesta); para el resto, del mismo lote de 600
+lecturas que `NavitrackContent` ya carga para la flota entera —se guarda
+aparte en `aisCrudoCache` porque nadie más lo necesita, y cargarlo junto a
+`aisCache` habría hecho pesar el crudo de 600 lecturas en cada posición
+dibujada.
+
 Hasta el 16-09-2026 el endpoint decidía por antigüedad: pasado el TTL, abrir un
 embarque llamaba al proveedor. Como el cron corre una vez al día, a las seis
 horas de esa corrida cualquier apertura empezaba a pagar, y el gasto quedaba

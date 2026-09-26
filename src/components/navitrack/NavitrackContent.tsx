@@ -204,8 +204,23 @@ export function NavitrackContent() {
 
   /** Últimas posiciones guardadas por identificador, para toda la flota. */
   const [aisCache, setAisCache] = useState<Map<string, AisSnapshot>>(new Map());
+  /**
+   * La respuesta cruda del proveedor detrás de cada posición, por identificador.
+   *
+   * Aparte de `aisCache` a propósito: es solo para el botón "Ver JSON" del
+   * embarque abierto, y guardar el objeto entero de las 600 lecturas de la
+   * flota en cada posición ya cargada sería seguir todo ese peso sin que nadie
+   * lo mire.
+   */
+  const [aisCrudoCache, setAisCrudoCache] = useState<
+    Map<string, { crudo: Record<string, unknown> | null; consultadoAt: string | null }>
+  >(new Map());
 
   const [ais, setAis] = useState<AisSnapshot | null>(null);
+  const [aisCrudo, setAisCrudo] = useState<{
+    crudo: Record<string, unknown> | null;
+    consultadoAt: string | null;
+  } | null>(null);
   const [aisCargando, setAisCargando] = useState(false);
 
   const [escalasDe, setEscalasDe] = useState<{ opId: string | null; filas: Escala[] }>({
@@ -339,6 +354,20 @@ export function NavitrackContent() {
     }
     setAisCache(porIdent);
 
+    const porIdentCrudo = new Map<
+      string,
+      { crudo: Record<string, unknown> | null; consultadoAt: string | null }
+    >();
+    for (const l of (lecturasRes.data ?? []) as Record<string, unknown>[]) {
+      const ident = String(l.identificador ?? "").trim();
+      if (!ident || porIdentCrudo.has(ident)) continue;
+      porIdentCrudo.set(ident, {
+        crudo: (l.crudo as Record<string, unknown> | null) ?? null,
+        consultadoAt: (l.consultado_at as string | null) ?? null,
+      });
+    }
+    setAisCrudoCache(porIdentCrudo);
+
     const mapaNaves = new Map<string, NaveIdent>();
     const seguidas = new Set<string>();
     for (const n of (navesRes.data ?? []) as (NaveIdent & { tracking_activo?: boolean })[]) {
@@ -468,8 +497,17 @@ export function NavitrackContent() {
         // Un fallo del proveedor no se le muestra al usuario: la vista cae a la
         // posición estimada, que ya explica su propia procedencia.
         setAis(json.ok ? parseAisSnapshot(json.data ?? null) : null);
+        setAisCrudo(
+          json.ok
+            ? {
+                crudo: (json.data?.crudo as Record<string, unknown> | null) ?? null,
+                consultadoAt: (json.data?.consultadoAt as string | null) ?? null,
+              }
+            : null,
+        );
       } catch {
         setAis(null);
+        setAisCrudo(null);
       } finally {
         if (!silencioso) setAisCargando(false);
       }
@@ -479,6 +517,7 @@ export function NavitrackContent() {
 
   useEffect(() => {
     setAis(null);
+    setAisCrudo(null);
     setTransbordoError(null);
     if (!seleccionId || !identSeleccion || !user) return;
     /*
@@ -492,10 +531,11 @@ export function NavitrackContent() {
     if (!puedeGastar) {
       const clave = (identSeleccion.mmsi ?? "").trim() || (identSeleccion.imo ?? "").trim();
       setAis(clave ? (aisCache.get(clave) ?? null) : null);
+      setAisCrudo(clave ? (aisCrudoCache.get(clave) ?? null) : null);
       return;
     }
     void consultarAis(identSeleccion, false);
-  }, [seleccionId, identSeleccion, user, consultarAis, puedeGastar, aisCache]);
+  }, [seleccionId, identSeleccion, user, consultarAis, puedeGastar, aisCache, aisCrudoCache]);
 
   /**
    * Escalas del buque.
@@ -1167,6 +1207,7 @@ export function NavitrackContent() {
               avisoRecalada={avisoRecalada}
               op={seleccion}
               ais={ais}
+              aisCrudo={aisCrudo}
               journey={detalle.journey}
               estado={detalle.estado}
               alertas={detalle.alertas}

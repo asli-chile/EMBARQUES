@@ -107,6 +107,10 @@ function comoRespuesta(l: Lectura) {
     // Zarpe real de ese puerto. Sin él la pantalla fecha el último puerto con
     // el ETD del origen, que es otro puerto.
     atdUtc: fecha(l.crudo?.atdUtc),
+    // La respuesta completa del proveedor, para el botón "Ver JSON": lo
+    // demás de esta función es lo que la pantalla necesita para dibujar,
+    // esto es lo que necesita quien está revisando un dato puntual.
+    crudo: l.crudo,
   };
 }
 

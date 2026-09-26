@@ -3026,6 +3026,13 @@ export const translations = {
       itPendienteNave: "Falta la nave en {{puerto}}",
       itIndicarNave: "Indicar nave",
       itTransbordosTitulo: "Transbordos",
+      // ── Ver JSON: la lectura cruda del proveedor, sin traducir ─────────
+      jsonBoton: "Ver JSON",
+      jsonTitulo: "Última lectura del proveedor",
+      jsonConsultadoEl: "Consultado el {{fecha}}",
+      jsonSinDato: "Todavía no hay una lectura guardada para este buque.",
+      jsonCopiar: "Copiar",
+      jsonCopiado: "Copiado",
       // ── Arribo a destino ──────────────────────────────────────────────
       // Es la última pregunta del viaje y son dos: la llegada que la naviera
       // anuncia y la que ya ocurrió. Se separan porque solo la segunda da la
@@ -6447,6 +6454,12 @@ export const translations = {
       itPendienteNave: "Vessel missing at {{puerto}}",
       itIndicarNave: "Set vessel",
       itTransbordosTitulo: "Transshipments",
+      jsonBoton: "View JSON",
+      jsonTitulo: "Latest reading from the provider",
+      jsonConsultadoEl: "Queried on {{fecha}}",
+      jsonSinDato: "No saved reading yet for this vessel.",
+      jsonCopiar: "Copy",
+      jsonCopiado: "Copied",
       arriboSeccion: "Arrival at destination",
       arriboAnunciadoTitulo: "Arrival announced",
       arriboAnunciadoTexto:
