@@ -557,6 +557,14 @@ ahorrarse ocultándolo. Hasta el 26-09-2026 la corrida de prueba pasaba
 `undefined` en su lugar, como si fuera un gasto más, y el reporte mostraba
 "sin dato" donde debía decir el saldo real.
 
+**Botón "Correo de prueba" en el Panel de Rastreo.** Antes, correr esto era
+armar un `curl` a mano con `NAVITRACK_CRON_SECRET`. `POST
+/api/navitrack/prueba-correo` hace lo mismo desde la pantalla: solo
+superadmin, lee el secreto del lado del servidor (nunca viaja al navegador) y
+llama a `chequeo-diario?sin_gasto=1` por HTTP interno. El botón vive junto a
+"Actualizar posiciones" —esa sí gasta y pide confirmación; este no gasta nada
+y no la pide—.
+
 **El nombre de la nave no lleva el código de viaje.** Algunas navieras lo
 escriben pegado ("MSC ATHOS [MC633R]"), igual que el AIS. Si ese texto entra
 tal cual al catálogo, la misma nave se da de alta una vez por cada viaje que

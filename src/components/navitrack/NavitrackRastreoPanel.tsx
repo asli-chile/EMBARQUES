@@ -178,6 +178,7 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
   const [paso, setPaso] = useState<0 | 1 | 2>(0);
   const [restante, setRestante] = useState(ESPERA_SEG);
   const [actualizando, setActualizando] = useState(false);
+  const [enviandoPrueba, setEnviandoPrueba] = useState(false);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -257,6 +258,44 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
       setPresupuesto(null);
     }
   }, [apiPrefix, cargar, tr]);
+
+  /*
+   * Correo de prueba: la corrida entera, sin gastar y sin avisarle al equipo.
+   *
+   * Va contra un endpoint propio y no contra `chequeo-diario` directo: ese
+   * exige el secreto del cron, que no puede viajar al navegador. El endpoint
+   * lo llama por dentro, del lado del servidor, y solo lo deja apretar quien
+   * ya está mirando este panel (superadmin).
+   */
+  const enviarPrueba = useCallback(async () => {
+    setEnviandoPrueba(true);
+    setAviso(null);
+    try {
+      const r = await fetch(`${apiPrefix}/api/navitrack/prueba-correo`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const j = (await r.json()) as {
+        ok: boolean;
+        code?: string;
+        saldo?: number | null;
+        revisadas?: number;
+      };
+      if (!j.ok) {
+        setAviso(MOTIVO[j.code ?? ""] ?? tr.rastreoPruebaError);
+      } else {
+        setAviso(
+          tr.rastreoPruebaEnviado
+            .replace("{{saldo}}", j.saldo == null ? "—" : String(j.saldo))
+            .replace("{{n}}", String(j.revisadas ?? 0)),
+        );
+      }
+    } catch {
+      setAviso(tr.rastreoPruebaError);
+    } finally {
+      setEnviandoPrueba(false);
+    }
+  }, [apiPrefix, tr]);
 
   const accion = useCallback(
     async (nave: NaveRastreo, tipo: "seguir" | "dejar" | "resolver") => {
@@ -351,23 +390,45 @@ export function NavitrackRastreoPanel({ tr, onCerrar }: { tr: Textos; onCerrar: 
           * Actualizar a mano es lo más caro que se puede apretar aquí, así que
           * el botón lo dice en su propia etiqueta y no se disfraza de "refrescar".
           */}
-        <div className="flex items-center justify-between gap-3 px-4 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3">
           <p className="text-[11px] leading-snug text-dash-muted">{tr.rastreoActualizarAyuda}</p>
-          <button
-            type="button"
-            disabled={!estado?.hayClave || actualizando}
-            onClick={() => void abrirActualizacion()}
-            className="dash-control motion-interactive inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-[12px] font-bold disabled:opacity-40"
-          >
-            <Icon
-              icon={actualizando ? "lucide:loader-2" : "lucide:refresh-cw"}
-              width={14}
-              height={14}
-              className={actualizando ? "animate-spin" : ""}
-              aria-hidden
-            />
-            {tr.rastreoActualizarBoton}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/*
+              * Correo de prueba: no gasta nada, así que no lleva confirmación
+              * ni el tono de advertencia del botón de al lado.
+              */}
+            <button
+              type="button"
+              disabled={enviandoPrueba}
+              onClick={() => void enviarPrueba()}
+              title={tr.rastreoPruebaAyuda}
+              className="dash-control motion-interactive inline-flex items-center gap-1.5 px-3 py-2 text-[12px] font-bold disabled:opacity-40"
+            >
+              <Icon
+                icon={enviandoPrueba ? "lucide:loader-2" : "lucide:mail-check"}
+                width={14}
+                height={14}
+                className={enviandoPrueba ? "animate-spin" : ""}
+                aria-hidden
+              />
+              {tr.rastreoPruebaBoton}
+            </button>
+            <button
+              type="button"
+              disabled={!estado?.hayClave || actualizando}
+              onClick={() => void abrirActualizacion()}
+              className="dash-control motion-interactive inline-flex items-center gap-1.5 px-3 py-2 text-[12px] font-bold disabled:opacity-40"
+            >
+              <Icon
+                icon={actualizando ? "lucide:loader-2" : "lucide:refresh-cw"}
+                width={14}
+                height={14}
+                className={actualizando ? "animate-spin" : ""}
+                aria-hidden
+              />
+              {tr.rastreoActualizarBoton}
+            </button>
+          </div>
         </div>
 
         {estado && !estado.hayClave && (

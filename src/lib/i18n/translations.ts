@@ -2818,6 +2818,11 @@ export const translations = {
       rastreoActualizarBoton: "Actualizar posiciones",
       rastreoActualizarAyuda:
         "Las posiciones se actualizan solas cada día. Hacerlo a mano consulta al proveedor y gasta saldo.",
+      rastreoPruebaBoton: "Correo de prueba",
+      rastreoPruebaAyuda:
+        "Corre el chequeo diario sin consultar al proveedor y sin gastar nada. El reporte llega solo a ti, sin copia al equipo.",
+      rastreoPruebaEnviado: "Correo de prueba enviado. {{n}} nave(s) revisadas, saldo {{saldo}}.",
+      rastreoPruebaError: "No se pudo enviar el correo de prueba.",
       rastreoGastoTitulo: "Esta acción gasta saldo",
       rastreoGastoUna: "consulta al proveedor",
       rastreoGastoVarias: "consultas al proveedor, una por nave navegando",
@@ -6240,6 +6245,11 @@ export const translations = {
       rastreoActualizarBoton: "Refresh positions",
       rastreoActualizarAyuda:
         "Positions refresh on their own every day. Doing it by hand queries the provider and uses balance.",
+      rastreoPruebaBoton: "Test email",
+      rastreoPruebaAyuda:
+        "Runs the daily check without querying the provider and without spending anything. The report goes only to you, with no copy to the team.",
+      rastreoPruebaEnviado: "Test email sent. {{n}} vessel(s) checked, balance {{saldo}}.",
+      rastreoPruebaError: "Could not send the test email.",
       rastreoGastoTitulo: "This action uses balance",
       rastreoGastoUna: "provider query",
       rastreoGastoVarias: "provider queries, one per sailing vessel",
