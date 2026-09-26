@@ -116,7 +116,8 @@ const GRUPOS: Grupo[] = [
       { key: "etd", labelKey: "colETD", formato: "fecha" },
       { key: "pod", labelKey: "colPOD" },
       { key: "eta", labelKey: "colETA", formato: "fecha" },
-      { key: "tt", labelKey: "colTransitDays", formato: "numero", entero: true },
+      // fijo: se calcula desde ETD/ETA, no se edita a mano.
+      { key: "tt", labelKey: "colTransitDays", formato: "numero", entero: true, fijo: true },
     ],
   },
   {
