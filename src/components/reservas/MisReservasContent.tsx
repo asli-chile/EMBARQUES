@@ -94,6 +94,7 @@ type Operacion = {
   especie: string | null;
   naviera: string | null;
   nave: string | null;
+  viaje: string | null;
   pol: string | null;
   pod: string | null;
   etd: string | null;
@@ -133,6 +134,18 @@ type Operacion = {
   inicio_stacking: string | null;
   fin_stacking: string | null;
 };
+
+/**
+ * Nave y viaje para mostrar bajo la naviera. Algunas naves se cargaron con el
+ * viaje entre corchetes ("MSC EMILIA [NX634A]"): se muestra sin el corchete,
+ * y ese viaje solo se usa si el campo `viaje` está vacío, para no repetirlo.
+ */
+function naveYViaje(op: Pick<Operacion, "nave" | "viaje">): string {
+  const nave = (op.nave ?? "").replace(/\s*\[[^\]]*\]\s*/g, " ").trim();
+  const enCorchete = /\[([^\]]+)\]/.exec(op.nave ?? "")?.[1]?.trim() ?? "";
+  const viaje = (op.viaje ?? "").trim() || enCorchete.toUpperCase();
+  return [nave, viaje].filter(Boolean).join(" · ");
+}
 
 type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "contenedor" | "estado_operacion" | "solicitud_ventana";
 type SortDirection = "asc" | "desc";
@@ -641,7 +654,7 @@ const ReservaCard = memo(function ReservaCard({
         {(op.naviera || op.nave) && (
           <p className="text-dash-fg/90 truncate">
             <span className="font-semibold">{op.naviera ?? "-"}</span>
-            {op.nave ? <span className="text-dash-muted"> · {op.nave}</span> : null}
+            {naveYViaje(op) ? <span className="text-dash-muted"> · {naveYViaje(op)}</span> : null}
           </p>
         )}
         {op.especie && (
@@ -974,7 +987,16 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
           {op.naviera ? (
             <NavieraLogo nombre={op.naviera} logoUrl={logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null} size={28} />
           ) : null}
-          <span className="truncate text-[14px] font-medium text-dash-muted">{op.naviera || "—"}</span>
+          {/* La nave y su viaje van bajo la naviera: se leen juntos y así no
+              suman una columna más a una tabla que ya es ancha. */}
+          <span className="min-w-0 leading-tight">
+            <span className="block truncate text-[14px] font-medium text-dash-muted">{op.naviera || "—"}</span>
+            {naveYViaje(op) && (
+              <span className="block max-w-[14rem] truncate text-[11.5px] font-semibold text-dash-fg/85" title={naveYViaje(op)}>
+                {naveYViaje(op)}
+              </span>
+            )}
+          </span>
         </span>
       </td>
       {/*
@@ -1494,7 +1516,7 @@ export function MisReservasContent() {
     let q = supabase
       .from("operaciones")
       .select(
-        `id, correlativo, ref_asli, referencia_externa, cliente, especie, naviera, nave, pol, pod, etd, eta, tt, booking,
+        `id, correlativo, ref_asli, referencia_externa, cliente, especie, naviera, nave, viaje, pol, pod, etd, eta, tt, booking,
          booking_doc_url, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara,
          enviado_transporte, tipo_reserva_transporte, estado_operacion, arribo_confirmado, arribo_at, arribo_anunciado_at,
          solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
@@ -1540,6 +1562,7 @@ export function MisReservasContent() {
             op.contenedor?.toLowerCase().includes(search) ||
             op.naviera?.toLowerCase().includes(search) ||
             op.nave?.toLowerCase().includes(search) ||
+            op.viaje?.toLowerCase().includes(search) ||
             op.ref_asli?.toLowerCase().includes(search) ||
             formatRefAsli(op.ref_asli, op.correlativo)?.toLowerCase().includes(search) ||
             op.referencia_externa?.toLowerCase().includes(search) ||
