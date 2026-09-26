@@ -1052,14 +1052,17 @@ export function MisDocumentosContent() {
       <PanelBajoFila cerrando={fila.cerrando} className="bg-dash-surface">
         {/* ── Tira del embarque: cada dato en su celda, separados por una línea ── */}
         <div className="flex shrink-0 items-center gap-4 border-b border-dash-border px-4 py-3.5">
+          {/* Con la ficha abierta la cabecera de la página se repliega y con
+              ella su flecha de volver; esta ocupa su lugar y vuelve a la lista. */}
           <button
             type="button"
             onClick={fila.cerrar}
-            className="motion-interactive flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-dash-border bg-dash-control text-dash-muted hover:text-dash-fg"
-            title={`${trR.detalleReplegar} (Esc)`}
-            aria-label={trR.detalleReplegar}
+            className="dash-control motion-interactive inline-flex h-9 shrink-0 items-center gap-1.5 px-2.5 text-sm font-semibold"
+            title={`${trR.detalleVolverLista} (Esc)`}
+            aria-label={trR.detalleVolverLista}
           >
-            <Icon icon="lucide:chevrons-up" width={15} height={15} />
+            <Icon icon="lucide:arrow-left" width={18} height={18} className="shrink-0" />
+            <span className="hidden sm:inline">{trR.btnBack}</span>
           </button>
           <div className="flex min-w-0 flex-1 items-center overflow-x-auto py-0.5">
             <div className={celda}>

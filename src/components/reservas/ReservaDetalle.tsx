@@ -1091,7 +1091,22 @@ export function ReservaDetalle({
           {/* Una franja: quién es, por dónde va y qué se puede hacer. En
               pantallas angostas se apila en ese mismo orden. */}
           <div className="grid items-center gap-x-8 gap-y-3 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
-            <div className="min-w-0 lg:max-w-[22rem]">
+            {/* Con la ficha abierta, la cabecera de la página (y su flecha de
+                volver) se repliega para dar espacio. Esta flecha ocupa su
+                lugar: vuelve a la lista, que es un nivel más arriba. Pasa por
+                onClose, así los cambios sin guardar piden confirmación. */}
+            <div className="flex min-w-0 items-center gap-3 lg:max-w-[26rem]">
+              <button
+                type="button"
+                onClick={onClose}
+                title={`${tr.detalleVolverLista} (Esc)`}
+                aria-label={tr.detalleVolverLista}
+                className="rd-btn motion-interactive inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold"
+              >
+                <Icon icon="lucide:arrow-left" width={17} height={17} aria-hidden />
+                <span className="hidden sm:inline">{tr.btnBack}</span>
+              </button>
+            <div className="min-w-0">
               <p className="rd-muted text-[10px] font-bold uppercase tracking-[0.18em]">{tr.detalleReserva}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <h3 className="text-xl font-extrabold leading-none tabular-nums tracking-tight">
@@ -1115,6 +1130,7 @@ export function ReservaDetalle({
               <p className="rd-muted mt-1 truncate text-xs font-semibold">
                 {[texto(fila.cliente), texto(fila.naviera)].filter(Boolean).join("  ·  ") || "—"}
               </p>
+            </div>
             </div>
             {/* Ruta: se lee de izquierda a derecha, como el viaje. */}
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(4rem,1fr)_minmax(0,1fr)] items-center gap-3">
