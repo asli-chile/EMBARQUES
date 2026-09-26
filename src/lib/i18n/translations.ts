@@ -88,6 +88,8 @@ export const translations = {
       esperandoVercel: "Esperando a Vercel",
       commitHace: "Commit hace",
       limiteGithub: "GitHub limitó las consultas; se retoma a las",
+      limiteGithubUltimo: "Último estado conocido: GitHub limitó las consultas y se retoma a las",
+      sinDatos: "Todavía sin datos de GitHub.",
     },
     marketingOficina: {
       title: "Oficina de marketing",
@@ -3510,6 +3512,8 @@ export const translations = {
       esperandoVercel: "Waiting for Vercel",
       commitHace: "Committed",
       limiteGithub: "GitHub rate-limited requests; resumes at",
+      limiteGithubUltimo: "Last known status: GitHub rate-limited requests; resumes at",
+      sinDatos: "No data from GitHub yet.",
     },
     marketingOficina: {
       title: "Marketing office",

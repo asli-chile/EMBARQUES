@@ -98,7 +98,18 @@ export function ClaudeUsoIndicator() {
     };
   }, [habilitado, cargar]);
 
-  if (!habilitado || !uso) return null;
+  if (!habilitado) return null;
+  // Sin dato todavía se muestra el hueco, no nada: que desaparezca se lee como roto.
+  if (!uso) {
+    return (
+      <div className="asli-no-drag relative z-10 mr-3 hidden items-center md:flex" aria-label={tr.aria}>
+        <div className="flex h-8 items-center gap-2 whitespace-nowrap rounded-full border border-white/10 bg-white/[0.06] px-3 text-[12px] font-semibold text-white/50">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-white/30" aria-hidden />
+          <span>Claude —</span>
+        </div>
+      </div>
+    );
+  }
 
   const loc = locale === "en" ? enUS : es;
   const reinicio = uso.sesion_reinicia ? new Date(uso.sesion_reinicia) : null;
