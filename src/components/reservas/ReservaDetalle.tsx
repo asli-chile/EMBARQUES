@@ -567,7 +567,7 @@ function ValorEditable({
       onClick={abrir}
       title={pendiente ? labels.pendiente : labels.editar}
       className={`group/editar -mx-1 mt-0.5 flex w-[calc(100%+0.5rem)] items-start gap-1 rounded-md px-1 text-left text-[13px] leading-snug outline-none hover:bg-dash-control focus-visible:ring-2 focus-visible:ring-[var(--estado-curso)] ${
-        sinDato ? "text-dash-muted/45" : "font-semibold text-dash-fg"
+        sinDato ? "text-dash-muted/35" : "font-semibold text-dash-fg"
       } ${campo.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
     >
       <span className="min-w-0 flex-1 break-words">{fmtValor(campo, valor, fila, si, no)}</span>
@@ -671,8 +671,12 @@ export function SeccionesOperacion({
   const si = campos.yes ?? "Sí";
   const no = campos.no ?? "No";
   const etiqueta = (key: string) => campos[key] ?? tr[key] ?? key;
+  /* Una sección por fila, a lo ancho y en el orden del viaje: el título a la
+     izquierda y los campos en columnas parejas a la derecha. Antes eran
+     tarjetas en columnas tipo mosaico, que se leían de arriba abajo por
+     columna, dejaban huecos disparejos y cortaban el orden del viaje. */
   return (
-    <div className="columns-1 gap-3 md:columns-2 xl:columns-3 2xl:columns-4">
+    <div className="space-y-2.5">
       {grupos.map((g, i) => {
         const llenos = g.campos.filter((c) => !vacio(fila[c.key]));
         const visibles = soloConDatos ? llenos : g.campos;
@@ -685,26 +689,32 @@ export function SeccionesOperacion({
             key={g.id}
             data-seccion={g.id}
             style={staggerStyle(i)}
-            className="rd-card motion-view-section mb-3 break-inside-avoid overflow-hidden rounded-2xl"
+            className="rd-card motion-view-section grid overflow-hidden rounded-2xl md:grid-cols-[13.5rem_minmax(0,1fr)]"
           >
-            <header className="flex items-center gap-3 px-4 pb-2.5 pt-3.5">
-              <span className="rd-icono flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
-                <Icon icon={g.icono} width={17} height={17} aria-hidden />
+            <header className="flex items-center gap-3 border-b border-dash-border px-4 py-3 md:flex-col md:items-start md:border-b-0 md:border-r md:py-4">
+              <span className="rd-icono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                <Icon icon={g.icono} width={15} height={15} aria-hidden />
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 md:w-full md:flex-none">
                 <p className="truncate text-[13px] font-bold text-dash-fg">{tr[g.tituloKey]}</p>
-                <p className="text-[11px] tabular-nums text-dash-muted">
-                  {llenos.length} {tr.detalleDe} {g.campos.length} {tr.detalleCampos}
-                </p>
+                <div className={`${tono} mt-1.5 flex items-center gap-2`}>
+                  <span className="h-1 flex-1 overflow-hidden rounded-full bg-dash-control" aria-hidden>
+                    <span
+                      className="block h-full rounded-full bg-[var(--estado)] transition-[width] duration-300"
+                      style={{ width: `${Math.round(frac * 100)}%` }}
+                    />
+                  </span>
+                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-dash-muted">
+                    {llenos.length}/{g.campos.length}
+                  </span>
+                </div>
               </div>
-              <Avance frac={frac} tono={tono} />
             </header>
+
             {visibles.length === 0 ? (
-              <p className="mx-4 mb-4 rounded-lg border border-dashed border-dash-border px-3 py-2.5 text-center text-[11px] text-dash-muted">
-                {tr.detalleSinDatos}
-              </p>
+              <p className="flex items-center px-4 py-3 text-[12px] text-dash-muted/70">{tr.detalleSinDatos}</p>
             ) : (
-              <dl className="mx-2 mb-2 grid grid-cols-2 gap-1">
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 px-2 py-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 {visibles.map((c) => {
                   const v = fila[c.key];
                   const sinDato = vacio(v);
@@ -712,15 +722,20 @@ export function SeccionesOperacion({
                   return (
                     <div
                       key={c.key}
-                      className={`min-w-0 rounded-lg px-2.5 py-2 ${
+                      className={`min-w-0 rounded-lg px-2.5 py-1.5 ${
                         pendiente
                           ? "estado--curso bg-[color-mix(in_srgb,var(--estado)_12%,transparent)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--estado)_45%,transparent)]"
-                          : sinDato
-                            ? ""
-                            : "bg-dash-control/50"
+                          : ""
                       }`}
                     >
-                      <dt className="truncate text-[10px] font-semibold uppercase tracking-wide text-dash-muted">
+                      {/* La etiqueta de un campo vacío se apaga con su valor:
+                          si brillara igual, una sección vacía se vería tan
+                          cargada como una completa. */}
+                      <dt
+                        className={`truncate text-[10px] font-semibold uppercase tracking-wide ${
+                          sinDato && !pendiente ? "text-dash-muted/55" : "text-dash-muted"
+                        }`}
+                      >
                         {etiqueta(c.labelKey)}
                       </dt>
                       {proponer && editable(g, c) ? (
@@ -740,7 +755,7 @@ export function SeccionesOperacion({
                       ) : (
                         <dd
                           className={`mt-0.5 break-words text-[13px] leading-snug ${
-                            sinDato ? "text-dash-muted/45" : "font-semibold text-dash-fg"
+                            sinDato ? "text-dash-muted/35" : "font-semibold text-dash-fg"
                           } ${c.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
                         >
                           {fmtValor(c, v, fila, si, no)}
@@ -1134,32 +1149,5 @@ export function ReservaDetalle({
           )}
         </div>
     </PanelBajoFila>
-  );
-}
-
-/** Anillo de avance de una sección: cuánto de lo que pide está cargado. */
-export function Avance({ frac, tono }: { frac: number; tono: string }) {
-  const r = 14;
-  const c = 2 * Math.PI * r;
-  return (
-    <span className={`${tono} relative inline-flex h-9 w-9 shrink-0 items-center justify-center`} aria-hidden>
-      <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="3" className="stroke-dash-border" />
-        <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
-          stroke="var(--estado)"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - frac)}
-        />
-      </svg>
-      <span className="absolute text-[9px] font-extrabold tabular-nums" style={{ color: "var(--estado)" }}>
-        {Math.round(frac * 100)}
-      </span>
-    </span>
   );
 }
