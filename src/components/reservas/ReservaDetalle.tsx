@@ -310,6 +310,36 @@ const ICONO_CAMPO: Record<string, string> = {
   fecha_cierre: "lucide:calendar-x",
 };
 
+/** Valores de `tratamiento_frio` que significan que no hay tratamiento. */
+const SIN_TRATAMIENTO = new Set(["", "NO", "SIN TRATAMIENTO"]);
+
+/**
+ * Si un campo corresponde a esta operación. O₂ y CO₂ son parámetros del
+ * tratamiento de frío: sin tratamiento no hay nada que medir, y mostrarlos
+ * vacíos le restaba avance a un paso que en realidad estaba completo.
+ */
+function aplica(c: Campo, fila: Fila): boolean {
+  if (c.key === "tratamiento_frio_o2" || c.key === "tratamiento_frio_co2") {
+    return !SIN_TRATAMIENTO.has(String(fila.tratamiento_frio ?? "").trim().toUpperCase());
+  }
+  return true;
+}
+
+/** Los campos de un grupo que corresponden a esta operación. */
+function camposDe(g: Grupo, fila: Fila): Campo[] {
+  return g.campos.filter((c) => aplica(c, fila));
+}
+
+/**
+ * Valor de un campo para mostrar y contar. La ventilación sin cargar es 0
+ * (unidad cerrada), no un dato que falta.
+ */
+function valorDe(c: Campo, fila: Fila): unknown {
+  const v = fila[c.key];
+  if (c.key === "ventilacion" && vacio(v)) return 0;
+  return v;
+}
+
 function vacio(v: unknown): boolean {
   return v == null || (typeof v === "string" && v.trim() === "");
 }
@@ -787,9 +817,10 @@ export function SeccionesOperacion({
   return (
     <ol className="rd-pasos relative space-y-2.5 pl-11 sm:pl-12">
       {grupos.map((g, i) => {
-        const llenos = g.campos.filter((c) => !vacio(fila[c.key]));
-        const visibles = soloConDatos ? llenos : g.campos;
-        const frac = llenos.length / g.campos.length;
+        const aplicables = camposDe(g, fila);
+        const llenos = aplicables.filter((c) => !vacio(valorDe(c, fila)));
+        const visibles = soloConDatos ? llenos : aplicables;
+        const frac = aplicables.length ? llenos.length / aplicables.length : 1;
         const completo = frac === 1;
         /* El avance usa los estados de marca: completo en oliva, a
            medias en teal, sin nada en gris. */
@@ -798,7 +829,7 @@ export function SeccionesOperacion({
         const conCambios = g.campos.some((c) => c.key in pendientes);
         const resumen = llenos
           .slice(0, 5)
-          .map((c) => fmtValor(c, fila[c.key], fila, si, no))
+          .map((c) => fmtValor(c, valorDe(c, fila), fila, si, no))
           .join("  ·  ");
         const cuerpoId = `rd-paso-${g.id}`;
         return (
@@ -855,7 +886,7 @@ export function SeccionesOperacion({
                     />
                   </span>
                   <span className="w-9 text-right text-[11px] font-bold tabular-nums text-dash-muted">
-                    {llenos.length}/{g.campos.length}
+                    {llenos.length}/{aplicables.length}
                   </span>
                 </span>
                 <Icon
@@ -874,7 +905,7 @@ export function SeccionesOperacion({
                   ) : (
                     <dl className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
                       {visibles.map((c) => {
-                        const v = fila[c.key];
+                        const v = valorDe(c, fila);
                         const sinDato = vacio(v);
                         const pendiente = c.key in pendientes;
                         const estadoFicha = pendiente ? "rd-ficha--pendiente" : sinDato ? "rd-ficha--vacia" : "rd-ficha--llena";
@@ -1199,7 +1230,7 @@ export function ReservaDetalle({
         <div ref={cuerpoRef} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="sticky top-0 z-10 flex items-center gap-2 overflow-x-auto border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-bg)_88%,transparent)] px-4 py-2.5 backdrop-blur-md">
             {grupos.map((g) => {
-              const llenos = g.campos.filter((c) => !vacio(fila[c.key])).length;
+              const llenos = camposDe(g, fila).filter((c) => !vacio(valorDe(c, fila))).length;
               return (
                 <button
                   key={g.id}
