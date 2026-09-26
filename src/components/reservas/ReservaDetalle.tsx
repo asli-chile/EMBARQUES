@@ -216,6 +216,99 @@ const GRUPOS: Grupo[] = [
   },
 ];
 
+/**
+ * Ícono de cada campo en su ficha. Van por clave y no dentro de GRUPOS para
+ * que la lista de campos siga leyéndose como lista de campos. El que no esté
+ * acá cae en un punto neutro.
+ */
+const ICONO_CAMPO: Record<string, string> = {
+  referencia_externa: "lucide:tag",
+  temporada: "lucide:calendar-range",
+  ingreso: "lucide:calendar-plus",
+  semana: "lucide:calendar-days",
+  ejecutivo: "lucide:user-round",
+  tipo_operacion: "lucide:arrow-left-right",
+  solicitud_ventana: "lucide:alarm-clock",
+  cliente: "lucide:building-2",
+  consignatario: "lucide:user-check",
+  contrato: "lucide:file-signature",
+  incoterm: "lucide:scale",
+  forma_pago: "lucide:wallet",
+  pais: "lucide:globe",
+  especie: "lucide:leaf",
+  tipo_unidad: "lucide:container",
+  temperatura: "lucide:thermometer-snowflake",
+  ventilacion: "lucide:fan",
+  tratamiento_frio: "lucide:snowflake",
+  tipo_atmosfera: "lucide:wind",
+  tratamiento_frio_o2: "lucide:atom",
+  tratamiento_frio_co2: "lucide:cloud",
+  pallets: "lucide:layers",
+  peso_bruto: "lucide:weight",
+  peso_neto: "lucide:scale",
+  naviera: "lucide:anchor",
+  nave: "lucide:ship",
+  viaje: "lucide:route",
+  booking: "lucide:bookmark",
+  pol: "lucide:map-pin",
+  etd: "lucide:calendar-arrow-up",
+  pod: "lucide:map-pinned",
+  eta: "lucide:calendar-check",
+  tt: "lucide:timer",
+  contenedor: "lucide:box",
+  sello: "lucide:lock",
+  sello_planta: "lucide:lock-keyhole",
+  tara: "lucide:weight",
+  deposito: "lucide:warehouse",
+  agendamiento_retiro: "lucide:calendar-clock",
+  devolucion_unidad: "lucide:undo-2",
+  planta_presentacion: "lucide:factory",
+  citacion: "lucide:calendar-clock",
+  llegada_planta: "lucide:log-in",
+  salida_planta: "lucide:log-out",
+  inicio_stacking: "lucide:package-open",
+  fin_stacking: "lucide:package",
+  ingreso_stacking: "lucide:package-check",
+  corte_documental: "lucide:file-clock",
+  late_inicio: "lucide:clock",
+  late_fin: "lucide:clock",
+  xlate_inicio: "lucide:clock-alert",
+  xlate_fin: "lucide:clock-alert",
+  transporte: "lucide:truck",
+  chofer: "lucide:user",
+  rut_chofer: "lucide:id-card",
+  telefono_chofer: "lucide:phone",
+  patente_camion: "lucide:rectangle-horizontal",
+  patente_remolque: "lucide:rectangle-horizontal",
+  tramo: "lucide:route",
+  aga: "lucide:briefcase",
+  dus: "lucide:file-text",
+  sps: "lucide:file-badge",
+  numero_guia_despacho: "lucide:file-output",
+  swb: "lucide:file-check",
+  fob_invoice: "lucide:receipt",
+  fecha_confirmacion_booking: "lucide:calendar-check-2",
+  fecha_envio_documentacion: "lucide:send",
+  fecha_entrega_bl: "lucide:file-down",
+  numero_factura_asli: "lucide:receipt",
+  factura_transporte: "lucide:receipt-text",
+  concepto_facturado: "lucide:text",
+  moneda: "lucide:coins",
+  valor_tramo: "lucide:banknote",
+  porteo: "lucide:truck",
+  valor_porteo: "lucide:banknote",
+  falso_flete: "lucide:ban",
+  valor_falso_flete: "lucide:banknote",
+  monto_facturado: "lucide:badge-dollar-sign",
+  tipo_cambio: "lucide:repeat",
+  margen_estimado: "lucide:trending-up",
+  margen_real: "lucide:line-chart",
+  fecha_entrega_factura: "lucide:calendar-check",
+  fecha_pago_cliente: "lucide:hand-coins",
+  fecha_pago_transporte: "lucide:hand-coins",
+  fecha_cierre: "lucide:calendar-x",
+};
+
 function vacio(v: unknown): boolean {
   return v == null || (typeof v === "string" && v.trim() === "");
 }
@@ -645,7 +738,7 @@ export function gruposOperacion(isCliente: boolean, excluir: readonly string[] =
   return GRUPOS.filter((g) => !(g.interno && isCliente) && !excluir.includes(g.id));
 }
 
-/** Las secciones de datos de una operación, en tarjetas por grupo. */
+/** Las secciones de datos de una operación, como pasos del viaje. */
 export function SeccionesOperacion({
   fila,
   grupos,
@@ -675,110 +768,169 @@ export function SeccionesOperacion({
   const si = campos.yes ?? "Sí";
   const no = campos.no ?? "No";
   const etiqueta = (key: string) => campos[key] ?? tr[key] ?? key;
-  /* Una sección por fila, a lo ancho y en el orden del viaje: el título a la
-     izquierda y los campos en columnas parejas a la derecha. Antes eran
-     tarjetas en columnas tipo mosaico, que se leían de arriba abajo por
-     columna, dejaban huecos disparejos y cortaban el orden del viaje. */
+  /* Los grupos van en el orden del viaje, así que se leen como pasos
+     numerados unidos por una espina punteada —la misma ruta de la cabecera—.
+     Cada paso se pliega: plegado muestra en una línea lo que tiene cargado,
+     así compacto no significa esconder. Los que no tienen nada arrancan
+     plegados, para que la ficha abra mostrando lo que sí hay. */
+  /* `null` = todavía rige la regla (vacíos plegados). Se recalcula en cada
+     render porque la operación completa llega después de abrir la ficha: fijarla
+     al montar plegaría pasos que un instante después tienen datos. Desde el
+     primer clic manda lo que eligió la persona. */
+  const [elegidos, setElegidos] = useState<Set<string> | null>(null);
+  const porDefecto = new Set(grupos.filter((g) => g.campos.every((c) => vacio(fila[c.key]))).map((g) => g.id));
+  const plegados = elegidos ?? porDefecto;
+  const alternar = (id: string) =>
+    setElegidos((prev) => {
+      const next = new Set(prev ?? porDefecto);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
-    <div className="space-y-2.5">
+    <ol className="rd-pasos relative space-y-2.5 pl-11 sm:pl-12">
       {grupos.map((g, i) => {
         const llenos = g.campos.filter((c) => !vacio(fila[c.key]));
         const visibles = soloConDatos ? llenos : g.campos;
         const frac = llenos.length / g.campos.length;
+        const completo = frac === 1;
         /* El avance usa los estados de marca: completo en oliva, a
            medias en teal, sin nada en gris. */
-        const tono = frac === 1 ? "estado--ok" : frac > 0 ? "estado--curso" : "estado--espera";
+        const tono = completo ? "estado--ok" : frac > 0 ? "estado--curso" : "estado--espera";
+        const plegado = plegados.has(g.id);
+        const conCambios = g.campos.some((c) => c.key in pendientes);
+        const resumen = llenos
+          .slice(0, 5)
+          .map((c) => fmtValor(c, fila[c.key], fila, si, no))
+          .join("  ·  ");
+        const cuerpoId = `rd-paso-${g.id}`;
         return (
-          <section
+          <li
             key={g.id}
             data-seccion={g.id}
+            data-plegada={plegado || undefined}
             style={staggerStyle(i)}
-            className="rd-card motion-view-section grid overflow-hidden rounded-2xl md:grid-cols-[13.5rem_minmax(0,1fr)]"
+            className={`${tono} motion-view-section relative`}
           >
-            <header className="flex items-center gap-3 border-b border-dash-border px-4 py-3 md:flex-col md:items-start md:border-b-0 md:border-r md:py-4">
-              <span className="rd-icono flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
-                <Icon icon={g.icono} width={15} height={15} aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1 md:w-full md:flex-none">
-                <p className="truncate text-[13px] font-bold text-dash-fg">{tr[g.tituloKey]}</p>
-                <div className={`${tono} mt-1.5 flex items-center gap-2`}>
-                  <span className="h-1 flex-1 overflow-hidden rounded-full bg-dash-control" aria-hidden>
+            {/* Número del paso, sobre la espina. Se enciende al completarse. */}
+            <span
+              className={`rd-paso-num absolute -left-11 top-3 flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-extrabold tabular-nums sm:-left-12 ${
+                completo ? "rd-paso-num--lleno" : ""
+              }`}
+              aria-hidden
+            >
+              {completo ? <Icon icon="lucide:check" width={15} height={15} /> : i + 1}
+            </span>
+
+            <section className="rd-card overflow-hidden rounded-2xl">
+              <button
+                type="button"
+                data-plegar
+                onClick={() => alternar(g.id)}
+                aria-expanded={!plegado}
+                aria-controls={cuerpoId}
+                className="group/paso flex w-full items-center gap-3 px-3.5 py-2.5 text-left outline-none hover:bg-dash-control/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--estado-curso)]"
+              >
+                <span className="rd-icono flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                  <Icon icon={g.icono} width={17} height={17} aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <span className="truncate text-[13.5px] font-bold text-dash-fg">{tr[g.tituloKey]}</span>
+                    {conCambios && (
+                      <span
+                        className="estado--curso h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--estado)]"
+                        title={tr.detalleCampoPendiente}
+                      />
+                    )}
+                  </span>
+                  {plegado && (
+                    <span className="mt-0.5 block truncate text-[11.5px] text-dash-muted">
+                      {resumen || tr.detalleSinDatos}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden w-32 shrink-0 items-center gap-2 sm:flex">
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-dash-control" aria-hidden>
                     <span
                       className="block h-full rounded-full bg-[var(--estado)] transition-[width] duration-300"
                       style={{ width: `${Math.round(frac * 100)}%` }}
                     />
                   </span>
-                  <span className="shrink-0 text-[10px] font-semibold tabular-nums text-dash-muted">
+                  <span className="w-9 text-right text-[11px] font-bold tabular-nums text-dash-muted">
                     {llenos.length}/{g.campos.length}
                   </span>
-                </div>
-              </div>
-            </header>
+                </span>
+                <Icon
+                  icon="lucide:chevron-down"
+                  width={16}
+                  height={16}
+                  className={`shrink-0 text-dash-muted transition-transform duration-200 ${plegado ? "-rotate-90" : ""}`}
+                  aria-hidden
+                />
+              </button>
 
-            {visibles.length === 0 ? (
-              <p className="flex items-center px-4 py-3 text-[12px] text-dash-muted/70">{tr.detalleSinDatos}</p>
-            ) : (
-              <dl className="grid grid-cols-2 gap-x-3 gap-y-0.5 px-2 py-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {visibles.map((c) => {
-                  const v = fila[c.key];
-                  const sinDato = vacio(v);
-                  const pendiente = c.key in pendientes;
-                  return (
-                    <div
-                      key={c.key}
-                      /* Tres estados de un vistazo: cambio sin guardar en
-                         teal, dato cargado en oliva (el "completo" de la barra
-                         de avance), vacío sin fondo. */
-                      className={`min-w-0 rounded-lg border-l-2 px-2.5 py-1.5 ${
-                        pendiente
-                          ? "estado--curso border-[var(--estado)] bg-[color-mix(in_srgb,var(--estado)_12%,transparent)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--estado)_45%,transparent)]"
-                          : sinDato
-                            ? "border-transparent"
-                            : "estado--ok border-[color-mix(in_srgb,var(--estado)_70%,transparent)] bg-[color-mix(in_srgb,var(--estado)_9%,transparent)]"
-                      }`}
-                    >
-                      {/* La etiqueta de un campo vacío se apaga con su valor:
-                          si brillara igual, una sección vacía se vería tan
-                          cargada como una completa. */}
-                      <dt
-                        className={`truncate text-[10px] font-semibold uppercase tracking-wide ${
-                          sinDato && !pendiente ? "text-dash-muted/55" : "text-dash-muted"
-                        }`}
-                      >
-                        {etiqueta(c.labelKey)}
-                      </dt>
-                      {proponer && editable(g, c) ? (
-                        <dd>
-                          <ValorEditable
-                            campo={c}
-                            valor={v}
-                            fila={fila}
-                            proponer={proponer}
-                            pendiente={pendiente}
-                            opciones={opcionesDe(opciones, c.key, fila)}
-                            si={si}
-                            no={no}
-                            labels={labelsEdicion}
-                          />
-                        </dd>
-                      ) : (
-                        <dd
-                          className={`mt-0.5 break-words text-[13px] leading-snug ${
-                            sinDato ? "text-dash-muted/35" : "font-semibold text-dash-fg"
-                          } ${c.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
-                        >
-                          {fmtValor(c, v, fila, si, no)}
-                        </dd>
-                      )}
-                    </div>
-                  );
-                })}
-              </dl>
-            )}
-          </section>
+              {!plegado && (
+                <div id={cuerpoId} className="border-t border-dash-border px-3 pb-3 pt-2.5">
+                  {visibles.length === 0 ? (
+                    <p className="px-1 py-1 text-[12px] text-dash-muted/70">{tr.detalleSinDatos}</p>
+                  ) : (
+                    <dl className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2">
+                      {visibles.map((c) => {
+                        const v = fila[c.key];
+                        const sinDato = vacio(v);
+                        const pendiente = c.key in pendientes;
+                        const estadoFicha = pendiente ? "rd-ficha--pendiente" : sinDato ? "rd-ficha--vacia" : "rd-ficha--llena";
+                        return (
+                          <div key={c.key} className={`rd-ficha ${estadoFicha} flex min-w-0 gap-2.5 rounded-xl px-2.5 py-2`}>
+                            <Icon
+                              icon={ICONO_CAMPO[c.key] ?? "lucide:circle-dot"}
+                              width={16}
+                              height={16}
+                              className="rd-ficha-icono mt-0.5 shrink-0"
+                              aria-hidden
+                            />
+                            <div className="min-w-0 flex-1">
+                              <dt className="truncate text-[9.5px] font-bold uppercase tracking-[0.07em] text-dash-muted">
+                                {etiqueta(c.labelKey)}
+                              </dt>
+                              {proponer && editable(g, c) ? (
+                                <dd>
+                                  <ValorEditable
+                                    campo={c}
+                                    valor={v}
+                                    fila={fila}
+                                    proponer={proponer}
+                                    pendiente={pendiente}
+                                    opciones={opcionesDe(opciones, c.key, fila)}
+                                    si={si}
+                                    no={no}
+                                    labels={labelsEdicion}
+                                  />
+                                </dd>
+                              ) : (
+                                <dd
+                                  className={`mt-0.5 break-words text-[13px] leading-snug ${
+                                    sinDato ? "text-dash-muted/40" : "font-semibold text-dash-fg"
+                                  } ${c.mono && !sinDato ? "font-mono tracking-tight" : ""}`}
+                                >
+                                  {fmtValor(c, v, fila, si, no)}
+                                </dd>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </dl>
+                  )}
+                </div>
+              )}
+            </section>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 
@@ -899,6 +1051,8 @@ export function ReservaDetalle({
     const cuerpo = cuerpoRef.current;
     const el = cuerpo?.querySelector<HTMLElement>(`[data-seccion="${id}"]`);
     if (!cuerpo || !el) return;
+    /* Saltar a un paso plegado es querer verlo: se despliega. */
+    if (el.dataset.plegada) el.querySelector<HTMLButtonElement>("[data-plegar]")?.click();
     const top = el.getBoundingClientRect().top - cuerpo.getBoundingClientRect().top + cuerpo.scrollTop;
     cuerpo.scrollTo({ top: top - 56, behavior: "smooth" });
   };

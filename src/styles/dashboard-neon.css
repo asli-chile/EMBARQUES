@@ -965,6 +965,64 @@ html[data-erp-neon="light"] {
   background: linear-gradient(135deg, color-mix(in srgb, var(--estado-curso) 24%, transparent), color-mix(in srgb, var(--estado-curso) 6%, transparent));
   border: 1px solid color-mix(in srgb, var(--estado-curso) 30%, transparent);
 }
+/* Pasos del viaje en la ficha: una espina punteada une los números, como la
+   ruta de la cabecera. Es el único gesto llamativo del cuerpo; lo demás se
+   queda en los tokens del tema. */
+.rd-pasos::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 1.4rem;
+  bottom: 1.4rem;
+  width: 2px;
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--estado-curso) 55%, transparent) 50%, transparent 50%);
+  background-size: 2px 9px;
+  pointer-events: none;
+}
+.rd-paso-num {
+  z-index: 1;
+  background: var(--dash-bg);
+  border: 2px solid color-mix(in srgb, var(--estado) 70%, transparent);
+  color: var(--estado);
+  box-shadow: 0 0 0 4px var(--dash-bg);
+}
+.rd-paso-num--lleno {
+  background: var(--estado);
+  border-color: var(--estado);
+  color: #ffffff;
+  box-shadow: 0 0 0 4px var(--dash-bg), 0 0 18px -2px color-mix(in srgb, var(--estado) 60%, transparent);
+}
+
+/* Fichas de campo: el estado se lee en el borde y en el ícono, no en el
+   texto, para que el valor conserve siempre el mismo peso. */
+.rd-ficha {
+  border: 1px solid transparent;
+  transition: border-color var(--motion-duration-fast, 160ms) ease, background-color var(--motion-duration-fast, 160ms) ease;
+}
+.rd-ficha--llena {
+  --estado: var(--estado-ok);
+  background: color-mix(in srgb, var(--estado) 8%, var(--dash-control));
+  border-color: color-mix(in srgb, var(--estado) 28%, transparent);
+}
+.rd-ficha--llena .rd-ficha-icono {
+  color: var(--estado);
+}
+.rd-ficha--vacia {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--dash-muted) 22%, transparent);
+}
+.rd-ficha--vacia .rd-ficha-icono {
+  color: color-mix(in srgb, var(--dash-muted) 45%, transparent);
+}
+.rd-ficha--pendiente {
+  --estado: var(--estado-curso);
+  background: color-mix(in srgb, var(--estado) 13%, var(--dash-control));
+  border-color: var(--estado);
+}
+.rd-ficha--pendiente .rd-ficha-icono {
+  color: var(--estado);
+}
+
 .rd-chip {
   background: var(--dash-control);
   border: 1px solid var(--dash-border);
