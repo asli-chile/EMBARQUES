@@ -201,6 +201,28 @@
   background: color-mix(in srgb, var(--nt-accent) 45%, transparent);
 }
 
+/*
+  Línea de tiempo horizontal, sobre el mapa.
+
+  Cada hito ocupa una columna y el trazo se arma con dos mitades, una a cada
+  lado del punto: así el tramo que une dos hitos toma el color del que ya se
+  cumplió, y el primero y el último no sacan línea hacia afuera.
+*/
+.navitrack .nt-htl-seg {
+  height: 2px;
+  flex: 1;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--dash-muted) 22%, transparent);
+}
+
+.navitrack .nt-htl-seg--done {
+  background: color-mix(in srgb, var(--nt-accent) 55%, transparent);
+}
+
+.navitrack .nt-htl-seg--hidden {
+  visibility: hidden;
+}
+
 /* Sello de certeza del evento: real, confirmado o estimado. */
 .navitrack .nt-certainty {
   display: inline-flex;

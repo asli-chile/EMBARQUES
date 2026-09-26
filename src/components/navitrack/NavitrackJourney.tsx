@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import type { Locale } from "@/lib/i18n/translations";
 import { fmtFechaCorta, fmtFechaHora } from "./navitrack-format";
@@ -44,34 +45,78 @@ type TimelineProps = {
   tr: Textos;
 };
 
-export function NavitrackTimeline({ eventos, etapa, locale, tr }: TimelineProps) {
+const CERTEZA_KEY: Record<EventoViaje["certeza"], string> = {
+  REAL: "certezaReal",
+  CONFIRMADO: "certezaConfirmado",
+  ANUNCIADO: "certezaAnunciado",
+  ESTIMADO: "certezaEstimado",
+};
+
+function claseCerteza(certeza: EventoViaje["certeza"]): string {
+  if (certeza === "REAL") return "nt-certainty--real";
+  if (certeza === "CONFIRMADO" || certeza === "ANUNCIADO") return "nt-certainty--confirmado";
+  return "";
+}
+
+/**
+ * La fecha de un hito, con la precisión que el dato tiene.
+ *
+ * El zarpe lleva hora solo cuando es real: la fecha planificada (`etd`) no
+ * tiene hora, y ponerle una sería inventar una precisión que no hay.
+ */
+function fechaDeEvento(ev: EventoViaje, locale: Locale): string | null {
+  const conHora = ev.codigo === "TRANSITO" || (ev.codigo === "ZARPE" && ev.certeza === "REAL");
+  return conHora ? fmtFechaHora(ev.fecha, locale) : fmtFechaCorta(ev.fecha, locale);
+}
+
+/**
+ * La historia del viaje como una línea horizontal, de izquierda (lo que pasó)
+ * a derecha (lo que falta).
+ *
+ * Va sobre el mapa y no al costado porque cuenta lo mismo que la ruta, en el
+ * mismo sentido de lectura: un recorrido de un extremo al otro. En la columna
+ * lateral era una lista vertical de lo más nuevo a lo más viejo, que obligaba a
+ * leer el viaje al revés y le quitaba al mapa el espacio para los datos de la
+ * operación.
+ *
+ * Con muchos hitos se desplaza en horizontal, y al abrirse se centra en el hito
+ * actual: lo que se quiere ver primero es dónde va la carga, no cómo empezó.
+ */
+export function NavitrackTimelineHorizontal({ eventos, etapa, locale, tr }: TimelineProps) {
   const tono = ETAPA_META[etapa].tono;
+  const contenedor = useRef<HTMLOListElement>(null);
+
+  useEffect(() => {
+    const ol = contenedor.current;
+    const actual = ol?.querySelector<HTMLElement>("[data-actual='true']");
+    if (!ol || !actual) return;
+    // `scrollLeft` y no `scrollIntoView`: este último también mueve la página
+    // en vertical si puede, y la ficha no tiene por qué saltar al abrirse.
+    ol.scrollLeft = actual.offsetLeft - ol.clientWidth / 2 + actual.clientWidth / 2;
+  }, [eventos]);
+
+  const hecho = (ev: EventoViaje | undefined) => Boolean(ev && (ev.cumplido || ev.actual));
 
   return (
-    <ol className={`nt-tone--${tono} motion-stagger-group space-y-0`}>
+    <ol
+      ref={contenedor}
+      aria-label={tr.historiaDesliza}
+      className={`nt-tone--${tono} relative flex overflow-x-auto pb-1`}
+    >
       {eventos.map((ev, i) => {
-        const ultimo = i === eventos.length - 1;
-        const certezaKey =
-          ev.certeza === "REAL"
-            ? "certezaReal"
-            : ev.certeza === "CONFIRMADO"
-              ? "certezaConfirmado"
-              : ev.certeza === "ANUNCIADO"
-                ? "certezaAnunciado"
-                : "certezaEstimado";
-        // El zarpe lleva hora solo cuando es real: la fecha planificada (`etd`)
-        // no tiene hora, y ponerle una sería inventar una precisión que no hay.
-        const conHora = ev.codigo === "TRANSITO" || (ev.codigo === "ZARPE" && ev.certeza === "REAL");
-        const fecha = conHora ? fmtFechaHora(ev.fecha, locale) : fmtFechaCorta(ev.fecha, locale);
-
+        const fecha = fechaDeEvento(ev, locale);
+        const vivo = ev.cumplido || ev.actual;
         return (
-          <li key={`${ev.codigo}-${i}`} className="flex gap-3">
-            <div className="flex flex-col items-center">
+          <li
+            key={`${ev.codigo}-${i}`}
+            data-actual={ev.actual ? "true" : undefined}
+            className="flex min-w-[9.5rem] flex-1 flex-col items-center px-1"
+          >
+            <div className="flex w-full items-center">
               <span
-                className={`nt-tl-dot ${
-                  ev.actual ? "nt-tl-dot--now" : ev.cumplido ? "nt-tl-dot--done" : ""
-                }`}
-              >
+                className={`nt-htl-seg ${i === 0 ? "nt-htl-seg--hidden" : hecho(ev) ? "nt-htl-seg--done" : ""}`}
+              />
+              <span className={`nt-tl-dot ${ev.actual ? "nt-tl-dot--now" : ev.cumplido ? "nt-tl-dot--done" : ""}`}>
                 <Icon
                   icon={ev.cumplido && !ev.actual ? "lucide:check" : EVENTO_ICON[ev.codigo]}
                   width={12}
@@ -79,48 +124,35 @@ export function NavitrackTimeline({ eventos, etapa, locale, tr }: TimelineProps)
                   aria-hidden
                 />
               </span>
-              {!ultimo && <span className={`nt-tl-line ${ev.cumplido ? "nt-tl-line--done" : ""}`} />}
+              <span
+                className={`nt-htl-seg ${
+                  i === eventos.length - 1 ? "nt-htl-seg--hidden" : hecho(eventos[i + 1]) ? "nt-htl-seg--done" : ""
+                }`}
+              />
             </div>
 
-            <div className={`min-w-0 flex-1 ${ultimo ? "pb-0" : "pb-4"}`}>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <p
-                  className={`text-[13px] font-bold leading-tight ${
-                    ev.cumplido || ev.actual ? "text-dash-fg" : "text-dash-muted"
-                  }`}
-                >
-                  {tr[EVENTO_LABEL[ev.codigo]] ?? ev.codigo}
-                </p>
-                <span
-                  className={`nt-certainty ${
-                    ev.certeza === "REAL"
-                      ? "nt-certainty--real"
-                      : ev.certeza === "CONFIRMADO" || ev.certeza === "ANUNCIADO"
-                        ? "nt-certainty--confirmado"
-                        : ""
-                  }`}
-                >
-                  {tr[certezaKey]}
-                </span>
-              </div>
-              {(ev.lugar || fecha) && (
-                <p className="mt-0.5 truncate text-[11.5px] text-dash-muted">
-                  {[ev.lugar, fecha].filter(Boolean).join(" · ")}
+            <div className="mt-1.5 flex w-full min-w-0 flex-col items-center text-center">
+              <p
+                className={`max-w-full truncate text-[12.5px] font-bold leading-tight ${
+                  vivo ? "text-dash-fg" : "text-dash-muted"
+                }`}
+              >
+                {tr[EVENTO_LABEL[ev.codigo]] ?? ev.codigo}
+              </p>
+              <span className={`nt-certainty mt-1 ${claseCerteza(ev.certeza)}`}>{tr[CERTEZA_KEY[ev.certeza]]}</span>
+              {ev.lugar && (
+                <p className="mt-1 max-w-full truncate text-[11px] font-semibold text-dash-fg/85" title={ev.lugar}>
+                  {ev.lugar}
                 </p>
               )}
-              {/* En un transbordo, el hito sin las dos naves no dice nada:
-                  saber que hubo transbordo en Cristóbal no sirve si no se ve
-                  de qué buque a cuál pasó la carga. Si la naviera todavía no
-                  dijo a cuál, se dice eso en vez de callar la segunda nave. */}
+              {fecha && <p className="max-w-full truncate text-[11px] text-dash-muted tabular-nums">{fecha}</p>}
+              {/* Sin las dos naves, un transbordo no dice de qué buque a cuál pasó la carga. */}
               {ev.codigo === "TRANSBORDO" && ev.naveAnterior && (
-                <p className="mt-0.5 flex items-center gap-1 truncate text-[11.5px] text-dash-fg">
-                  <span className="truncate opacity-70">{ev.naveAnterior}</span>
-                  <Icon icon="lucide:arrow-right" width={11} height={11} className="shrink-0 opacity-60" aria-hidden />
-                  {ev.nave ? (
-                    <span className="truncate font-semibold">{ev.nave}</span>
-                  ) : (
-                    <span className="truncate italic text-dash-muted">{tr.itNavePorConfirmar}</span>
-                  )}
+                <p
+                  className="max-w-full truncate text-[10.5px] text-dash-muted"
+                  title={`${ev.naveAnterior} → ${ev.nave ?? tr.itNavePorConfirmar}`}
+                >
+                  {ev.naveAnterior} → {ev.nave ?? <em>{tr.itNavePorConfirmar}</em>}
                 </p>
               )}
             </div>

@@ -55,13 +55,37 @@ export type NavitrackOperacion = {
   ingreso_stacking: string | null;
   fin_stacking: string | null;
   corte_documental: string | null;
+  /*
+   * Ya no se cargan desde NaviTrack, pero lo cargado sigue valiendo: es el
+   * respaldo de `resolvePosition` cuando no hay AIS.
+   */
   tracking_manual_lat: number | null;
   tracking_manual_lng: number | null;
   tracking_manual_updated_at: string | null;
+  /*
+   * Datos de la carga, para el panel "Datos de la operación" de la ficha.
+   *
+   * Son los que se preguntan por teléfono cuando alguien sigue un embarque:
+   * qué va, en qué condiciones y quién lo atiende. Quedan fuera los montos,
+   * márgenes y facturas —no son del seguimiento, y el cliente también mira
+   * esta ficha— y `observaciones`, que es nota interna.
+   */
+  ejecutivo: string | null;
+  consignatario: string | null;
+  incoterm: string | null;
+  especie: string | null;
+  tipo_unidad: string | null;
+  temperatura: string | number | null;
+  ventilacion: string | number | null;
+  pallets: string | number | null;
+  peso_bruto: string | number | null;
+  peso_neto: string | number | null;
+  sello: string | null;
+  deposito: string | null;
 };
 
 export const NAVITRACK_OP_SELECT =
-  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, zarpe_real_at, eta, tt, estado_operacion, arribo_confirmado, eta_original, eta_original_heredada, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at";
+  "id, ref_asli, correlativo, cliente, contenedor, booking, naviera, nave, viaje, pol, pod, pais, etd, zarpe_real_at, eta, tt, estado_operacion, arribo_confirmado, eta_original, eta_original_heredada, arribo_at, arribo_anunciado_at, ingreso_stacking, fin_stacking, corte_documental, tracking_manual_lat, tracking_manual_lng, tracking_manual_updated_at, ejecutivo, consignatario, incoterm, especie, tipo_unidad, temperatura, ventilacion, pallets, peso_bruto, peso_neto, sello, deposito";
 
 /** Identificadores del catálogo `naves`: permiten resolver el AIS sin buscar a mano. */
 export type NaveIdent = { nombre: string; imo: string | null; mmsi: string | null };

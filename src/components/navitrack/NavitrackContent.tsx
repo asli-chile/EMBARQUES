@@ -25,7 +25,6 @@ import {
   type Recalada,
 } from "./NavitrackItinerario";
 import { NavitrackRastreoPanel } from "./NavitrackRastreoPanel";
-import { NavitrackCoordsManual } from "./NavitrackCoordsManual";
 import {
   yaZarpo,
   GRACIA_POST_ETA_DIAS,
@@ -243,8 +242,6 @@ export function NavitrackContent() {
   const [escalasCargando, setEscalasCargando] = useState(false);
   const [escalasEdadH, setEscalasEdadH] = useState<number | null>(null);
 
-  /** Ventana de posición manual del buque, para cuando no hay AIS. */
-  const [coordsAbiertas, setCoordsAbiertas] = useState(false);
 
   const [transbordoGuardando, setTransbordoGuardando] = useState(false);
   const [transbordoError, setTransbordoError] = useState<string | null>(null);
@@ -1147,76 +1144,6 @@ export function NavitrackContent() {
     [supabase, seleccion, ais, profile, tr],
   );
 
-  /* ---------------------------- Posición manual ---------------------------- */
-
-  /*
-   * Cuando el buque no emite AIS, alguien pone la posición a mano.
-   *
-   * Viene del módulo de seguimiento anterior y se conserva tal cual, RPC
-   * incluida: `sync_operaciones_tracking_manual` propaga la coordenada a las
-   * demás operaciones del mismo buque y viaje, que es lo correcto —una posición
-   * es del barco, no del contenedor— y ahorra cargarla embarque por embarque.
-   * Si la RPC falla o la operación no tiene nave, se escribe solo esta fila.
-   */
-  const guardarCoords = useCallback(
-    async (lat: number, lng: number) => {
-      if (!supabase || !seleccion) return { ok: false as const, message: tr.manualSaveError };
-      if (String(seleccion.nave ?? "").trim()) {
-        const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
-          p_nave: seleccion.nave ?? "",
-          p_viaje: seleccion.viaje ?? "",
-          p_lat: lat,
-          p_lng: lng,
-          p_clear: false,
-        });
-        if (!error) {
-          await cargar();
-          return { ok: true as const };
-        }
-      }
-      const { error } = await supabase
-        .from("operaciones")
-        .update({
-          tracking_manual_lat: lat,
-          tracking_manual_lng: lng,
-          tracking_manual_updated_at: new Date().toISOString(),
-        })
-        .eq("id", seleccion.id);
-      if (error) return { ok: false as const, message: tr.manualSaveError };
-      await cargar();
-      return { ok: true as const };
-    },
-    [supabase, seleccion, cargar, tr],
-  );
-
-  const borrarCoords = useCallback(async () => {
-    if (!supabase || !seleccion) return { ok: false as const, message: tr.manualSaveError };
-    if (String(seleccion.nave ?? "").trim()) {
-      const { error } = await supabase.rpc("sync_operaciones_tracking_manual", {
-        p_nave: seleccion.nave ?? "",
-        p_viaje: seleccion.viaje ?? "",
-        p_lat: 0,
-        p_lng: 0,
-        p_clear: true,
-      });
-      if (!error) {
-        await cargar();
-        return { ok: true as const };
-      }
-    }
-    const { error } = await supabase
-      .from("operaciones")
-      .update({
-        tracking_manual_lat: null,
-        tracking_manual_lng: null,
-        tracking_manual_updated_at: null,
-      })
-      .eq("id", seleccion.id);
-    if (error) return { ok: false as const, message: tr.manualSaveError };
-    await cargar();
-    return { ok: true as const };
-  }, [supabase, seleccion, cargar, tr]);
-
   /* --------------------------------- Render -------------------------------- */
 
   if (authLoading) return <ModuleSoftFallback chrome="dashboard" />;
@@ -1316,7 +1243,6 @@ export function NavitrackContent() {
                   ? undefined
                   : (foco?: string | null) => setItinerarioAbierto({ foco: foco ?? null })
               }
-              onCargarCoords={soloLectura ? undefined : () => setCoordsAbiertas(true)}
               avisoRecalada={avisoRecalada}
               op={seleccion}
               ais={ais}
@@ -1392,25 +1318,6 @@ export function NavitrackContent() {
             />
           )}
         </div>
-
-        {/* Posición del buque cargada a mano, para cuando no hay AIS. */}
-        {seleccion && (
-          <NavitrackCoordsManual
-            open={coordsAbiertas}
-            onClose={() => setCoordsAbiertas(false)}
-            initialLat={seleccion.tracking_manual_lat ?? null}
-            initialLng={seleccion.tracking_manual_lng ?? null}
-            vesselLabel={[seleccion.nave, seleccion.viaje, seleccion.contenedor]
-              .filter(Boolean)
-              .join(" · ")}
-            groupHint={
-              String(seleccion.nave ?? "").trim() ? tr.manualSyncGroup : tr.manualSyncSingle
-            }
-            tr={tr as unknown as Parameters<typeof NavitrackCoordsManual>[0]["tr"]}
-            onSave={guardarCoords}
-            onClear={borrarCoords}
-          />
-        )}
 
         {/* Itinerario de la carga: directo o con transbordo, y el arribo. */}
       {itinerarioAbierto && seleccion && (

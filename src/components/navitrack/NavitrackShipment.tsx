@@ -7,11 +7,12 @@ import type { NeonTheme } from "@/lib/ui/neonTheme";
 import { NavitrackMap } from "./NavitrackMap";
 import { NavitrackJsonCrudo } from "./NavitrackJsonCrudo";
 import { NavieraLogo } from "./NavieraLogo";
-import { NavitrackCadena, NavitrackTimeline, NavitrackTransbordo } from "./NavitrackJourney";
+import { NavitrackCadena, NavitrackTimelineHorizontal, NavitrackTransbordo } from "./NavitrackJourney";
 import { isoDePais, isoDePuerto } from "./navitrack-banderas";
 import type { ModoViaje, Recalada } from "./NavitrackItinerario";
 import { desvioEta, estadoDesvio, formatoDesvio, sentidoDesvio } from "@/lib/operaciones/desvioEta";
-import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
+import { etiquetaEstado } from "@/lib/operaciones/estados";
+import { fmtFecha, fmtFechaHora, fmtNm, interpolar } from "./navitrack-format";
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 import {
   parseOpDate,
@@ -220,8 +221,6 @@ type ShipmentProps = {
    * Ausente para quien no decide.
    */
   onEditarItinerario?: (foco?: string | null) => void;
-  /** Abre la carga manual de posición. Ausente para quien no edita. */
-  onCargarCoords?: () => void;
   /** Resultado de la última decisión, para confirmarla en pantalla. */
   avisoRecalada: string | null;
   op: NavitrackOperacion;
@@ -262,11 +261,12 @@ type ShipmentProps = {
 /**
  * Pizarra del embarque: todo en una pantalla, sin scroll de página.
  *
- * El alto se reparte con flex y `min-h-0`: encabezado, franja de indicadores y
- * nota son fijos, y el bloque central (mapa + columna derecha) se queda con lo
- * que sobra. Lo único que puede desplazarse por dentro es la historia del viaje,
- * que es la lista de largo variable. Bajo `lg` la pizarra no cabe y la vista
- * vuelve a ser una columna con scroll, que es lo honesto en un teléfono.
+ * El alto se reparte con flex y `min-h-0`: encabezado, historia del viaje (una
+ * línea horizontal) y franja de indicadores son fijos, y el bloque central
+ * (mapa + columna derecha) se queda con lo que sobra. Lo único que se desplaza
+ * por dentro son los datos de la operación, que es la lista de largo variable.
+ * Bajo `lg` la pizarra no cabe y la vista vuelve a ser una columna con scroll,
+ * que es lo honesto en un teléfono.
  */
 export function NavitrackShipment({
   soloLectura = false,
@@ -281,7 +281,6 @@ export function NavitrackShipment({
   recaladas,
   modoViaje,
   onEditarItinerario,
-  onCargarCoords,
   avisoRecalada,
   eventos,
   decision,
@@ -323,18 +322,6 @@ export function NavitrackShipment({
   useEffect(() => {
     if (pestana === "transbordo" && !mostrarTransbordo) setPestana("ruta");
   }, [pestana, mostrarTransbordo]);
-
-  const relativos = {
-    haceMenosDeUnMinuto: tr.haceMenosDeUnMinuto,
-    haceMinutos: tr.haceMinutos,
-    haceHoras: tr.haceHoras,
-    haceDias: tr.haceDias,
-    haceUnMinuto: tr.haceUnMinuto,
-    haceUnaHora: tr.haceUnaHora,
-    haceUnDia: tr.haceUnDia,
-  };
-  const actualizado = fmtRelativo(journey.position?.at ?? null, relativos);
-  const actualizadoExacto = fmtFechaHora(journey.position?.at ?? null, locale);
 
   const etaErp = fmtFecha(estado.eta.erp, locale);
   const etaAis = fmtFechaHora(estado.eta.ais, locale);
@@ -480,8 +467,64 @@ export function NavitrackShipment({
   const banderaPod = isoDePais(op.pais) ?? isoDePuerto(op.pod);
   const esReal = journey.position?.source === "AIS";
 
-  // La historia se lee de lo más reciente a lo más antiguo, como un registro.
-  const eventosRecientes = [...eventos].reverse();
+  /*
+   * Datos de la operación, agrupados por la pregunta que responden.
+   *
+   * Un dato vacío no se muestra: esta columna reemplaza a la historia del
+   * viaje, y una grilla de guiones ocuparía el lugar sin decir nada. Si un
+   * grupo queda sin nada, desaparece entero.
+   */
+  const numero = (v: string | number | null, unidad: string) => {
+    if (v == null || String(v).trim() === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? `${n.toLocaleString(locale === "en" ? "en-US" : "es-CL")} ${unidad}`.trim() : String(v);
+  };
+  const zarpeReal = op.zarpe_real_at ? fmtFechaHora(new Date(op.zarpe_real_at), locale) : null;
+  type GrupoDatos = { titulo: string; datos: [string, React.ReactNode][] };
+  const todosLosDatos: GrupoDatos[] = [
+    {
+      titulo: tr.datosGrupoEmbarque,
+      datos: [
+        [tr.datosRefAsli, op.ref_asli],
+        [tr.booking, op.booking],
+        [tr.datosContenedor, op.contenedor],
+        [tr.datosSello, op.sello],
+        [tr.cliente, op.cliente],
+        [tr.datosConsignatario, op.consignatario],
+        [tr.datosEjecutivo, op.ejecutivo],
+        [tr.datosIncoterm, op.incoterm],
+        [tr.datosEstado, op.estado_operacion ? etiquetaEstado(op.estado_operacion) : null],
+      ],
+    },
+    {
+      titulo: tr.datosGrupoCarga,
+      datos: [
+        [tr.datosEspecie, op.especie],
+        [tr.datosTipoUnidad, op.tipo_unidad],
+        [tr.datosTemperatura, numero(op.temperatura, "°C")],
+        [tr.datosVentilacion, numero(op.ventilacion, "")],
+        [tr.datosPallets, numero(op.pallets, "")],
+        [tr.datosPesoBruto, numero(op.peso_bruto, "kg")],
+        [tr.datosPesoNeto, numero(op.peso_neto, "kg")],
+        [tr.datosDeposito, op.deposito],
+      ],
+    },
+    {
+      titulo: tr.datosGrupoFechas,
+      datos: [
+        [tr.evStacking, fmtFecha(parseOpDate(op.ingreso_stacking), locale)],
+        [tr.evCorte, fmtFecha(parseOpDate(op.corte_documental), locale)],
+        [tr.evFinStacking, fmtFecha(parseOpDate(op.fin_stacking), locale)],
+        [tr.datosEtd, etdFmt],
+        [tr.datosZarpeReal, zarpeReal],
+        [tr.colEta, etaErp],
+        [tr.datosTransito, op.tt != null ? interpolar(tr.datosDias, { n: String(op.tt) }) : null],
+      ],
+    },
+  ];
+  const gruposDatos = todosLosDatos
+    .map((g) => ({ ...g, datos: g.datos.filter(([, v]) => v != null && v !== "") }))
+    .filter((g) => g.datos.length > 0);
 
   const mapLabels = {
     origen: tr.origen,
@@ -732,6 +775,43 @@ export function NavitrackShipment({
       </header>
 
       {/*
+        * Historia del viaje, de lado a lado sobre el mapa.
+        *
+        * Se lee en el mismo sentido que la ruta: lo cumplido a la izquierda, lo
+        * que falta a la derecha. Ocupa un alto fijo y no le quita al mapa más
+        * de lo que le quitaba la nota de procedencia que había abajo.
+        */}
+      <section className="dash-card dash-card-static shrink-0 overflow-hidden max-sm:order-3">
+        <div className="dash-section-head flex items-center gap-2 px-3.5 py-1.5">
+          <Icon icon="lucide:history" width={14} height={14} className="text-dash-neon" aria-hidden />
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-dash-fg">{tr.historiaViaje}</h2>
+          {/*
+            * Confirmación de la última decisión: dice a qué nave pasó la carga,
+            * así que va junto a la historia y no en un aviso que se esfuma.
+            */}
+          {avisoRecalada && (
+            <p className="min-w-0 truncate rounded-md border border-dash-neon/35 bg-dash-neon/10 px-2 py-0.5 text-[11px] text-dash-fg">
+              {avisoRecalada}
+            </p>
+          )}
+          {/* Lo que agrega —una escala, un transbordo— es historia del viaje. */}
+          {onEditarItinerario && (
+            <button
+              type="button"
+              onClick={() => onEditarItinerario()}
+              className="dash-control motion-interactive ml-auto inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
+            >
+              <Icon icon="lucide:route" width={12} height={12} aria-hidden />
+              {tr.itEditar}
+            </button>
+          )}
+        </div>
+        <div className="px-2 py-2.5">
+          <NavitrackTimelineHorizontal eventos={eventos} etapa={estado.etapa} locale={locale} tr={tr} />
+        </div>
+      </section>
+
+      {/*
         * Bloque central: se queda con el alto que sobra.
         *
         * `flex-1 min-h-0` es lo que sostiene la pizarra de escritorio, donde no
@@ -741,7 +821,7 @@ export function NavitrackShipment({
         * la tarjeta, que recorta, lo dejaba en una franja. Bajo `sm` toma su
         * alto natural y el scroll hace el resto.
         */}
-      <div className="grid grid-cols-1 gap-3 max-sm:order-4 sm:min-h-0 sm:flex-1 sm:gap-2 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-3 max-sm:order-5 sm:min-h-0 sm:flex-1 sm:gap-2 lg:grid-cols-[1.6fr_1fr]">
         <section className="dash-card dash-card-static flex flex-col overflow-hidden sm:min-h-0">
           <div className="dash-section-head flex shrink-0 items-center gap-1 overflow-x-auto px-2 py-1.5">
             {pestanas.map((p) => (
@@ -1075,54 +1155,40 @@ export function NavitrackShipment({
             )}
           </section>
 
-          {/* Historia: la única lista de largo variable, así que es la que scrollea. */}
+          {/*
+            * Datos de la operación: lo que se pregunta por teléfono.
+            *
+            * Ocupa el lugar que dejó la historia del viaje, que subió sobre el
+            * mapa. Es la columna de largo variable, así que es la que se
+            * desplaza por dentro.
+            */}
           <section className="dash-card dash-card-static flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="dash-section-head flex shrink-0 items-center gap-2 px-3.5 py-2">
-              <Icon icon="lucide:history" width={14} height={14} className="text-dash-neon" aria-hidden />
+              <Icon icon="lucide:clipboard-list" width={14} height={14} className="text-dash-neon" aria-hidden />
               <h2 className="text-[11px] font-bold uppercase tracking-wider text-dash-fg">
-                {tr.historiaViaje}
+                {tr.datosOperacion}
               </h2>
-              {/* Lo que agrega —una escala, un transbordo— es historia del viaje,
-                  así que el botón vive junto a ella y no en una caja aparte. */}
-              {onEditarItinerario && (
-                <button
-                  type="button"
-                  onClick={() => onEditarItinerario()}
-                  className="dash-control motion-interactive ml-auto inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-bold"
-                >
-                  <Icon icon="lucide:route" width={12} height={12} aria-hidden />
-                  {tr.itEditar}
-                </button>
-              )}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3">
-              {/*
-                * Confirmación de la última decisión.
-                *
-                * Va aquí y no en un toast porque dice algo que conviene seguir
-                * viendo: a qué nave pasó la carga y si quedó con seguimiento.
-                */}
-              {avisoRecalada && (
-                <p className="mb-3 rounded-lg border border-dash-neon/35 bg-dash-neon/10 px-3 py-2 text-[12px] leading-snug text-dash-fg">
-                  {avisoRecalada}
-                </p>
-              )}
-
-              <NavitrackTimeline
-                eventos={eventosRecientes}
-                etapa={estado.etapa}
-                locale={locale}
-                tr={tr}
-              />
+              {gruposDatos.map((g, gi) => (
+                <section key={g.titulo} className={gi > 0 ? "mt-3.5 border-t border-dash-border pt-3" : ""}>
+                  <p className="pb-2 text-[11.5px] font-bold uppercase tracking-wider text-dash-muted sm:text-[10px]">
+                    {g.titulo}
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    {g.datos.map(([label, valor]) => (
+                      <Dato key={label} label={label} valor={valor} />
+                    ))}
+                  </div>
+                </section>
+              ))}
 
               {/*
                 * Los transbordos, con lo prometido y lo ocurrido.
                 *
-                * El historial ya cuenta que hubo un cambio de nave; esta lista
-                * dice lo que el historial no alcanza: qué anunció la naviera
-                * para cada transbordo y qué hizo de verdad el buque según el
-                * AIS. Las paradas programadas no se listan aparte: son parte
-                * del recorrido y el historial las cuenta una sola vez.
+                * La historia de arriba ya cuenta que hubo un cambio de nave;
+                * esta lista dice lo que ella no alcanza: qué anunció la naviera
+                * para cada transbordo y qué hizo de verdad el buque según el AIS.
                 */}
               {transbordosDelViaje.length > 0 && (
                 <section className="mt-4">
@@ -1193,7 +1259,7 @@ export function NavitrackShipment({
 
       {/* Franja de indicadores: lo que un operador mira de reojo. */}
       <div
-        className={`shrink-0 gap-2.5 max-sm:order-3 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:gap-2 sm:grid sm:grid-cols-3 ${
+        className={`shrink-0 gap-2.5 max-sm:order-4 max-sm:-mx-1 max-sm:flex max-sm:snap-x max-sm:snap-mandatory max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 sm:gap-2 sm:grid sm:grid-cols-3 ${
           hayCadena ? "xl:grid-cols-7" : "xl:grid-cols-6"
         }`}
       >
@@ -1337,48 +1403,6 @@ export function NavitrackShipment({
             </span>
           }
         />
-      </div>
-
-      {/*
-        * Nota de procedencia: explica el dato sin que nadie tenga que preguntarlo.
-        *
-        * El `order` no es decorativo. Bajo `sm` los bloques se reordenan a mano,
-        * y un hijo sin `order` vale 0, o sea que se va delante de todos: esta
-        * nota aparecía arriba del embarque, antes incluso de saber cuál era. Al
-        * numerar por `order`, los que no se numeran no se quedan en su sitio.
-        */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-dash-border bg-dash-control/50 px-3 py-2 max-sm:order-5 max-sm:gap-2.5 max-sm:px-3.5 max-sm:py-3">
-        <p className="flex min-w-0 items-center gap-2 text-[11px] leading-snug text-dash-muted">
-          <Icon icon="lucide:info" width={13} height={13} className="shrink-0 text-dash-neon" aria-hidden />
-          <span className="min-w-0">{tr.notaAis}</span>
-        </p>
-        <div className="flex shrink-0 items-center gap-3">
-          {actualizado && (
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-dash-muted">
-              <Icon icon="lucide:refresh-cw" width={12} height={12} aria-hidden />
-              {tr.ultimaActualizacion}:{" "}
-              {/* El dato exacto, al pasar el mouse: igual que en la tabla. */}
-              <span className="nt-tip" data-tip={actualizadoExacto ?? ""}>
-                {actualizado}
-              </span>
-            </p>
-          )}
-          {/*
-            * La posición manual vive acá, pegada a la nota que declara de dónde
-            * sale el dato: es justo donde alguien lee "posición estimada" y se
-            * da cuenta de que puede hacer algo al respecto.
-            */}
-          {onCargarCoords && (
-            <button
-              type="button"
-              onClick={onCargarCoords}
-              className="dash-control motion-interactive inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold"
-            >
-              <Icon icon="lucide:map-pin" width={12} height={12} aria-hidden />
-              {tr.manualCoordsBtn}
-            </button>
-          )}
-        </div>
       </div>
 
       {jsonAbierto && (

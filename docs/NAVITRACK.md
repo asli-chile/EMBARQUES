@@ -21,8 +21,8 @@ Complementa a [ESTILOS-VISUALES.md](./ESTILOS-VISUALES.md) (formas y color) y a
 Se construyó al lado de `/tracking` para no arriesgar lo que estaba en
 producción, y el **13-09-2026** lo reemplazó: `src/components/tracking/` y
 `/api/shiptracking/*` se eliminaron, y `/tracking` quedó como una redirección a
-`/navitrack`. Lo único que se rescató de ahí es la carga manual de posición,
-hoy [NavitrackCoordsManual.tsx](../src/components/navitrack/NavitrackCoordsManual.tsx).
+`/navitrack`. Lo único que se rescató de ahí fue la carga manual de posición,
+que se retiró de la pantalla el 26-09-2026 (ver "La pizarra del embarque").
 
 Tres consecuencias que conviene tener presentes:
 
@@ -108,7 +108,8 @@ De `operaciones` (ver `NAVITRACK_OP_SELECT` en `navitrack-model.ts`):
 | `arribo_confirmado` | Cierra el viaje al 100 % |
 | `arribo_at`, `arribo_anunciado_at` | Cuándo llegó y para cuándo se anunció |
 | `ingreso_stacking`, `corte_documental`, `fin_stacking` | Hitos reales del timeline |
-| `tracking_manual_lat/lng` | Posición cargada a mano cuando no hay AIS |
+| `tracking_manual_lat/lng` | Posición cargada a mano cuando no hay AIS. Ya no se carga desde NaviTrack, pero lo guardado sigue siendo el respaldo de `resolvePosition` |
+| `ejecutivo`, `consignatario`, `incoterm`, `especie`, `tipo_unidad`, `temperatura`, `ventilacion`, `pallets`, `peso_bruto`, `peso_neto`, `sello`, `deposito` | Panel "Datos de la operación" de la ficha |
 
 De `navieras`: `logo_url`, la marca que acompaña al número de contenedor en la
 cabecera del embarque.
@@ -960,9 +961,9 @@ scroll de página. El alto se reparte con flex y `min-h-0`:
 ```
 barra superior      shrink-0
 encabezado          shrink-0   identidad + etapa + avance + ruta/ETA
-bloque central      flex-1     [ mapa con pestañas | ETA + historia ]
-franja indicadores  shrink-0   5 tarjetas
-nota de procedencia shrink-0
+historia del viaje  shrink-0   línea de tiempo horizontal + Itinerario
+bloque central      flex-1     [ mapa con pestañas | ETA + datos de la operación ]
+franja indicadores  shrink-0   6 o 7 tarjetas
 ```
 
 Reglas para no romperlo:
@@ -970,8 +971,10 @@ Reglas para no romperlo:
 - **Todo lo que se agregue arriba o abajo va `shrink-0`**; lo que debe absorber
   el alto sobrante va `flex-1 min-h-0`. Sin `min-h-0` un hijo flex nunca se
   encoge por debajo de su contenido y reaparece el scroll de página.
-- **Solo la historia del viaje scrollea por dentro**, porque es la única lista de
-  largo variable. Si una sección nueva puede crecer, va dentro de una pestaña o
+- **Solo los datos de la operación scrollean por dentro** (en vertical), porque
+  es la única lista de largo variable de la columna. La historia del viaje se
+  desplaza en **horizontal** cuando no caben los hitos, y al abrirse se centra en
+  el hito actual. Si una sección nueva puede crecer, va dentro de una pestaña o
   con su propio `overflow-y-auto`, nunca empujando la página.
 - **Bajo `lg` la pizarra no cabe** y la vista vuelve a ser una columna con
   scroll (`lg:overflow-hidden` en la raíz). Forzar la pizarra en un teléfono
@@ -980,6 +983,28 @@ Reglas para no romperlo:
   buque**, y **Transbordo** solo cuando hay algo que resolver). Las pestañas son
   el lugar donde va lo que no cabe: sumar una sección nueva ahí no le quita alto
   a nada.
+
+**Cambios del 26-09-2026.**
+
+- **La historia del viaje está sobre el mapa**, como línea horizontal: lo
+  cumplido a la izquierda, lo que falta a la derecha, el hito actual destacado
+  (`NavitrackTimelineHorizontal`). Antes era una lista vertical en la columna
+  derecha, de lo más nuevo a lo más viejo, que obligaba a leer el viaje al revés
+  del mapa. El orden y los sellos (real, confirmado, anunciado, estimado) no
+  cambiaron: salen de `construirTimeline`, igual que antes.
+- **La columna derecha muestra los datos de la operación**, agrupados en
+  Embarque, Carga y Fechas, con la lista de transbordos (anunciado contra real)
+  al final. Un dato vacío no se muestra y un grupo sin datos desaparece: una
+  grilla de guiones ocuparía el lugar sin decir nada. Quedan fuera montos,
+  márgenes y facturas, porque el cliente también mira esta ficha, y
+  `observaciones`, que es nota interna.
+- **Se retiró la franja inferior**: la nota de procedencia, "Última
+  actualización" y el botón "Cargar posición del buque" con su ventana
+  (`NavitrackCoordsManual`, eliminada). La procedencia de la posición la sigue
+  diciendo la tarjeta "Posición actual" (AIS satelital / posición calculada),
+  con la fecha exacta de la lectura. Las coordenadas cargadas antes **no se
+  borraron**: `resolvePosition` las sigue usando cuando no hay AIS, y la RPC
+  `sync_operaciones_tracking_manual` sigue en la base, sin nadie que la llame.
 
 ---
 

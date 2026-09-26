@@ -10,7 +10,9 @@
  * ya está guardada —no dispara ninguna consulta nueva—.
  */
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
+import { useNeonTheme } from "@/lib/ui/neonTheme";
 
 type Props = {
   datos: { crudo: Record<string, unknown> | null; consultadoAt: string | null } | null;
@@ -20,6 +22,7 @@ type Props = {
 
 export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
   const [copiado, setCopiado] = useState(false);
+  const [theme] = useNeonTheme();
   const texto = datos?.crudo ? JSON.stringify(datos.crudo, null, 2) : null;
 
   const copiar = async () => {
@@ -33,8 +36,28 @@ export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[75] flex items-start justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-6">
+  if (typeof document === "undefined") return null;
+
+  /*
+   * Montada en `body`, no dentro de la ficha.
+   *
+   * Dentro de la ficha, un `fixed` no se mide contra la pantalla sino contra el
+   * primer ancestro con `transform` —los paneles con animación de entrada lo
+   * tienen mientras corre—, y además queda atrapado en su contexto de apilado:
+   * la ventana aparecía pegada arriba y el header le pasaba por encima, subiera
+   * lo que subiera su z-index. En `body` no tiene ancestros que la descoloquen.
+   *
+   * Afuera de la ficha pierde el tema, así que el fondo lleva su propio
+   * `dash-neon`: los estilos de la tarjeta cuelgan de `.dash-neon .dash-card`
+   * y necesitan ese ancestro. El velo va en línea porque `.dash-neon` pinta el
+   * degradado de la página y taparía todo lo que queda detrás.
+   */
+  return createPortal(
+    <div
+      className="dash-neon fixed inset-0 z-[300] flex items-center justify-center p-3 backdrop-blur-sm sm:p-6"
+      data-theme={theme}
+      style={{ background: "rgb(0 0 0 / 0.6)" }}
+    >
       {/*
         * Alto acotado con `flex flex-col`, no un `overflow-y-auto` en el
         * fondo: así el encabezado —con el botón de cerrar— queda fijo pase lo
@@ -45,7 +68,7 @@ export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={tr.jsonTitulo}
-        className="motion-panel dash-card dash-card-static flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden"
+        className="motion-panel dash-card dash-card-static flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden"
         data-state="open"
       >
         <header className="dash-section-head flex shrink-0 items-start justify-between gap-3 px-4 py-3">
@@ -97,6 +120,7 @@ export function NavitrackJsonCrudo({ datos, tr, onCerrar }: Props) {
           )}
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }
