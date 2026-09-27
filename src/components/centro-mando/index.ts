@@ -1,0 +1,1 @@
+export { CentroDeMandoContent } from "./CentroDeMandoContent";

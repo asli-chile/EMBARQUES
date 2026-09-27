@@ -113,6 +113,9 @@ const LazyInformativosContent = lazy(() =>
 const LazyCreadorPublicidadContent = lazy(() =>
   import("@/components/marketing-creador").then((m) => ({ default: m.CreadorPublicidadContent })),
 );
+const LazyCentroDeMandoContent = lazy(() =>
+  import("@/components/centro-mando").then((m) => ({ default: m.CentroDeMandoContent })),
+);
 const LazyMarketingOfficeContent = lazy(() =>
   import("@/components/marketing-office").then((m) => ({ default: m.MarketingOfficeContent })),
 );
@@ -274,6 +277,15 @@ export function AppShell({ children, pathname }: AppShellProps) {
       >
         <Sus>
           <LazyCreadorPublicidadContent />
+        </Sus>
+      </ConfigGuard>
+    ) : pathname === "/centrodecomando" ? (
+      <ConfigGuard
+        allowAdmin={false}
+        forbiddenMessage="No tienes acceso al centro de mando. Solo el superadmin puede verlo."
+      >
+        <Sus>
+          <LazyCentroDeMandoContent />
         </Sus>
       </ConfigGuard>
     ) : pathname === "/reservas/crear" ? (

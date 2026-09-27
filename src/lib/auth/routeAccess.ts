@@ -58,6 +58,7 @@ const ROUTE_RULES: Record<string, RouteRule> = {
   "/configuracion/temporadas": { kind: "superadmin" },
   "/configuracion/naves-tracking": { kind: "superadmin" },
   "/creador-publicidad": { kind: "superadmin" },
+  "/centrodecomando": { kind: "superadmin" },
   "/cartolas-nubox": { kind: "cartolasNubox" },
   "/cliente": { kind: "operational" },
   // Seguimiento: todo el personal y el cliente, cada uno con lo que RLS le deja ver.

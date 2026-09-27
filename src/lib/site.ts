@@ -80,6 +80,12 @@ export const siteConfig = {
       superadminOnly: true,
     },
     {
+      labelKey: "centroDeMando",
+      id: "centro-de-mando",
+      href: "/centrodecomando",
+      superadminOnly: true,
+    },
+    {
       labelKey: "cartolasNubox",
       id: "cartolas-nubox",
       href: "/cartolas-nubox",

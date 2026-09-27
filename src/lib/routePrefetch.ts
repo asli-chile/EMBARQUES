@@ -37,6 +37,7 @@ const prefetchers: Record<string, PrefetchFn> = {
   "/comunicaciones/informativos": () => import("@/components/comunicaciones"),
   "/marketing": () => import("@/components/marketing-office"),
   "/creador-publicidad": () => import("@/components/marketing-creador"),
+  "/centrodecomando": () => import("@/components/centro-mando"),
 };
 
 const started = new Set<string>();
