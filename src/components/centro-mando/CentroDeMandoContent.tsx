@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { withBase } from "@/lib/basePath";
 import "./centro-mando.css";
+import catalogo from "./oficina.json";
 
 const CLAVE = "erp-centro-mando-pedidos";
 
@@ -18,6 +19,19 @@ type FormatoId = (typeof FORMATOS)[number]["id"];
 type TipoPedido = "video" | "imagenes" | "pack";
 type Motor = "claude" | "cursor";
 type OrigenCaptura = "web" | "portal";
+type Vista = "pedido" | "oficina";
+
+type AgenteOficina = {
+  nombre: string;
+  titulo: string;
+  departamento: string;
+  resumen: string;
+};
+
+const oficina = catalogo as {
+  departamentos: { id: string; nombre: string }[];
+  agentes: AgenteOficina[];
+};
 
 type Pedido = {
   id: string;
@@ -62,7 +76,10 @@ export function CentroDeMandoContent() {
   const [imagenes, setImagenes] = useState<string[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [aviso, setAviso] = useState<string | null>(null);
-
+  const [vista, setVista] = useState<Vista>("pedido");
+  const [sala, setSala] = useState("todas");
+  const [busca, setBusca] = useState("");
+  const [ficha, setFicha] = useState<string | null>(null);
   const llevaVideo = tipo === "video" || tipo === "pack";
 
   useEffect(() => {
@@ -76,6 +93,17 @@ export function CentroDeMandoContent() {
       .join(", ");
     return piezas || "Marca al menos un formato.";
   }, [formatos, llevaVideo]);
+
+  const visibles = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return oficina.agentes.filter((a) => {
+      if (sala !== "todas" && a.departamento !== sala) return false;
+      if (!q) return true;
+      return `${a.titulo} ${a.nombre} ${a.resumen}`.toLowerCase().includes(q);
+    });
+  }, [busca, sala]);
+
+  const elegido = oficina.agentes.find((a) => a.nombre === ficha) ?? null;
 
   function alternarFormato(id: FormatoId) {
     setFormatos((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -129,18 +157,39 @@ export function CentroDeMandoContent() {
 
   return (
     <main className="cmd">
+      <div className="cmd-ficheros" role="tablist" aria-label="Pantallas">
+        <button
+          type="button"
+          role="tab"
+          className={vista === "pedido" ? "cmd-ficha cmd-ficha-activa" : "cmd-ficha"}
+          aria-selected={vista === "pedido"}
+          onClick={() => setVista("pedido")}
+        >
+          Centro de mando
+        </button>
+        <button
+          type="button"
+          role="tab"
+          className={vista === "oficina" ? "cmd-ficha cmd-ficha-activa" : "cmd-ficha"}
+          aria-selected={vista === "oficina"}
+          onClick={() => setVista("oficina")}
+        >
+          Oficina de agentes
+        </button>
+      </div>
       <div className="cmd-chasis">
         <header className="cmd-frente">
           <div className="cmd-marca">
             <span className="cmd-lampara" aria-hidden="true" />
             <div>
               <p className="cmd-kicker">ПУЛЬТ · ASLI</p>
-              <h1 className="cmd-titulo">Centro de mando</h1>
+              <h1 className="cmd-titulo">{vista === "pedido" ? "Centro de mando" : "Oficina de agentes"}</h1>
             </div>
           </div>
           <p className="cmd-serie">ЭВМ-186 · CURICÓ</p>
         </header>
 
+        {vista === "pedido" ? (
         <div className="cmd-rejilla">
           <section className="cmd-pantalla" aria-label="Pedido">
             <div className="cmd-cuerpo">
@@ -356,6 +405,79 @@ export function CentroDeMandoContent() {
             </div>
           </aside>
         </div>
+        ) : (
+          <section className="cmd-pantalla" aria-label="Oficina de agentes">
+            <div className="cmd-cuerpo">
+              <div className="cmd-oficina-barra">
+                <label className="cmd-campo">
+                  Buscar agente
+                  <input
+                    type="text"
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    placeholder="seo, cfo, cereza, copy…"
+                  />
+                </label>
+                <a className="cmd-enlace" href="http://127.0.0.1:4317" target="_blank" rel="noreferrer">
+                  Abrir la oficina en vivo
+                </a>
+              </div>
+              <div className="cmd-formatos">
+                <button
+                  type="button"
+                  className="cmd-tecla"
+                  aria-pressed={sala === "todas"}
+                  onClick={() => setSala("todas")}
+                >
+                  Todas · {oficina.agentes.length}
+                </button>
+                {oficina.departamentos.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className="cmd-tecla"
+                    aria-pressed={sala === d.id}
+                    onClick={() => setSala(d.id)}
+                  >
+                    {d.nombre}
+                  </button>
+                ))}
+              </div>
+              <div className="cmd-planta">
+                <ul className="cmd-escritorios">
+                  {visibles.map((a) => (
+                    <li key={a.nombre}>
+                      <button
+                        type="button"
+                        className={ficha === a.nombre ? "cmd-escritorio cmd-escritorio-activo" : "cmd-escritorio"}
+                        onClick={() => setFicha(a.nombre)}
+                      >
+                        <span>{a.titulo}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <aside className="cmd-ficha-agente">
+                  {elegido ? (
+                    <>
+                      <p className="cmd-cuando">
+                        {oficina.departamentos.find((d) => d.id === elegido.departamento)?.nombre}
+                      </p>
+                      <h2>{elegido.titulo}</h2>
+                      <p>{elegido.resumen}</p>
+                    </>
+                  ) : (
+                    <p className="cmd-vacio">
+                      {visibles.length === 0
+                        ? "Ningún agente coincide con la búsqueda."
+                        : "Elige un escritorio para ver qué hace."}
+                    </p>
+                  )}
+                </aside>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
