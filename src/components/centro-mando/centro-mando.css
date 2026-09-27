@@ -1,0 +1,368 @@
+@import url("https://fonts.googleapis.com/css2?family=Russo+One&family=Share+Tech+Mono&display=swap");
+
+.cmd {
+  --fosforo: #d8ffb0;
+  --fosforo-bajo: #8fbf78;
+  --ambar: #ffb000;
+  --ambar-tinta: #1a1200;
+  --rojo: #ff4d3a;
+  --pantalla: #071208;
+  --chasis: #1c2618;
+  --linea: #3d5c32;
+  box-sizing: border-box;
+  min-height: 100%;
+  overflow: auto;
+  padding: 1.25rem;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255, 176, 0, 0.08), transparent 28%),
+    linear-gradient(180deg, #243024 0%, #141910 40%, #10150e 100%);
+  color: var(--fosforo);
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+}
+
+.cmd *,
+.cmd *::before,
+.cmd *::after {
+  box-sizing: border-box;
+}
+
+.cmd-chasis {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.85rem;
+  border: 3px solid #0a0e09;
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, #3a4634 0%, #2a3526 8%, #243024 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.cmd-frente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0.7rem 0.8rem;
+}
+
+.cmd-marca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cmd-lampara {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--rojo);
+  box-shadow: 0 0 10px var(--rojo), inset 0 -2px 2px rgba(0, 0, 0, 0.45);
+}
+
+.cmd-kicker {
+  margin: 0;
+  color: var(--ambar);
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+}
+
+.cmd-titulo {
+  margin: 0;
+  color: #f4f7ef;
+  font-family: "Russo One", sans-serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.cmd-serie {
+  margin: 0;
+  color: #c5d2b8;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+}
+
+.cmd-rejilla {
+  display: grid;
+  gap: 0.75rem;
+}
+
+@media (min-width: 960px) {
+  .cmd-rejilla {
+    grid-template-columns: minmax(0, 1.45fr) minmax(16rem, 0.7fr);
+  }
+}
+
+.cmd-pantalla,
+.cmd-registro {
+  position: relative;
+  overflow: hidden;
+  border: 2px solid #050805;
+  border-radius: 0.7rem;
+  background: var(--pantalla);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.55);
+}
+
+.cmd-pantalla::after,
+.cmd-registro::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.16) 0 1px,
+    transparent 1px 3px
+  );
+  mix-blend-mode: multiply;
+}
+
+.cmd-cuerpo,
+.cmd-lista {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 1.05rem 1.15rem;
+}
+
+.cmd-bloque {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cmd-leyenda {
+  margin-bottom: 0.45rem;
+  color: var(--ambar);
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cmd-opciones,
+.cmd-formatos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.cmd-tecla {
+  border: 1px solid var(--linea);
+  border-radius: 0.2rem;
+  background: transparent;
+  color: var(--fosforo);
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: 0.04em;
+  padding: 0.4rem 0.7rem;
+}
+
+.cmd-tecla[aria-pressed="true"],
+.cmd-casilla:has(input:checked) {
+  border-color: var(--ambar);
+  background: var(--ambar);
+  color: var(--ambar-tinta);
+}
+
+.cmd-casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid var(--linea);
+  border-radius: 0.2rem;
+  padding: 0.4rem 0.65rem;
+  color: var(--fosforo);
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.cmd-casilla input {
+  accent-color: var(--ambar-tinta);
+}
+
+.cmd-medida {
+  color: inherit;
+  opacity: 0.72;
+  font-size: 0.75rem;
+}
+
+.cmd-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--fosforo);
+  font-size: 0.95rem;
+}
+
+.cmd-campo input[type="text"],
+.cmd-campo textarea {
+  width: 100%;
+  border: 1px solid var(--linea);
+  border-radius: 0.15rem;
+  background: #030806;
+  color: var(--fosforo);
+  font: inherit;
+  padding: 0.65rem 0.7rem;
+}
+
+.cmd-campo textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.cmd-campo input::placeholder,
+.cmd-campo textarea::placeholder {
+  color: #5d8a52;
+}
+
+.cmd-campo input:focus,
+.cmd-campo textarea:focus {
+  outline: 1px solid var(--ambar);
+}
+
+.cmd-archivos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cmd-archivo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--linea);
+  border-radius: 0.2rem;
+  padding: 0.4rem 0.7rem;
+  color: var(--fosforo);
+  cursor: pointer;
+}
+
+.cmd-archivo input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.cmd-enlace {
+  color: var(--ambar);
+  font-size: 0.95rem;
+}
+
+.cmd-nota {
+  margin: 0;
+  color: var(--fosforo-bajo);
+  font-size: 0.85rem;
+}
+
+.cmd-opcion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.cmd-check,
+.cmd-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--fosforo);
+  cursor: pointer;
+}
+
+.cmd-check input,
+.cmd-radio input {
+  accent-color: var(--ambar);
+  width: 1rem;
+  height: 1rem;
+}
+
+.cmd-volumen {
+  color: var(--fosforo-bajo);
+  font-size: 0.9rem;
+}
+
+.cmd-volumen input {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  accent-color: var(--ambar);
+}
+
+.cmd-aviso {
+  margin: 0;
+  color: var(--rojo);
+  font-size: 0.95rem;
+}
+
+.cmd-lanzar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cmd-enviar {
+  border: 0;
+  border-radius: 0.15rem;
+  background: var(--ambar);
+  color: var(--ambar-tinta);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  padding: 0.65rem 0.9rem;
+  text-transform: uppercase;
+}
+
+.cmd-enviar:hover {
+  background: #ffc233;
+}
+
+.cmd-registro h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0.8rem 1rem 0;
+  color: var(--ambar);
+  font-size: 0.78rem;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.cmd-vacio,
+.cmd-pedido {
+  border: 1px dashed var(--linea);
+  border-radius: 0.15rem;
+  padding: 0.75rem;
+}
+
+.cmd-pedido h3 {
+  margin: 0.2rem 0 0;
+  color: var(--fosforo);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.cmd-pedido p,
+.cmd-vacio {
+  margin: 0.35rem 0 0;
+  color: var(--fosforo-bajo);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.cmd-cuando {
+  color: var(--ambar);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
