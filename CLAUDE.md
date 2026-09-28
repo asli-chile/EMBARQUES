@@ -353,6 +353,15 @@ deja de desplazarse hasta replegar. La ficha de marca (franja navy → teal
 oscuro) usa las clases `rd-*` de `dashboard-neon.css`. Si una tercera pantalla
 necesita lo mismo, usar esa pieza en vez de copiarla.
 
+Reserva ASLI y Reserva Externa la usan a través de
+`src/components/transportes/FichaTransporte.tsx`: cabecera con indicadores,
+tabla y una ficha que es un **formulario** (se guarda con el pie, no campo a
+campo) ordenado como recorrido de pasos. Las fechas van con
+`src/components/ui/CampoFecha.tsx`, no con `<input type="date">`: el nativo
+toma el idioma del sistema operativo y mostraba `MM/DD/YYYY` con AM/PM.
+Al guardar una reserva, RUT, teléfono y remolque se copian al catálogo del
+chofer y del camión (`src/lib/transportes/catalogo.ts`).
+
 En Mis Reservas la ficha se **edita en el lugar** para `superadmin`, `admin` y
 `ejecutivo` (este último solo ve —y RLS solo le deja escribir— las reservas de
 sus clientes). A diferencia de la celda en línea de la tabla, que solo llena

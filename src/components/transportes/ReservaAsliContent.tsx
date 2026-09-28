@@ -1,10 +1,47 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { insertarNotificacion } from "@/lib/notifications/NotificationsContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { Combobox } from "@/components/ui/Combobox";
+import { CampoFecha } from "@/components/ui/CampoFecha";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { propsFilaDesplegable } from "@/components/ui/FilaDesplegable";
+import {
+  BarraFiltrosTransporte,
+  BotonEliminarPie,
+  BTN_HERO,
+  CampoPlanta,
+  CabeceraTransporte,
+  CAMPO_INPUT,
+  CAMPO_LABEL,
+  CargandoTransporte,
+  ChevronFila,
+  ChipEstado,
+  claseFila,
+  contarCambios,
+  FichaTransporte,
+  FilaVacia,
+  FiltroSelect,
+  MarcoTabla,
+  PaginaTransporte,
+  fechaCorta,
+  PieFicha,
+  RecorridoPasos,
+  SeccionFicha,
+  SeccionInstructivo,
+  TD,
+  TH,
+  useFilaConCambios,
+  type Indicador,
+  type Paso,
+} from "@/components/transportes/FichaTransporte";
+import { withBase } from "@/lib/basePath";
+import { completarCatalogoTransporte } from "@/lib/transportes/catalogo";
+import { displayRefAsli } from "@/lib/refAsli";
+import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { format } from "date-fns";
 import { sileo } from "sileo";
 import { ESTADO_META, etiquetaEstado, normalizarEstado } from "@/lib/operaciones/estados";
@@ -148,19 +185,53 @@ const initialFormData: FormData = {
   observaciones: "",
 };
 
+/** Campos del formulario tal como están guardados en la operación. */
+function formDesdeOperacion(op: Operacion): FormData {
+  return {
+    operacion_id: op.id,
+    transporte: op.transporte ?? "",
+    chofer: op.chofer ?? "",
+    rut_chofer: op.rut_chofer ?? "",
+    telefono_chofer: op.telefono_chofer ?? "",
+    patente_camion: op.patente_camion ?? "",
+    patente_remolque: op.patente_remolque ?? "",
+    contenedor: op.contenedor ?? "",
+    sello: op.sello ?? "",
+    tara: op.tara != null ? String(op.tara) : "",
+    planta_presentacion: op.planta_presentacion ?? "",
+    citacion: op.citacion ?? "",
+    llegada_planta: op.llegada_planta ?? "",
+    salida_planta: op.salida_planta ?? "",
+    deposito: op.deposito ?? "",
+    agendamiento_retiro: op.agendamiento_retiro ?? "",
+    inicio_stacking: op.inicio_stacking ?? "",
+    fin_stacking: op.fin_stacking ?? "",
+    ingreso_stacking: op.ingreso_stacking ?? "",
+    tramo: op.tramo ?? "",
+    valor_tramo: op.valor_tramo != null ? String(op.valor_tramo) : "",
+    moneda: op.moneda ?? "",
+    observaciones: op.observaciones ?? "",
+  };
+}
+
 export function ReservaAsliContent() {
   const { t } = useLocale();
   const { user, isCliente, isSuperadmin, isAdmin, empresaNombres, isLoading: authLoading, profile } = useAuth();
   const canManageTransport = isSuperadmin || isAdmin;
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
   const tr = t.transporteAsli;
+  const tf = t.transporteFicha;
+  const tm = t.misReservas;
   const [theme] = useNeonTheme();
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  /* Lo que había al abrir la ficha: contra esto se cuentan los cambios. */
+  const [formBase, setFormBase] = useState<FormData>(initialFormData);
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
   const [empresasTransporte, setEmpresasTransporte] = useState<TransporteEmpresa[]>([]);
   const [choferes, setChoferes] = useState<Chofer[]>([]);
   const [equipos, setEquipos] = useState<Equipo[]>([]);
   const [tramos, setTramos] = useState<Tramo[]>([]);
+  const [plantas, setPlantas] = useState<{ id: string; nombre: string }[]>([]);
   const [empresaTransporteId, setEmpresaTransporteId] = useState<string>("");
   const [empresaTransporteInput, setEmpresaTransporteInput] = useState<string>("");
   const [choferInput, setChoferInput] = useState<string>("");
@@ -169,15 +240,15 @@ export function ReservaAsliContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterPending, setFilterPending] = useState(false);
+  /* "" todas, "pendiente" con asignación incompleta, "completa" asignadas. */
+  const [asignacionFiltro, setAsignacionFiltro] = useState("");
+  const [transporteFiltro, setTransporteFiltro] = useState("");
   const [confirmNewItem, setConfirmNewItem] = useState<{
     type: 'empresa' | 'chofer' | 'equipo';
     value: string;
     callback: () => Promise<void>;
   } | null>(null);
   const [confirmDeleteReserva, setConfirmDeleteReserva] = useState<string | null>(null);
-  // Panel activo en mobile: "select" = lista de operaciones, "form" = formulario
-  const [mobilePanel, setMobilePanel] = useState<"select" | "form">("select");
   // Instructivo
   const [instrFilename, setInstrFilename] = useState<string>("");
   const [instrSavedUrl, setInstrSavedUrl] = useState<string | null>(null);
@@ -209,15 +280,17 @@ export function ReservaAsliContent() {
       qOp = qOp.in("cliente", empresaNombres);
     }
     qOp = aplicarFiltroTemporada(qOp, temporadaActiva);
-    const [operacionesRes, empresasRes, tramosRes] = await Promise.all([
+    const [operacionesRes, empresasRes, tramosRes, plantasRes] = await Promise.all([
       qOp.order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
       supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
+      supabase.from("plantas").select("id, nombre").eq("activo", true).order("nombre"),
     ]);
 
     setOperaciones(operacionesRes.data ?? []);
     setEmpresasTransporte((empresasRes.data ?? []) as TransporteEmpresa[]);
     setTramos((tramosRes.data ?? []) as Tramo[]);
+    setPlantas((plantasRes.data ?? []) as { id: string; nombre: string }[]);
     setLoading(false);
   }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres]);
 
@@ -295,7 +368,9 @@ export function ReservaAsliContent() {
 
   const filteredOperaciones = useMemo(() => {
     let list = operaciones;
-    if (filterPending) list = list.filter(isPendiente);
+    if (asignacionFiltro === "pendiente") list = list.filter(isPendiente);
+    if (asignacionFiltro === "completa") list = list.filter((op) => !isPendiente(op));
+    if (transporteFiltro) list = list.filter((op) => (op.transporte ?? "") === transporteFiltro);
     if (!searchTerm.trim()) return list;
     const search = searchTerm.toLowerCase();
     return list.filter((op) => {
@@ -306,11 +381,49 @@ export function ReservaAsliContent() {
         (op.booking ?? "").toLowerCase().includes(search) ||
         (op.naviera ?? "").toLowerCase().includes(search) ||
         (op.nave ?? "").toLowerCase().includes(search) ||
-        (op.pod ?? "").toLowerCase().includes(search)
+        (op.pod ?? "").toLowerCase().includes(search) ||
+        (op.contenedor ?? "").toLowerCase().includes(search) ||
+        (op.transporte ?? "").toLowerCase().includes(search) ||
+        (op.chofer ?? "").toLowerCase().includes(search)
       );
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [operaciones, searchTerm, filterPending]);
+  }, [operaciones, searchTerm, asignacionFiltro, transporteFiltro]);
+
+  const empresasEnUso = useMemo(
+    () => Array.from(new Set(operaciones.map((op) => op.transporte).filter((x): x is string => !!x))).sort(),
+    [operaciones],
+  );
+
+  const resumenAsignacion = useMemo(() => {
+    const total = operaciones.length;
+    const pendientes = operaciones.filter(isPendiente).length;
+    const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+    return { total, pendientes, completas: total - pendientes, pct };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [operaciones]);
+
+  const cambios = useMemo(() => contarCambios(formData, formBase), [formData, formBase]);
+
+  const visiblesIds = useMemo(() => filteredOperaciones.map((op) => op.id), [filteredOperaciones]);
+  const { fila, cerrar: cerrarFicha, confirmarDescarte, setConfirmarDescarte, descartarYCerrar } = useFilaConCambios({
+    visibles: visiblesIds,
+    habilitado: !loading,
+    pendientes: cambios.length,
+    bloqueoEscape: !!(confirmNewItem || confirmDeleteReserva || confirmReplaceInstr),
+  });
+
+  /* Replegada la ficha, el formulario vuelve a cero. */
+  useEffect(() => {
+    if (fila.abiertaId) return;
+    setFormData(initialFormData);
+    setFormBase(initialFormData);
+    setEmpresaTransporteInput("");
+    setEmpresaTransporteId("");
+    setChoferInput("");
+    setEquipoInput("");
+    setError(null);
+  }, [fila.abiertaId]);
 
   const handleChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -319,31 +432,9 @@ export function ReservaAsliContent() {
     if (field === "operacion_id" && value) {
       const op = operaciones.find((o) => o.id === value);
       if (op) {
-        setFormData({
-          operacion_id: value,
-          transporte: op.transporte ?? "",
-          chofer: op.chofer ?? "",
-          rut_chofer: op.rut_chofer ?? "",
-          telefono_chofer: op.telefono_chofer ?? "",
-          patente_camion: op.patente_camion ?? "",
-          patente_remolque: op.patente_remolque ?? "",
-          contenedor: op.contenedor ?? "",
-          sello: op.sello ?? "",
-          tara: op.tara != null ? String(op.tara) : "",
-          planta_presentacion: op.planta_presentacion ?? "",
-          citacion: op.citacion ?? "",
-          llegada_planta: op.llegada_planta ?? "",
-          salida_planta: op.salida_planta ?? "",
-          deposito: op.deposito ?? "",
-          agendamiento_retiro: op.agendamiento_retiro ?? "",
-          inicio_stacking: op.inicio_stacking ?? "",
-          fin_stacking: op.fin_stacking ?? "",
-          ingreso_stacking: op.ingreso_stacking ?? "",
-          tramo: op.tramo ?? "",
-          valor_tramo: op.valor_tramo != null ? String(op.valor_tramo) : "",
-          moneda: op.moneda ?? "",
-          observaciones: op.observaciones ?? "",
-        });
+        const inicial = formDesdeOperacion(op);
+        setFormData(inicial);
+        setFormBase(inicial);
         // Restaurar empresa de transporte en el combobox
         if (op.transporte) {
           setEmpresaTransporteInput(op.transporte);
@@ -370,8 +461,19 @@ export function ReservaAsliContent() {
         setChoferInput(op.chofer ?? "");
         setEquipoInput(op.patente_camion ?? "");
       }
-      setMobilePanel("form");
     }
+  };
+
+  /* Clic en una fila: abre su ficha, o la repliega si es la abierta. Con
+     otra abierta no hace nada: primero hay que replegar. */
+  const alternarFila = (id: string) => {
+    if (fila.abiertaId === id) {
+      cerrarFicha();
+      return;
+    }
+    if (fila.abiertaId) return;
+    handleChange("operacion_id", id);
+    fila.toggle(id);
   };
 
   const handleEmpresaTransporteChange = async (id: string) => {
@@ -481,6 +583,8 @@ export function ReservaAsliContent() {
       .insert({ 
         empresa_id: empresaTransporteId,
         nombre: nombre.trim(),
+        rut: formData.rut_chofer.trim() || null,
+        telefono: formData.telefono_chofer.trim() || null,
         activo: true 
       })
       .select("id, empresa_id, nombre, numero_chofer, rut, telefono, activo")
@@ -494,7 +598,7 @@ export function ReservaAsliContent() {
     
     const newChofer = data as Chofer;
     setChoferes(prev => [...prev, newChofer].sort((a, b) => a.nombre.localeCompare(b.nombre)));
-    setFormData(prev => ({ ...prev, chofer: newChofer.nombre, rut_chofer: "", telefono_chofer: "" }));
+    setFormData(prev => ({ ...prev, chofer: newChofer.nombre }));
     setChoferInput(newChofer.nombre);
     sileo.success({ title: "Chofer creado exitosamente." });
   };
@@ -507,6 +611,7 @@ export function ReservaAsliContent() {
       .insert({ 
         empresa_id: empresaTransporteId,
         patente_camion: patente.trim().toUpperCase(),
+        patente_remolque: formData.patente_remolque.trim().toUpperCase() || null,
         activo: true 
       })
       .select("id, empresa_id, patente_camion, patente_remolque, activo")
@@ -664,6 +769,17 @@ export function ReservaAsliContent() {
     }
   };
 
+  /* Lleva al catálogo el RUT, teléfono y remolque escritos en la reserva
+     (ver completarCatalogoTransporte). No bloquea el guardado. */
+  const sincronizarCatalogo = async (datos: FormData) => {
+    if (!supabase) return;
+    const hecho = await completarCatalogoTransporte(supabase, datos, choferes, equipos);
+    const ch = hecho.chofer;
+    if (ch) setChoferes((prev) => prev.map((c) => (c.id === ch.id ? { ...c, rut: ch.rut, telefono: ch.telefono } : c)));
+    const eq = hecho.equipo;
+    if (eq) setEquipos((prev) => prev.map((e) => (e.id === eq.id ? { ...e, patente_remolque: eq.patente_remolque } : e)));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase || !formData.operacion_id) return;
@@ -716,12 +832,19 @@ export function ReservaAsliContent() {
       setError(err.message);
     } else {
       sileo.success({
-        title: "Reserva de transporte guardada exitosamente",
+        title: tf.asliGuardado,
         description: nuevoEstado
-          ? `La operación pasó a ${etiquetaEstado(nuevoEstado)}.`
+          ? `${tf.asliPasoA} ${etiquetaEstado(nuevoEstado)}.`
           : undefined,
       });
-      void fetchData();
+      void sincronizarCatalogo(formData);
+      // Se actualiza en el lugar: recargar todo desmontaría la tabla y
+      // replegaría la ficha que se está trabajando.
+      const opId = formData.operacion_id;
+      setOperaciones((prev) => prev.map((o) => (o.id === opId ? ({ ...o, ...updates } as Operacion) : o)));
+      const guardado = { ...formData, contenedor: normalizarContenedor(formData.contenedor) };
+      setFormData(guardado);
+      setFormBase(guardado);
 
       // Notificar al equipo
       if (user && profile) {
@@ -756,9 +879,9 @@ export function ReservaAsliContent() {
     if (err) {
       setError(err.message);
     } else {
-      if (formData.operacion_id === targetId) setFormData(initialFormData);
+      // Si era la abierta, sale de la lista y la ficha se repliega sola.
       setOperaciones((prev) => prev.filter((o) => o.id !== targetId));
-      sileo.success({ title: "Operación enviada a la papelera de transportes" });
+      sileo.success({ title: tf.asliQuitada });
     }
   };
 
@@ -794,31 +917,37 @@ export function ReservaAsliContent() {
   };
 
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "-";
+    if (!dateStr) return "—";
     try {
+      // Una fecha sola ("2026-09-28") es día calendario: con new Date() se
+      // leería como medianoche UTC y en Chile mostraría el día anterior.
+      const soloFecha = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+      if (soloFecha) return `${soloFecha[3]}/${soloFecha[2]}/${soloFecha[1]}`;
       return format(new Date(dateStr), "dd/MM/yyyy");
     } catch {
       return dateStr;
     }
   };
 
-  const inputClass =
-    "dash-control w-full min-h-[2.6rem] px-3.5 py-3 text-base font-semibold text-dash-fg placeholder:text-dash-muted placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40 disabled:opacity-50 disabled:cursor-not-allowed";
-  const labelClass = "mb-1.5 block text-[11px] font-bold uppercase tracking-[0.08em] text-dash-muted";
-  const sectionTitleClass = "text-base font-bold tracking-wide text-dash-fg";
-  const cardAccent = <div className="h-[3px] bg-gradient-to-r from-dash-neon to-dash-neon-hot" />;
-  const sectionIconWrap =
-    "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-dash-neon/35 bg-dash-neon/15";
-
-
   const renderInput = (
     label: string,
     field: keyof FormData,
     type: string = "text",
     placeholder?: string
-  ) => (
+  ) =>
+    type === "date" || type === "datetime-local" ? (
+      <div>
+        <label className={CAMPO_LABEL}>{label}</label>
+        <CampoFecha
+          value={formData[field]}
+          onChange={(v) => handleChange(field, v)}
+          conHora={type === "datetime-local"}
+          className={CAMPO_INPUT}
+        />
+      </div>
+    ) : (
     <div>
-      <label className={labelClass}>{label}</label>
+      <label className={CAMPO_LABEL}>{label}</label>
       <input
         type={type}
         lang="es-CL"
@@ -826,829 +955,606 @@ export function ReservaAsliContent() {
         onChange={(e) => handleChange(field, e.target.value)}
         onBlur={field === "contenedor" ? (e) => handleChange(field, normalizarContenedor(e.target.value)) : undefined}
         placeholder={placeholder}
-        className={inputClass}
+        className={CAMPO_INPUT}
       />
     </div>
   );
 
-  const renderSelect = (
-    label: string,
-    field: keyof FormData,
-    options: string[],
-    placeholder?: string
-  ) => (
-    <div>
-      <label className={labelClass}>{label}</label>
-      <select
-        value={formData[field]}
-        onChange={(e) => handleChange(field, e.target.value)}
-        className={inputClass}
-      >
-        <option value="">{placeholder || tr.select}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
+  if (loading) return <CargandoTransporte theme={theme} label={tr.loading} />;
 
-  if (loading) {
+  /** Lo que le falta a la asignación para quedar completa. */
+  const faltantes = (op: Operacion): string[] =>
+    [
+      [op.transporte, tf.campoEmpresa],
+      [op.chofer, tf.campoChofer],
+      [op.patente_camion, tf.campoUnidad],
+      [op.contenedor, tf.campoContenedor],
+      [op.tramo, tf.campoTramo],
+    ]
+      .filter(([valor]) => !valor)
+      .map(([, campo]) => String(campo));
+
+  const indicadores: Indicador[] = [
+    { clave: "", label: tf.asliKpiTotal, valor: resumenAsignacion.total, pct: null, tono: "estado--curso", icon: "lucide:files" },
+    {
+      clave: "pendiente",
+      label: tf.asliKpiPendientes,
+      valor: resumenAsignacion.pendientes,
+      pct: resumenAsignacion.pct(resumenAsignacion.pendientes),
+      tono: "estado--atencion",
+      icon: "lucide:clock",
+    },
+    {
+      clave: "completa",
+      label: tf.asliKpiCompletas,
+      valor: resumenAsignacion.completas,
+      pct: resumenAsignacion.pct(resumenAsignacion.completas),
+      tono: "estado--ok",
+      icon: "lucide:check-circle",
+    },
+  ];
+
+  const hayFiltros = !!(searchTerm || asignacionFiltro || transporteFiltro);
+  const limpiarFiltros = () => {
+    setSearchTerm("");
+    setAsignacionFiltro("");
+    setTransporteFiltro("");
+  };
+
+  const COLS = canManageTransport ? 12 : 11;
+
+  const chipEstadoOp = (estado: string | null) => {
+    const cfg = getEstadoOperacionStyle(estado);
+    if (!estado) return <span className="text-dash-muted">—</span>;
     return (
-      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
-        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
-          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
-            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
-            <span>{tr.loading}</span>
-          </div>
-        </main>
-      </div>
+      <span
+        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+          cfg ? `${cfg.bg} ${cfg.text} ${cfg.border}` : "border-dash-border text-dash-muted"
+        }`}
+      >
+        <span className={`h-1.5 w-1.5 rounded-full ${cfg?.dot ?? "bg-current"}`} aria-hidden />
+        {etiquetaEstado(estado)}
+      </span>
     );
-  }
+  };
+
+  /* Un campo para el avance del paso: etiqueta, valor mostrable y si tiene
+     cambios sin guardar. */
+  const campo = (label: string, key: keyof FormData, fmt: (v: string) => string = (v) => v) => ({
+    label,
+    valor: formData[key] ? fmt(formData[key]) : "",
+    key,
+  });
+  const paso = (
+    id: string,
+    icono: string,
+    titulo: string,
+    campos: ReturnType<typeof campo>[],
+    contenido: React.ReactNode,
+  ): Paso => ({
+    id,
+    icono,
+    titulo,
+    campos,
+    conCambios: campos.some((c) => cambios.includes(c.key)),
+    contenido,
+  });
+
+  const renderFicha = (op: Operacion) => {
+    return (
+      <FichaTransporte
+        cerrando={fila.cerrando}
+        onCerrar={cerrarFicha}
+        onSubmit={handleSubmit}
+        labels={{ volver: tm.detalleVolverLista, replegar: tm.detalleReplegar }}
+        eyebrow={tf.asliEyebrow}
+        titulo={displayRefAsli(op.ref_asli, op.correlativo, "-")}
+        estado={chipEstadoOp(op.estado_operacion)}
+        subtitulo={[op.cliente, op.naviera].filter(Boolean).join("  ·  ") || "—"}
+        resumen={[
+          { label: tf.colBooking, valor: op.booking || null, icono: "lucide:bookmark", mono: true },
+          { label: tf.colContenedor, valor: normalizarContenedor(formData.contenedor) || null, icono: "lucide:container", mono: true },
+          { label: tr.warehouse, valor: formData.deposito || null, icono: "lucide:warehouse" },
+          { label: t.transporteExt.naveLabel, valor: op.nave || null, icono: "lucide:ship" },
+          { label: tf.colDestino, valor: op.pod || null, icono: "lucide:map-pin" },
+          { label: tf.colEtd, valor: op.etd ? formatDate(op.etd) : null, icono: "lucide:calendar" },
+        ]}
+        acciones={
+          <>
+            <a href={`${withBase("/documentos/mis-documentos")}?op=${encodeURIComponent(op.id)}`} className={BTN_HERO}>
+              <Icon icon="lucide:folder-open" width={13} height={13} aria-hidden />
+              {tf.irDocumentos}
+            </a>
+            {op.booking_doc_url && (
+              <a href={op.booking_doc_url} target="_blank" rel="noopener noreferrer" className={BTN_HERO}>
+                <Icon icon="lucide:paperclip" width={13} height={13} aria-hidden />
+                {tf.verBooking}
+              </a>
+            )}
+          </>
+        }
+        lateral={
+          <>
+            <SeccionInstructivo
+              url={instrSavedUrl}
+              nombre={instrFilename}
+              error={instrSaveError}
+              subiendo={instrUploading}
+              onElegir={() => {
+                if (instrSavedUrl) setConfirmReplaceInstr(true);
+                else instrFileInputRef.current?.click();
+              }}
+              onLimpiarError={() => setInstrSaveError(null)}
+              labels={{
+                titulo: tf.instrTitulo,
+                cargado: tf.instrCargado,
+                hintGuardado: tf.instrHintGuardado,
+                hintSubir: tf.instrHintSubir,
+                guardadoEn: tf.instrGuardadoEn,
+                descargar: tf.instrDescargar,
+                subir: tf.instrSubir,
+                reemplazar: tf.instrReemplazar,
+                subiendo: tf.instrSubiendo,
+              }}
+            />
+            <SeccionFicha icono="lucide:message-square-text" titulo={tr.observations}>
+              <textarea
+                value={formData.observaciones}
+                onChange={(e) => handleChange("observaciones", e.target.value)}
+                rows={Math.min(8, Math.max(2, formData.observaciones.split("\n").length))}
+                placeholder={tr.observationsPlaceholder}
+                className={`${CAMPO_INPUT} resize-y col-span-full`}
+              />
+            </SeccionFicha>
+          </>
+        }
+        pie={
+          <PieFicha
+            cambios={cambios}
+            error={error}
+            guardando={saving}
+            onDescartar={() => handleChange("operacion_id", op.id)}
+            izquierda={
+              canManageTransport ? (
+                <BotonEliminarPie label={tf.asliQuitar} onClick={() => setConfirmDeleteReserva(op.id)} />
+              ) : undefined
+            }
+            labels={{
+              cambio: tm.detalleCambioSinGuardar,
+              cambios: tm.detalleCambiosSinGuardar,
+              sinCambios: tf.sinCambios,
+              descartar: tm.detalleDescartar,
+              guardar: tm.detalleGuardarCambios,
+              guardando: tr.saving,
+            }}
+          />
+        }
+      >
+
+        <RecorridoPasos
+          labels={{ siguiente: tf.pasoSiguiente, sinDatos: tf.pasoSinDatos, falta: tf.falta }}
+          pasos={[
+            paso(
+              "unidad",
+              "lucide:truck",
+              tf.pasoUnidad,
+              [
+                campo(tr.transportCompany, "transporte"),
+                campo(tr.driverName, "chofer"),
+                campo(tr.driverRut, "rut_chofer"),
+                campo(tr.driverPhone, "telefono_chofer"),
+                campo(tr.truckPlate, "patente_camion"),
+                campo(tr.trailerPlate, "patente_remolque"),
+              ],
+              <>
+                <div>
+                  <label className={CAMPO_LABEL}>{tr.transportCompany}</label>
+                  <Combobox
+                    neon
+                    value={empresaTransporteInput}
+                    onChange={handleEmpresaInputChange}
+                    onBlur={handleEmpresaInputBlur}
+                    options={empresasTransporte.map((e) => ({ value: e.nombre, label: e.nombre, sublabel: e.rut || undefined }))}
+                    placeholder={t.transporteExt.placeholderEmpresa}
+                    className={CAMPO_INPUT}
+                    icon="lucide:building-2"
+                  />
+                </div>
+                <div>
+                  <label className={CAMPO_LABEL}>{tr.driverName}</label>
+                  <Combobox
+                    neon
+                    value={choferInput}
+                    onChange={handleChoferInputChange}
+                    onBlur={handleChoferInputBlur}
+                    options={choferes.map((c) => ({ value: c.nombre, label: c.nombre, sublabel: c.rut || undefined }))}
+                    placeholder={t.transporteExt.placeholderChofer}
+                    disabled={!empresaTransporteId}
+                    className={CAMPO_INPUT}
+                    icon="lucide:user"
+                  />
+                </div>
+                {renderInput(tr.driverRut, "rut_chofer")}
+                {renderInput(tr.driverPhone, "telefono_chofer", "tel")}
+                <div>
+                  <label className={CAMPO_LABEL}>{tr.truckPlate}</label>
+                  <Combobox
+                    neon
+                    value={equipoInput}
+                    onChange={(v) => handleEquipoInputChange(v.toUpperCase())}
+                    onBlur={handleEquipoInputBlur}
+                    options={equipos.map((x) => ({
+                      value: x.patente_camion,
+                      label: x.patente_camion,
+                      sublabel: x.patente_remolque ? `Remolque: ${x.patente_remolque}` : undefined,
+                    }))}
+                    placeholder={t.transporteExt.placeholderPatente}
+                    disabled={!empresaTransporteId}
+                    className={CAMPO_INPUT}
+                    icon="lucide:truck"
+                  />
+                </div>
+                {renderInput(tr.trailerPlate, "patente_remolque")}
+              </>,
+            ),
+            paso(
+              "contenedor",
+              "lucide:container",
+              tf.pasoContenedor,
+              [campo(tr.container, "contenedor", normalizarContenedor), campo(tr.seal, "sello"), campo(tr.tare, "tara")],
+              <>
+                {renderInput(tr.container, "contenedor")}
+                {renderInput(tr.seal, "sello")}
+                {renderInput(tr.tare, "tara", "number")}
+                <div>
+                  <p className={CAMPO_LABEL}>{tr.warehouse}</p>
+                  <p className="flex min-h-[2.5rem] items-center gap-2 rounded-lg border border-dashed border-dash-border px-3 text-[13.5px] font-semibold text-dash-muted">
+                    <Icon icon="lucide:warehouse" width={14} height={14} className="shrink-0" aria-hidden />
+                    <span className="truncate">{formData.deposito || tf.desdeOperacion}</span>
+                  </p>
+                </div>
+              </>,
+            ),
+            paso(
+              "citacion",
+              "lucide:factory",
+              tf.pasoCitacion,
+              [
+                campo(tf.plantaCitacion, "planta_presentacion"),
+                campo(tr.citation, "citacion", fechaCorta),
+                campo(tr.plantArrival, "llegada_planta", fechaCorta),
+                campo(tr.plantDeparture, "salida_planta", fechaCorta),
+              ],
+              <>
+                <div className="col-span-full">
+                  <CampoPlanta
+                    label={tf.plantaCitacion}
+                    value={formData.planta_presentacion}
+                    onChange={(v) => handleChange("planta_presentacion", v)}
+                    plantas={plantas}
+                    onPlantaCreada={(p) => setPlantas((prev) => [...prev, p].sort((a, b) => a.nombre.localeCompare(b.nombre)))}
+                    onError={setError}
+                    supabase={supabase}
+                    labels={{ buscar: t.crearReserva.searchPlanta, agregar: t.crearReserva.addNewPlanta }}
+                  />
+                </div>
+                {renderInput(tr.citation, "citacion", "datetime-local")}
+                {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
+                {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
+              </>,
+            ),
+            paso(
+              "stacking",
+              "lucide:layers",
+              tf.pasoStacking,
+              [
+                campo(tr.stackingStart, "inicio_stacking", fechaCorta),
+                campo(tr.stackingEnd, "fin_stacking", fechaCorta),
+                campo(tr.stackingEntry, "ingreso_stacking", fechaCorta),
+              ],
+              <>
+                {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
+                {renderInput(tr.stackingEnd, "fin_stacking", "datetime-local")}
+                <div className="col-span-full">{renderInput(tr.stackingEntry, "ingreso_stacking", "datetime-local")}</div>
+              </>,
+            ),
+            paso(
+              "costos",
+              "lucide:calculator",
+              tf.pasoCostos,
+              [campo(tr.section, "tramo"), campo(tr.sectionValue, "valor_tramo"), campo(tf.moneda, "moneda")],
+              <>
+                <div className="col-span-full">
+                  <label className={CAMPO_LABEL}>{tr.section}</label>
+                  <select
+                    value={tramos.find((x) => `${x.origen} - ${x.destino}` === formData.tramo)?.id ?? ""}
+                    onChange={(e) => handleTramoChange(e.target.value)}
+                    className={CAMPO_INPUT}
+                  >
+                    <option value="">{tr.select}</option>
+                    {tramos.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.origen} — {x.destino} · {x.moneda}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {renderInput(tr.sectionValue, "valor_tramo", "number")}
+                <div>
+                  <label className={CAMPO_LABEL}>{tf.moneda}</label>
+                  <select value={formData.moneda} onChange={(e) => handleChange("moneda", e.target.value)} className={CAMPO_INPUT}>
+                    <option value="">{tf.seleccionar}</option>
+                    <option value="CLP">CLP — Peso chileno</option>
+                    <option value="USD">USD — Dólar</option>
+                    <option value="EUR">EUR — Euro</option>
+                  </select>
+                </div>
+              </>,
+            ),
+          ]}
+        />
+
+      </FichaTransporte>
+    );
+  };
 
   return (
-    <>
-      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
-        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
-            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
-          </div>
-
-          <div className="dash-toolbar relative z-10 shrink-0">
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
-                  <Icon icon="lucide:truck" width={22} height={22} className="text-dash-neon" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
-                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">{tr.subtitle}</p>
-                </div>
-              </div>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {operaciones.filter(isPendiente).length > 0 && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/35 bg-amber-500/15 px-3 py-1.5 text-sm font-bold text-dash-fg">
-                    <Icon icon="lucide:alert-circle" width={13} height={13} className="text-amber-400" />
-                    <span>{operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}</span>
-                  </div>
-                )}
-                {formData.operacion_id && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-3 py-1.5 text-sm font-semibold text-dash-fg">
-                    <Icon icon="lucide:check-circle" width={13} height={13} className="text-emerald-400" />
-                    <span>Op. seleccionada</span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => void fetchData()}
-                  className="rounded-lg border border-dash-border bg-dash-control p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                  title={t.misReservas?.refresh ?? "Actualizar"}
-                >
-                  <Icon icon="lucide:refresh-cw" width={16} height={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
-            <div className="lg:hidden flex rounded-xl border border-dash-border bg-dash-control/60 p-1 gap-1">
-              <button
-                type="button"
-                onClick={() => setMobilePanel("select")}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-bold transition-all ${
-                  mobilePanel === "select"
-                    ? "bg-dash-neon/20 text-dash-fg border border-dash-neon/40 shadow-[0_0_20px_-8px_color-mix(in_srgb,var(--dash-neon)_50%,transparent)]"
-                    : "text-dash-muted hover:text-dash-fg border border-transparent"
-                }`}
+    <PaginaTransporte theme={theme}>
+      {/* La cabecera se repliega con una ficha abierta, como en Mis Reservas. */}
+      <div className="rd-colapsable relative z-10 shrink-0" data-colapsado={fila.cabeceraOculta} inert={fila.cabeceraOculta || undefined}>
+        <div>
+          <CabeceraTransporte
+            titulo={tr.title}
+            subtitulo={tf.asliSubtitulo}
+            icono="lucide:truck"
+            volverLabel={tf.volver}
+            visibles={filteredOperaciones.length}
+            total={operaciones.length}
+            indicadores={indicadores}
+            activo={asignacionFiltro}
+            onIndicador={setAsignacionFiltro}
+            acciones={
+              <a
+                href={withBase("/transportes/papelera")}
+                className="dash-control rounded-lg p-2 text-dash-muted hover:text-dash-fg"
+                title={tf.asliPapelera}
+                aria-label={tf.asliPapelera}
               >
-                <Icon icon="lucide:list" width={14} height={14} />
-                {tr.selectOperation}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobilePanel("form")}
-                disabled={!formData.operacion_id}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-base font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                  mobilePanel === "form"
-                    ? "bg-dash-neon/20 text-dash-fg border border-dash-neon/40 shadow-[0_0_20px_-8px_color-mix(in_srgb,var(--dash-neon)_50%,transparent)]"
-                    : "text-dash-muted hover:text-dash-fg border border-transparent"
-                }`}
-              >
-                <Icon icon="lucide:truck" width={14} height={14} />
-                {tr.transportInfo}
-                {formData.operacion_id && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                )}
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="flex flex-col lg:flex-row gap-4">
-                <div className={`w-full lg:w-80 lg:flex-shrink-0 ${mobilePanel !== "select" ? "hidden lg:block" : ""}`}>
-                  <div className="dash-card overflow-hidden rounded-xl lg:sticky lg:top-0">
-                    {cardAccent}
-                    <div className="px-4 py-3 border-b border-dash-border flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className={sectionIconWrap}>
-                          <Icon icon="typcn:document" className="w-4 h-4 text-dash-neon" />
-                        </span>
-                        <h2 className={sectionTitleClass}>{tr.selectOperation}</h2>
-                      </div>
-                      {operaciones.filter(isPendiente).length > 0 && (
-                        <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-400/35 bg-amber-500/15 text-dash-fg text-sm font-bold flex-shrink-0">
-                          <Icon icon="lucide:alert-circle" width={12} height={12} className="text-amber-400" />
-                          {operaciones.filter(isPendiente).length} pendiente{operaciones.filter(isPendiente).length !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <div className="mb-3 space-y-2">
-                        <div className="relative">
-                          <Icon
-                            icon="typcn:zoom"
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted w-4 h-4 pointer-events-none"
-                          />
-                          <input
-                            type="text"
-                            placeholder={tr.searchPlaceholder}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="dash-control w-full pl-9 pr-4 py-3 text-base text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-lg hover:bg-dash-neon/10 transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={filterPending}
-                            onChange={(e) => setFilterPending(e.target.checked)}
-                            className="w-3.5 h-3.5 rounded border-dash-border accent-[var(--dash-neon)]"
-                          />
-                          <span className="text-sm text-dash-muted font-medium">Solo pendientes de completar</span>
-                        </label>
-                      </div>
-
-                      {filteredOperaciones.length === 0 ? (
-                        <div className="py-8 text-center">
-                          <span className="w-10 h-10 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center mx-auto mb-2 inline-flex">
-                            <Icon icon="typcn:document" width={20} height={20} className="text-dash-muted" />
-                          </span>
-                          <p className="text-dash-muted text-sm font-medium">{tr.noOperations}</p>
-                        </div>
-                      ) : (
-                        <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2">
-                          {filteredOperaciones.map((op) => {
-                            const isActive = formData.operacion_id === op.id;
-                            const pendientes: string[] = [];
-                            if (!op.transporte) pendientes.push("Empresa");
-                            if (!op.chofer) pendientes.push("Chofer");
-                            if (!op.patente_camion) pendientes.push("Unidad");
-                            if (!op.contenedor) pendientes.push("Contenedor");
-                            if (!op.tramo) pendientes.push("Tramo");
-                            const completo = pendientes.length === 0;
-                            return (
-                              <div
-                                key={op.id}
-                                className={`group relative w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
-                                  isActive
-                                    ? "border-dash-neon/50 bg-dash-neon/15 ring-2 ring-dash-neon/25"
-                                    : completo
-                                      ? "border-emerald-400/35 bg-emerald-500/10 hover:border-emerald-400/50 hover:bg-emerald-500/15"
-                                      : "border-amber-400/35 bg-amber-500/10 hover:border-amber-400/50 hover:bg-amber-500/15"
-                                }`}
-                                onClick={() => handleChange("operacion_id", op.id)}
-                              >
-                                {canManageTransport && (
-                                  <button
-                                    type="button"
-                                    onClick={(ev) => {
-                                      ev.stopPropagation();
-                                      setConfirmDeleteReserva(op.id);
-                                    }}
-                                    className="absolute top-2 right-2 p-1 rounded-lg text-dash-muted hover:text-red-400 hover:bg-red-500/15 opacity-0 group-hover:opacity-100 transition-all"
-                                    title="Quitar de transportes"
-                                  >
-                                    <Icon icon="typcn:trash" className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                <div className="flex items-start justify-between gap-2 mb-0.5">
-                                  <p className={`font-bold text-sm ${isActive ? "text-dash-neon" : "text-dash-fg"}`}>
-                                    {op.ref_asli || `A${String(op.correlativo).padStart(5, "0")}`}
-                                  </p>
-                                  <span className={`flex-shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold border ${
-                                    completo
-                                      ? "bg-emerald-500/15 text-dash-fg border-emerald-400/35"
-                                      : "bg-amber-500/15 text-dash-fg border-amber-400/35"
-                                  }`}>
-                                    <Icon icon={completo ? "lucide:check-circle" : "lucide:alert-circle"} width={10} height={10} />
-                                    {completo ? "Completo" : "Pendiente"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <p className="text-xs text-dash-muted truncate">{op.cliente} · {op.booking}</p>
-                                  {op.booking_doc_url && (
-                                    <a
-                                      href={op.booking_doc_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(ev) => ev.stopPropagation()}
-                                      title="Ver PDF de Booking"
-                                      className="flex-shrink-0 p-0.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/15 rounded transition-colors"
-                                    >
-                                      <Icon icon="lucide:paperclip" width={12} height={12} />
-                                    </a>
-                                  )}
-                                </div>
-                                <p className="text-xs text-dash-muted/80 mt-0.5">{op.naviera} · ETD: {formatDate(op.etd)}</p>
-                                {!completo && (
-                                  <div className="flex flex-wrap gap-1 mt-1.5">
-                                    {pendientes.map((p) => (
-                                      <span key={p} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/15 text-dash-fg border border-amber-400/35 rounded text-[10px] font-semibold">
-                                        <Icon icon="lucide:x-circle" width={9} height={9} />
-                                        {p}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`flex-1 min-w-0 ${mobilePanel !== "form" ? "hidden lg:block" : ""}`}>
-                  {formData.operacion_id ? (
-                    <div className="space-y-4">
-                      {selectedOperacion && (
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="p-4 bg-dash-neon/10 border-l-4 border-dash-neon flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className={sectionTitleClass}>{tr.selectedOperation}</p>
-                              <p className="text-dash-fg font-bold mt-1 text-sm">
-                                {selectedOperacion.ref_asli || `A${String(selectedOperacion.correlativo).padStart(5, "0")}`} — {selectedOperacion.cliente}
-                              </p>
-                              <p className="text-sm text-dash-muted mt-0.5">
-                                {selectedOperacion.naviera} • {selectedOperacion.nave} • {selectedOperacion.booking}
-                              </p>
-                              {selectedOperacion.booking_doc_url && (
-                                <a
-                                  href={selectedOperacion.booking_doc_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/35 text-dash-fg text-xs font-semibold hover:bg-emerald-500/25 transition-colors"
-                                >
-                                  <Icon icon="lucide:file-text" width={13} height={13} />
-                                  Ver PDF de Booking
-                                  <Icon icon="lucide:external-link" width={11} height={11} className="opacity-70" />
-                                </a>
-                              )}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setMobilePanel("select")}
-                              className="lg:hidden flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-dash-fg bg-dash-control border border-dash-neon/35 rounded-lg hover:bg-dash-neon/15 transition-colors"
-                            >
-                              <Icon icon="lucide:list" width={12} height={12} />
-                              Cambiar
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {selectedOperacion && (
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 flex items-center justify-between gap-3">
-                            <span className={sectionTitleClass}>Estado de la Operación</span>
-                            {(() => {
-                              const codigo = normalizarEstado(selectedOperacion.estado_operacion);
-                              const cancelada = codigo === "CANCELADA";
-                              const avanzada = codigo
-                                ? ESTADO_META[codigo].orden >= ESTADO_META.RESERVA_CONFIRMADA.orden && !cancelada
-                                : false;
-                              const badgeClass = cancelada
-                                ? "bg-red-500/15 text-dash-fg border-red-400/35"
-                                : avanzada
-                                  ? "bg-emerald-500/15 text-dash-fg border-emerald-400/35"
-                                  : "bg-amber-500/15 text-dash-fg border-amber-400/35";
-                              const icono = cancelada
-                                ? "lucide:x-circle"
-                                : avanzada
-                                  ? "lucide:check-circle"
-                                  : "lucide:clock";
-                              return (
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border ${badgeClass}`}>
-                                  <Icon icon={icono} width={13} height={13} />
-                                  {etiquetaEstado(selectedOperacion.estado_operacion)}
-                                </span>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      )}
-
-                      {selectedOperacion && (
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 flex items-center gap-3 border-b border-dash-border">
-                            <span className="w-8 h-8 rounded-xl border border-violet-400/35 bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-                              <Icon icon="lucide:file-spreadsheet" className="w-4 h-4 text-violet-300" />
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className={sectionTitleClass}>Instructivo de Embarque</p>
-                                {instrSavedUrl && (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-emerald-500/15 text-dash-fg border border-emerald-400/35">
-                                    <Icon icon="lucide:check" className="w-3 h-3" />
-                                    Cargado
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-dash-muted mt-0.5">
-                                {instrSavedUrl
-                                  ? "Ya hay un instructivo guardado para esta operación"
-                                  : "Sube el instructivo preparado (Excel o PDF)"}
-                              </p>
-                            </div>
-                          </div>
-
-                          {instrSavedUrl && (
-                            <div className="px-4 py-3 border-b border-emerald-400/25 bg-emerald-500/10 flex items-center gap-3 flex-wrap">
-                              <span className="w-9 h-9 rounded-xl border border-emerald-400/35 bg-dash-control flex items-center justify-center flex-shrink-0">
-                                <Icon icon="lucide:file-check-2" className="w-5 h-5 text-emerald-400" />
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-dash-fg truncate">{instrFilename}</p>
-                                <p className="text-[10px] text-emerald-300/90 mt-0.5">Guardado en Documentos</p>
-                              </div>
-                              <a href={instrSavedUrl} target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-dash-fg bg-emerald-500/25 border border-emerald-400/40 hover:bg-emerald-500/35 transition-colors whitespace-nowrap">
-                                <Icon icon="lucide:download" className="w-3.5 h-3.5" />
-                                Descargar
-                              </a>
-                            </div>
-                          )}
-
-                          {instrSaveError && (
-                            <div className="px-4 py-2 border-b border-red-400/25 bg-red-500/10 flex items-center gap-2">
-                              <Icon icon="lucide:cloud-off" className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                              <span className="text-[10px] text-dash-fg flex-1">{instrSaveError}</span>
-                              <button type="button" onClick={() => setInstrSaveError(null)} className="text-red-400 hover:text-red-300">
-                                <Icon icon="lucide:x" className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-
-                          <div className="px-4 py-3 flex items-center gap-2">
-                            <input
-                              ref={instrFileInputRef}
-                              type="file"
-                              accept=".xlsx,.xls,.pdf"
-                              className="hidden"
-                              onChange={(e) => void handleSubirInstructivo(e)}
-                            />
-                            <button
-                              type="button"
-                              disabled={instrUploading}
-                              onClick={() => {
-                                if (instrSavedUrl) setConfirmReplaceInstr(true);
-                                else instrFileInputRef.current?.click();
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-violet-400/40 text-dash-fg bg-violet-500/15 hover:bg-violet-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              {instrUploading
-                                ? <><Icon icon="typcn:refresh" className="w-3.5 h-3.5 animate-spin" />Subiendo...</>
-                                : <><Icon icon="lucide:upload" className="w-3.5 h-3.5" />{instrSavedUrl ? "Reemplazar instructivo" : "Subir instructivo"}</>
-                              }
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        {selectedOperacion && (
-                          <div className="dash-card overflow-hidden rounded-xl">
-                            {cardAccent}
-                            <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                              <span className={sectionIconWrap}>
-                                <Icon icon="lucide:file-text" className="w-4 h-4 text-dash-neon" />
-                              </span>
-                              <h2 className={sectionTitleClass}>Datos de la Operación</h2>
-                            </div>
-                            <div className="p-4 grid grid-cols-2 gap-3">
-                              {[
-                                { label: "POD", value: selectedOperacion.pod },
-                                { label: "ETD", value: formatDate(selectedOperacion.etd) },
-                                { label: "Naviera", value: selectedOperacion.naviera },
-                                { label: "Nave", value: selectedOperacion.nave },
-                                { label: "Booking", value: selectedOperacion.booking },
-                                { label: "Cliente", value: selectedOperacion.cliente },
-                                ...(selectedOperacion.deposito ? [{ label: "Depósito", value: selectedOperacion.deposito }] : []),
-                              ].map(({ label, value }) => (
-                                <div key={label}>
-                                  <p className="text-sm font-semibold text-dash-neon mb-0.5">{label}</p>
-                                  <p className="text-sm font-semibold text-dash-fg truncate">{value || "-"}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                            <span className={sectionIconWrap}>
-                              <Icon icon="lucide:truck" className="w-4 h-4 text-dash-neon" />
-                            </span>
-                            <h2 className={sectionTitleClass}>{tr.transportInfo}</h2>
-                          </div>
-                          <div className="p-4 grid grid-cols-2 gap-3">
-                            <div>
-                              <label className={labelClass}>{tr.transportCompany}</label>
-                              <Combobox
-                                neon
-                                value={empresaTransporteInput}
-                                onChange={handleEmpresaInputChange}
-                                onBlur={handleEmpresaInputBlur}
-                                options={empresasTransporte.map((e) => ({
-                                  value: e.nombre,
-                                  label: e.nombre,
-                                  sublabel: e.rut || undefined,
-                                }))}
-                                placeholder="Escriba o seleccione empresa..."
-                                className={inputClass}
-                                icon="lucide:building-2"
-                              />
-                            </div>
-                            <div>
-                              <label className={labelClass}>{tr.driverName}</label>
-                              <Combobox
-                                neon
-                                value={choferInput}
-                                onChange={handleChoferInputChange}
-                                onBlur={handleChoferInputBlur}
-                                options={choferes.map((c) => ({
-                                  value: c.nombre,
-                                  label: c.nombre,
-                                  sublabel: c.rut || undefined,
-                                }))}
-                                placeholder="Escriba o seleccione chofer..."
-                                disabled={!empresaTransporteId}
-                                className={inputClass}
-                                icon="lucide:user"
-                              />
-                            </div>
-                            {renderInput(tr.driverRut, "rut_chofer")}
-                            {renderInput(tr.driverPhone, "telefono_chofer", "tel")}
-                            <div>
-                              <label className={labelClass}>{tr.truckPlate}</label>
-                              <Combobox
-                                neon
-                                value={equipoInput}
-                                onChange={(v) => handleEquipoInputChange(v.toUpperCase())}
-                                onBlur={handleEquipoInputBlur}
-                                options={equipos.map((x) => ({
-                                  value: x.patente_camion,
-                                  label: x.patente_camion,
-                                  sublabel: x.patente_remolque ? `Remolque: ${x.patente_remolque}` : undefined,
-                                }))}
-                                placeholder="Escriba o seleccione patente..."
-                                disabled={!empresaTransporteId}
-                                className={inputClass}
-                                icon="lucide:truck"
-                              />
-                            </div>
-                            {renderInput(tr.trailerPlate, "patente_remolque")}
-                          </div>
-                        </div>
-
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                            <span className={sectionIconWrap}>
-                              <Icon icon="typcn:box" className="w-4 h-4 text-dash-neon" />
-                            </span>
-                            <h2 className={sectionTitleClass}>{tr.containerInfo}</h2>
-                          </div>
-                          <div className="p-4 grid grid-cols-2 gap-3">
-                            {renderInput(tr.container, "contenedor")}
-                            {renderInput(tr.seal, "sello")}
-                            {renderInput(tr.tare, "tara", "number")}
-                            <div>
-                              <label className={labelClass}>{tr.warehouse}</label>
-                              <div className="flex items-center gap-2 px-3.5 py-3 rounded-lg border border-dash-border bg-dash-control text-dash-muted text-base">
-                                <Icon icon="typcn:location" className="w-4 h-4 text-dash-muted flex-shrink-0" />
-                                <span className="truncate">{formData.deposito || "Desde la operación"}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                            <span className="w-8 h-8 rounded-xl border border-amber-400/35 bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-                              <Icon icon="typcn:calendar" className="w-4 h-4 text-amber-300" />
-                            </span>
-                            <h2 className={sectionTitleClass}>Citación a Planta</h2>
-                          </div>
-                          <div className="p-4 grid grid-cols-2 gap-3">
-                            <div className="col-span-2">
-                              {renderInput("Planta de Citación", "planta_presentacion", "text")}
-                            </div>
-                            {renderInput(tr.citation, "citacion", "datetime-local")}
-                            {renderInput(tr.plantArrival, "llegada_planta", "datetime-local")}
-                            {renderInput(tr.plantDeparture, "salida_planta", "datetime-local")}
-                          </div>
-                        </div>
-
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                            <span className="w-8 h-8 rounded-xl border border-violet-400/35 bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-                              <Icon icon="typcn:th-large" className="w-4 h-4 text-violet-300" />
-                            </span>
-                            <h2 className={sectionTitleClass}>{tr.stacking}</h2>
-                          </div>
-                          <div className="p-4 grid grid-cols-2 gap-3">
-                            {renderInput(tr.stackingStart, "inicio_stacking", "datetime-local")}
-                            {renderInput(tr.stackingEnd, "fin_stacking", "datetime-local")}
-                            <div className="col-span-2">
-                              {renderInput(tr.stackingEntry, "ingreso_stacking", "datetime-local")}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="dash-card overflow-hidden rounded-xl">
-                          {cardAccent}
-                          <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                            <span className="w-8 h-8 rounded-xl border border-emerald-400/35 bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-                              <Icon icon="typcn:calculator" className="w-4 h-4 text-emerald-300" />
-                            </span>
-                            <h2 className={sectionTitleClass}>{tr.costs}</h2>
-                          </div>
-                          <div className="p-4 grid grid-cols-2 gap-3">
-                            <div className="col-span-2">
-                              <label className={labelClass}>{tr.section}</label>
-                              <select
-                                value={tramos.find((x) => `${x.origen} - ${x.destino}` === formData.tramo)?.id ?? ""}
-                                onChange={(e) => handleTramoChange(e.target.value)}
-                                className={inputClass}
-                              >
-                                <option value="">{tr.select}</option>
-                                {tramos.map((x) => (
-                                  <option key={x.id} value={x.id}>
-                                    {x.origen} — {x.destino} · {x.moneda}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className={labelClass}>{tr.sectionValue}</label>
-                              <input
-                                type="number"
-                                lang="es-CL"
-                                value={formData.valor_tramo}
-                                onChange={(e) => handleChange("valor_tramo", e.target.value)}
-                                className={inputClass}
-                              />
-                            </div>
-                            <div>
-                              <label className={labelClass}>Moneda</label>
-                              <select
-                                value={formData.moneda}
-                                onChange={(e) => handleChange("moneda", e.target.value)}
-                                className={inputClass}
-                              >
-                                <option value="">Seleccionar</option>
-                                <option value="CLP">CLP — Peso chileno</option>
-                                <option value="USD">USD — Dólar</option>
-                                <option value="EUR">EUR — Euro</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="dash-card overflow-hidden rounded-xl">
-                        {cardAccent}
-                        <div className="px-4 py-3 border-b border-dash-border flex items-center gap-2.5">
-                          <span className="w-8 h-8 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center flex-shrink-0">
-                            <Icon icon="typcn:notes" className="w-4 h-4 text-dash-muted" />
-                          </span>
-                          <h2 className={sectionTitleClass}>{tr.observations}</h2>
-                        </div>
-                        <div className="p-4">
-                          <textarea
-                            value={formData.observaciones}
-                            onChange={(e) => handleChange("observaciones", e.target.value)}
-                            rows={2}
-                            placeholder={tr.observationsPlaceholder}
-                            className={`${inputClass} resize-none`}
-                          />
-                        </div>
-                      </div>
-
-                      {error && (
-                        <div className="p-4 bg-red-500/15 border border-red-400/35 rounded-xl text-dash-fg text-sm font-medium">
-                          {error}
-                        </div>
-                      )}
-
-                      <div className="flex gap-3 justify-between">
-                        {canManageTransport && formData.operacion_id && (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteReserva(formData.operacion_id)}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-300 bg-red-500/15 border border-red-400/35 rounded-xl hover:bg-red-500/25 transition-colors"
-                          >
-                            <Icon icon="typcn:trash" className="w-4 h-4" />
-                            Eliminar reserva
-                          </button>
-                        )}
-                        <div className="flex gap-3 ml-auto">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(initialFormData);
-                              setError(null);
-                            }}
-                            className="dash-control px-4 py-2.5 text-sm font-semibold text-dash-fg"
-                          >
-                            {tr.cancel}
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={saving}
-                            className="dash-cta inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
-                          >
-                            {saving ? (
-                              <>
-                                <Icon icon="typcn:refresh" className="w-4 h-4 animate-spin" />
-                                {tr.saving}
-                              </>
-                            ) : (
-                              <>
-                                <Icon icon="typcn:tick" className="w-4 h-4" />
-                                {tr.save}
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="dash-card overflow-hidden rounded-xl flex items-center justify-center min-h-[280px]">
-                      <div className="text-center py-8 px-4">
-                        <span className="w-12 h-12 rounded-xl border border-dash-border bg-dash-control flex items-center justify-center mx-auto mb-3 inline-flex">
-                          <Icon icon="typcn:arrow-left" width={24} height={24} className="text-dash-muted" />
-                        </span>
-                        <p className="text-dash-muted text-sm font-medium">{tr.selectOperation}</p>
-                        <button
-                          type="button"
-                          onClick={() => setMobilePanel("select")}
-                          className="lg:hidden mt-3 dash-cta inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold"
-                        >
-                          <Icon icon="typcn:document" width={14} height={14} />
-                          Ver operaciones
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </form>
-          </div>
-        </main>
+                <Icon icon="lucide:trash-2" width={14} height={14} />
+              </a>
+            }
+          />
+          <BarraFiltrosTransporte
+            busqueda={searchTerm}
+            onBusqueda={setSearchTerm}
+            placeholder={tr.searchPlaceholder}
+            onRefrescar={() => void fetchData()}
+            refrescarLabel={t.misReservas?.refresh ?? "Actualizar"}
+          >
+            <FiltroSelect
+              valor={asignacionFiltro}
+              onCambio={setAsignacionFiltro}
+              etiqueta={tf.colAsignacion}
+              todos={tf.colAsignacion}
+              opciones={[
+                { valor: "pendiente", label: tf.asliKpiPendientes },
+                { valor: "completa", label: tf.asliKpiCompletas },
+              ]}
+            />
+            <FiltroSelect
+              valor={transporteFiltro}
+              onCambio={setTransporteFiltro}
+              etiqueta={tf.colTransporte}
+              todos={tf.todasEmpresas}
+              opciones={empresasEnUso.map((n) => ({ valor: n, label: n }))}
+            />
+          </BarraFiltrosTransporte>
+        </div>
       </div>
 
-      {confirmNewItem && (
-        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
-          <div className="dash-card w-full max-w-sm rounded-xl p-6 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl border border-dash-neon/40 bg-dash-neon/15 text-dash-neon flex items-center justify-center">
-                {confirmNewItem.type === 'empresa' ? (
-                  <Icon icon="lucide:building-2" width={18} height={18} />
-                ) : confirmNewItem.type === 'chofer' ? (
-                  <Icon icon="lucide:user" width={18} height={18} />
-                ) : (
-                  <Icon icon="lucide:truck" width={18} height={18} />
-                )}
-              </div>
-              <div>
-                <h3 className="font-semibold text-dash-fg">
-                  Crear nuevo {confirmNewItem.type === 'empresa' ? 'empresa' : confirmNewItem.type === 'chofer' ? 'chofer' : 'equipo'}
-                </h3>
-                <p className="text-xs text-dash-muted">¿Confirmas agregar este nuevo elemento?</p>
-              </div>
-            </div>
-            <p className="text-sm text-dash-muted mb-6">
-              Se creará {confirmNewItem.type === 'empresa' ? 'la empresa' : confirmNewItem.type === 'chofer' ? 'el chofer' : 'el equipo'}:{" "}
-              <span className="font-medium text-dash-neon">{confirmNewItem.value}</span>
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmNewItem(null)}
-                className="dash-control flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await confirmNewItem.callback();
-                  setConfirmNewItem(null);
-                }}
-                disabled={saving}
-                className="dash-cta flex-1 px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
-              >
-                {saving ? 'Creando...' : 'Confirmar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <MarcoTabla
+        scrollProps={fila.scrollProps}
+        pie={
+          filteredOperaciones.length > 0 ? (
+            <span className="text-xs font-medium tabular-nums text-dash-muted">
+              {filteredOperaciones.length} {filteredOperaciones.length === 1 ? tf.registro : tf.registros}
+              {filteredOperaciones.length !== operaciones.length && ` ${tf.de} ${operaciones.length}`}
+            </span>
+          ) : undefined
+        }
+      >
+        <thead>
+          <tr>
+            <th className={TH}>{tf.colRef}</th>
+            <th className={TH}>{tf.colCliente}</th>
+            <th className={TH}>{tf.colBooking}</th>
+            <th className={TH}>{tf.colContenedor}</th>
+            <th className={TH}>{tf.colNave}</th>
+            <th className={TH}>{tf.colDestino}</th>
+            <th className={TH}>{tf.colEtd}</th>
+            <th className={TH}>{tf.colTransporte}</th>
+            <th className={TH}>{tf.colUnidad}</th>
+            <th className={TH}>{tf.colAsignacion}</th>
+            <th className={TH}>{tf.colEstadoOp}</th>
+            {canManageTransport && <th className={`${TH} w-12`} aria-label={tf.asliQuitar} />}
+          </tr>
+        </thead>
+        <tbody>
+          {filteredOperaciones.length === 0 ? (
+            <FilaVacia
+              colSpan={COLS}
+              icono="lucide:truck"
+              texto={operaciones.length === 0 ? tf.asliSinOperaciones : tf.sinResultados}
+              accion={
+                hayFiltros ? (
+                  <button type="button" onClick={limpiarFiltros} className="mt-1 text-xs font-medium text-dash-fg hover:underline">
+                    {tf.limpiarFiltros}
+                  </button>
+                ) : undefined
+              }
+            />
+          ) : (
+            filteredOperaciones.map((op, idx) => {
+              const abierta = fila.abiertaId === op.id;
+              const cfg = getEstadoOperacionStyle(op.estado_operacion);
+              const falta = faltantes(op);
+              return (
+                <Fragment key={op.id}>
+                  <tr {...propsFilaDesplegable(op.id, abierta, alternarFila)} className={claseFila(abierta, idx)}>
+                    <td className={`${TD} relative whitespace-nowrap`}>
+                      {/* La barra del canto habla del viaje, como en Mis Reservas. */}
+                      {cfg && <span className={`absolute inset-y-0 left-0 w-[3px] ${cfg.dot}`} aria-hidden />}
+                      <span className="inline-flex items-center gap-1.5">
+                        <ChevronFila abierta={abierta} />
+                        <span className="text-[14px] font-bold tabular-nums tracking-tight text-dash-fg">
+                          {displayRefAsli(op.ref_asli, op.correlativo, "-")}
+                        </span>
+                      </span>
+                    </td>
+                    <td className={`${TD} max-w-[14rem] truncate font-semibold text-dash-fg`}>{op.cliente || "—"}</td>
+                    <td className={`${TD} whitespace-nowrap`}>
+                      <span className="inline-flex items-center gap-1 font-mono text-[12.5px] text-dash-fg">
+                        {op.booking || "—"}
+                        {op.booking_doc_url && (
+                          <a
+                            href={op.booking_doc_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={tf.verBooking}
+                            className="rounded p-0.5 text-[var(--estado-curso)] hover:bg-dash-neon/10"
+                          >
+                            <Icon icon="lucide:paperclip" width={12} height={12} />
+                          </a>
+                        )}
+                      </span>
+                    </td>
+                    <td className={`${TD} whitespace-nowrap font-mono text-[12.5px] text-dash-fg`}>{op.contenedor || "—"}</td>
+                    <td className={TD}>
+                      <p className="max-w-[12rem] truncate font-semibold text-dash-fg">{op.naviera || "—"}</p>
+                      <p className="max-w-[12rem] truncate text-[12px] text-dash-muted">{op.nave || "—"}</p>
+                    </td>
+                    <td className={`${TD} whitespace-nowrap text-dash-fg`}>{op.pod || "—"}</td>
+                    <td className={`${TD} whitespace-nowrap tabular-nums text-dash-fg`}>{formatDate(op.etd)}</td>
+                    <td className={`${TD} max-w-[12rem] truncate text-dash-fg`}>{op.transporte || "—"}</td>
+                    <td className={TD}>
+                      <p className="max-w-[12rem] truncate text-dash-fg">{op.chofer || "—"}</p>
+                      <p className="font-mono text-[12px] text-dash-muted">{op.patente_camion || ""}</p>
+                    </td>
+                    <td className={TD} title={falta.length ? `${tf.falta}: ${falta.join(", ")}` : undefined}>
+                      {falta.length === 0 ? (
+                        <ChipEstado tono="estado--ok" label={tf.completa} icono="lucide:check" />
+                      ) : (
+                        <ChipEstado tono="estado--atencion" label={`${tf.faltan} ${falta.length}`} />
+                      )}
+                    </td>
+                    <td className={TD}>{chipEstadoOp(op.estado_operacion)}</td>
+                    {canManageTransport && (
+                      <td data-row-action className={`${TD} text-center`}>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteReserva(op.id)}
+                          className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-[color-mix(in_srgb,var(--estado-error)_14%,transparent)] hover:text-[var(--estado-error)]"
+                          title={tf.asliQuitar}
+                          aria-label={tf.asliQuitar}
+                        >
+                          <Icon icon="lucide:trash-2" width={14} height={14} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                  {abierta && (
+                    <tr className="bg-[color-mix(in_srgb,var(--estado-curso)_6%,transparent)]">
+                      <td colSpan={COLS} className="p-0">
+                        {renderFicha(op)}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })
+          )}
+        </tbody>
+      </MarcoTabla>
 
-      {confirmDeleteReserva && (
-        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
-          <div className="dash-card w-full max-w-sm rounded-xl p-6 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl border border-red-400/35 bg-red-500/15 text-red-300 flex items-center justify-center">
-                <Icon icon="typcn:trash" width={18} height={18} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-dash-fg">Eliminar reserva de transporte</h3>
-                <p className="text-xs text-dash-muted">Se borrarán todos los datos de transporte de esta operación</p>
-              </div>
-            </div>
-            <p className="text-sm text-dash-muted mb-6">
-              Esta acción limpiará empresa, chofer, equipo, contenedor, horarios, stacking, tramo y observaciones de la operación seleccionada. ¿Continuar?
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmDeleteReserva(null)}
-                className="dash-control flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDeleteReserva(confirmDeleteReserva ?? undefined)}
-                disabled={saving}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg bg-red-500/25 border border-red-400/40 hover:bg-red-500/35 disabled:opacity-50 transition-colors"
-              >
-                {saving ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <input
+        ref={instrFileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.pdf"
+        className="hidden"
+        onChange={(e) => void handleSubirInstructivo(e)}
+      />
 
-      {confirmReplaceInstr && (
-        <div className="dash-neon fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-theme={theme}>
-          <div className="dash-card w-full max-w-sm rounded-xl p-6 shadow-lg">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl border border-amber-400/35 bg-amber-500/15 text-amber-300 flex items-center justify-center flex-shrink-0">
-                <Icon icon="lucide:triangle-alert" width={18} height={18} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-dash-fg">Reemplazar instructivo</h3>
-                <p className="text-xs text-dash-muted">Ya hay un instructivo cargado</p>
-              </div>
-            </div>
-            <p className="text-sm text-dash-muted mb-2">
-              El archivo actual se reemplazará por el que subas y no se podrá recuperar.
-            </p>
-            <p className="text-sm font-semibold text-dash-fg mb-6 break-words">{instrFilename}</p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmReplaceInstr(false)}
-                className="dash-control flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmReplaceInstr(false);
-                  instrFileInputRef.current?.click();
-                }}
-                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-dash-fg bg-violet-500/25 border border-violet-400/40 hover:bg-violet-500/35 transition-colors"
-              >
-                Elegir archivo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      {confirmNewItem &&
+        createPortal(
+          <ConfirmDialog
+            title={
+              confirmNewItem.type === "empresa"
+                ? tf.nuevoEmpresaTitulo
+                : confirmNewItem.type === "chofer"
+                  ? tf.nuevoChoferTitulo
+                  : tf.nuevoEquipoTitulo
+            }
+            message={`${tf.nuevoMensaje} ${confirmNewItem.value}`}
+            confirmLabel={tf.nuevoConfirmar}
+            cancelLabel={tf.cancelar}
+            icon={
+              confirmNewItem.type === "empresa" ? "lucide:building-2" : confirmNewItem.type === "chofer" ? "lucide:user" : "lucide:truck"
+            }
+            onConfirm={() => {
+              const item = confirmNewItem;
+              setConfirmNewItem(null);
+              void item.callback();
+            }}
+            onCancel={() => setConfirmNewItem(null)}
+          />,
+          document.body,
+        )}
+
+      {confirmDeleteReserva &&
+        createPortal(
+          <ConfirmDialog
+            variant="warning"
+            title={tf.asliQuitarTitulo}
+            message={tf.asliQuitarMensaje}
+            confirmLabel={tf.asliQuitar}
+            cancelLabel={tf.cancelar}
+            icon="lucide:trash-2"
+            onConfirm={() => void handleDeleteReserva(confirmDeleteReserva)}
+            onCancel={() => setConfirmDeleteReserva(null)}
+          />,
+          document.body,
+        )}
+
+      {confirmReplaceInstr &&
+        createPortal(
+          <ConfirmDialog
+            variant="warning"
+            title={tf.instrReemplazarTitulo}
+            message={`${tf.instrReemplazarMensaje} (${instrFilename})`}
+            confirmLabel={tf.instrReemplazarAccion}
+            cancelLabel={tf.cancelar}
+            onConfirm={() => {
+              setConfirmReplaceInstr(false);
+              instrFileInputRef.current?.click();
+            }}
+            onCancel={() => setConfirmReplaceInstr(false)}
+          />,
+          document.body,
+        )}
+
+      {confirmarDescarte &&
+        createPortal(
+          <ConfirmDialog
+            variant="warning"
+            title={tm.detalleDescartarTitulo}
+            message={tm.detalleDescartarMensaje}
+            confirmLabel={tm.detalleDescartarConfirmar}
+            cancelLabel={tm.detalleSeguirEditando}
+            onConfirm={descartarYCerrar}
+            onCancel={() => setConfirmarDescarte(false)}
+          />,
+          document.body,
+        )}
+    </PaginaTransporte>
   );
 }
