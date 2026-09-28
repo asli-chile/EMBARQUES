@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -10,6 +11,19 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { aplicarFiltroTemporada } from "@/lib/temporadas";
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
+import { displayRefAsli } from "@/lib/refAsli";
+import {
+  BarraFiltrosTransporte,
+  CabeceraTransporte,
+  CargandoTransporte,
+  ChipEstado,
+  FilaVacia,
+  MarcoTabla,
+  PaginaTransporte,
+  TD,
+  TH,
+  type Indicador,
+} from "@/components/transportes/FichaTransporte";
 
 type Operacion = {
   id: string;
@@ -29,6 +43,15 @@ type Operacion = {
   origen: "asli" | "ext";
 };
 
+/**
+ * Papelera de transportes, con el aspecto de Reserva ASLI y Externa: cabecera
+ * con indicadores que filtran, búsqueda y tabla a todo el ancho. Al
+ * seleccionar filas aparece la barra de acciones, como en Mis Reservas.
+ *
+ * Reúne dos tablas: las operaciones de ASLI marcadas con
+ * `transporte_deleted_at` y las reservas externas con `deleted_at`. Restaurar
+ * y eliminar actúan sobre la tabla de cada fila.
+ */
 export function PapeleraTransportesContent() {
   const { t, locale } = useLocale();
   const { isCliente, isSuperadmin, empresaNombres, isLoading: authLoading } = useAuth();
@@ -40,6 +63,8 @@ export function PapeleraTransportesContent() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionLoading, setActionLoading] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const [origenFiltro, setOrigenFiltro] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     title: string; message: string; confirmLabel: string; onConfirm: () => void;
   } | null>(null);
@@ -115,24 +140,46 @@ export function PapeleraTransportesContent() {
     else setOperaciones([]);
   }, [authLoading, fetchOperaciones]);
 
+  const visibles = useMemo(() => {
+    let list = operaciones;
+    if (origenFiltro) list = list.filter((o) => o.origen === origenFiltro);
+    const s = busqueda.trim().toLowerCase();
+    if (!s) return list;
+    return list.filter((o) =>
+      [displayRefAsli(o.ref_asli, o.correlativo, ""), o.cliente, o.booking, o.contenedor, o.naviera, o.nave, o.transporte, o.chofer]
+        .some((v) => (v ?? "").toLowerCase().includes(s)),
+    );
+  }, [operaciones, origenFiltro, busqueda]);
+
+  /* La selección solo cuenta lo que se ve: con un filtro puesto, "todas" son
+     las visibles, y lo seleccionado que el filtro esconde no se toca. */
+  const seleccionVisible = useMemo(
+    () => visibles.filter((o) => selectedIds.has(o.id)).map((o) => o.id),
+    [visibles, selectedIds],
+  );
+
   const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "-";
+    if (!dateStr) return "—";
     try {
-      return format(new Date(dateStr), "dd-MM-yyyy HH:mm", { locale: locale === "es" ? es : undefined });
+      return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: locale === "es" ? es : undefined });
     } catch {
       return dateStr;
     }
   };
 
+  const allSelected = visibles.length > 0 && seleccionVisible.length === visibles.length;
   const handleSelectAll = () => {
-    if (selectedIds.size === operaciones.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(operaciones.map((op) => op.id)));
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(visibles.map((op) => op.id)));
   };
 
   const handleSelect = (id: string) => {
-    const s = new Set(selectedIds);
-    s.has(id) ? s.delete(id) : s.add(id);
-    setSelectedIds(s);
+    setSelectedIds((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      return s;
+    });
   };
 
   /* Cada fila vuelve a (o sale de) su propia tabla. */
@@ -153,18 +200,19 @@ export function PapeleraTransportesContent() {
     if (error) {
       sileo.error({ title: tr.errorRestoring });
     } else {
+      sileo.success({ title: tr.restaurados });
       setSelectedIds(new Set());
       await fetchOperaciones();
     }
     setActionLoading(false);
   };
 
-  const handleDeletePermanently = async (ids: string[]) => {
+  const handleDeletePermanently = (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
     setConfirmDialog({
-      title: tr.confirmDelete.replace("{count}", String(ids.length)).split(".")[0] || "Eliminar definitivamente",
+      title: tr.eliminarTitulo,
       message: tr.confirmDelete.replace("{count}", String(ids.length)),
-      confirmLabel: "Eliminar",
+      confirmLabel: tr.eliminarDefinitivo,
       onConfirm: () => { setConfirmDialog(null); void doDeletePermanently(ids); },
     });
   };
@@ -220,346 +268,256 @@ export function PapeleraTransportesContent() {
   const handleEmptyTrash = () => {
     if (!supabase || operaciones.length === 0) return;
     setConfirmDialog({
-      title: "Vaciar papelera",
+      title: tr.vaciarTitulo,
       message: tr.confirmEmptyTrash.replace("{count}", String(operaciones.length)),
-      confirmLabel: "Vaciar",
+      confirmLabel: tr.emptyTrash,
       onConfirm: () => {
         setConfirmDialog(null);
-        const allIds = operaciones.map((o) => o.id);
-        void doDeletePermanently(allIds);
+        void doDeletePermanently(operaciones.map((o) => o.id));
       },
     });
   };
 
-  const tipoBadge = (tipo: string | null) => {
-    if (tipo === "asli") return { label: "ASLI", cls: "bg-dash-neon/15 text-dash-fg border-dash-neon/35" };
-    if (tipo === "externa") return { label: "Externa", cls: "bg-violet-500/15 text-violet-300 border-violet-400/35" };
-    return { label: "—", cls: "bg-dash-control text-dash-muted border-dash-border" };
-  };
+  if (loading) return <CargandoTransporte theme={theme} label={tr.loading} />;
 
-  if (loading) {
-    return (
-      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
-        <main className="dash-page relative flex min-h-0 flex-1 items-center justify-center p-4" role="main">
-          <div className="dash-card flex items-center gap-3 rounded-xl px-5 py-4 text-sm font-medium text-dash-muted">
-            <Icon icon="typcn:refresh" className="h-4 w-4 animate-spin text-dash-neon" />
-            <span>{tr.loading}</span>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const nAsli = operaciones.filter((o) => o.origen === "asli").length;
+  const nExt = operaciones.length - nAsli;
+  const pct = (n: number) => (operaciones.length ? Math.round((n / operaciones.length) * 100) : 0);
+  const indicadores: Indicador[] = [
+    { clave: "", label: tr.kpiTotal, valor: operaciones.length, pct: null, tono: "estado--espera", icon: "lucide:trash-2" },
+    { clave: "asli", label: tr.kpiAsli, valor: nAsli, pct: pct(nAsli), tono: "estado--curso", icon: "lucide:truck" },
+    { clave: "ext", label: tr.kpiExt, valor: nExt, pct: pct(nExt), tono: "estado--transito", icon: "lucide:external-link" },
+  ];
 
-  const allSelected = selectedIds.size === operaciones.length && operaciones.length > 0;
+  const hayFiltros = !!(busqueda || origenFiltro);
+  const COLS = 10;
+  const btnFila = "rounded-lg p-1.5 text-dash-muted transition-colors disabled:opacity-50";
 
   return (
-    <>
-      <div className="dash-neon flex min-h-0 flex-1 flex-col" data-theme={theme}>
-        <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto" role="main">
-          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-            <div className="absolute -right-16 top-10 h-72 w-72 rounded-full bg-dash-neon/20 blur-3xl" />
-            <div className="absolute bottom-20 left-1/4 h-64 w-64 rounded-full bg-dash-neon-hot/15 blur-3xl" />
-          </div>
-
-          <div className="dash-toolbar relative z-10 shrink-0">
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dash-neon/40 bg-dash-neon/15 shadow-[0_0_24px_-8px_color-mix(in_srgb,var(--dash-neon)_55%,transparent)]">
-                  <Icon icon="lucide:trash-2" width={22} height={22} className="text-dash-neon" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="truncate text-lg font-bold tracking-tight text-dash-fg sm:text-xl">{tr.title}</h1>
-                  <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">
-                    {operaciones.length === 0
-                      ? tr.trashEmpty
-                      : `${operaciones.length} ${tr.itemsInTrash}`}
-                  </p>
-                </div>
-              </div>
-
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                {selectedIds.size > 0 && (
-                  <>
-                    <button
-                      onClick={() => void handleRestore(Array.from(selectedIds))}
-                      disabled={actionLoading}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-400/35 bg-emerald-500/15 px-3 py-2 text-sm font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/25 disabled:opacity-50"
-                    >
-                      <Icon icon="lucide:undo-2" width={14} height={14} />
-                      {tr.restore} ({selectedIds.size})
-                    </button>
-                    {isSuperadmin && (
-                      <button
-                        onClick={() => void handleDeletePermanently(Array.from(selectedIds))}
-                        disabled={actionLoading}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/35 bg-red-500/15 px-3 py-2 text-sm font-semibold text-red-300 transition-colors hover:bg-red-500/25 disabled:opacity-50"
-                      >
-                        <Icon icon="lucide:trash-2" width={14} height={14} />
-                        {tr.deletePermanent} ({selectedIds.size})
-                      </button>
-                    )}
-                  </>
-                )}
-                {isSuperadmin && operaciones.length > 0 && selectedIds.size === 0 && (
-                  <button
-                    onClick={() => void handleEmptyTrash()}
-                    disabled={actionLoading}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-dash-border bg-dash-control px-3 py-2 text-sm font-semibold text-dash-fg transition-colors hover:bg-dash-neon/15 disabled:opacity-50"
-                  >
-                    <Icon icon="lucide:trash" width={14} height={14} />
-                    {tr.emptyTrash}
-                  </button>
-                )}
-                <button
-                  onClick={() => void fetchOperaciones()}
-                  disabled={actionLoading}
-                  className="rounded-lg border border-dash-border bg-dash-control p-2 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
-                  title={tr.refresh}
-                >
-                  <Icon icon="typcn:refresh" width={16} height={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 flex-1 space-y-3 p-3 sm:p-4">
-            {selectedIds.size > 0 && (
-              <div className="flex items-center justify-between rounded-xl border border-dash-neon/35 bg-dash-neon/10 px-4 py-2.5">
-                <span className="text-sm font-semibold text-dash-fg">
-                  {selectedIds.size} {selectedIds.size === 1 ? "elemento seleccionado" : "elementos seleccionados"}
-                </span>
-                <button onClick={() => setSelectedIds(new Set())} className="text-sm text-dash-muted hover:text-dash-fg">
-                  Deseleccionar todo
-                </button>
-              </div>
-            )}
-
-            {operaciones.length === 0 ? (
-              <div className="dash-card flex flex-col items-center gap-3 rounded-xl px-4 py-16">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-dash-border bg-dash-control">
-                  <Icon icon="lucide:trash-2" width={26} height={26} className="text-dash-muted" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-dash-fg">{tr.trashEmpty}</p>
-                  <p className="mt-1 text-sm text-dash-muted">{tr.subtitle}</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2 md:hidden">
-                  {operaciones.map((op) => {
-                    const badge = tipoBadge(op.tipo_reserva_transporte);
-                    const sel = selectedIds.has(op.id);
-                    return (
-                      <div
-                        key={op.id}
-                        onClick={() => handleSelect(op.id)}
-                        className={`dash-card cursor-pointer rounded-xl border p-4 transition-all ${
-                          sel
-                            ? "border-dash-neon/50 bg-dash-neon/15 ring-2 ring-dash-neon/25"
-                            : "border-dash-border hover:border-dash-neon/35"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={sel}
-                              onChange={() => handleSelect(op.id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-4 w-4 shrink-0 rounded accent-[var(--dash-neon)]"
-                            />
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-bold text-dash-fg">
-                                  {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "—")}
-                                </span>
-                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>
-                                  {badge.label}
-                                </span>
-                              </div>
-                              <p className="mt-0.5 truncate text-sm font-medium text-dash-muted">{op.cliente || "-"}</p>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => void handleRestore([op.id])}
-                              disabled={actionLoading}
-                              className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-400 disabled:opacity-50"
-                              title={tr.restore}
-                            >
-                              <Icon icon="lucide:undo-2" width={15} height={15} />
-                            </button>
-                            {isSuperadmin && (
-                              <button
-                                onClick={() => void handleDeletePermanently([op.id])}
-                                disabled={actionLoading}
-                                className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
-                                title={tr.deletePermanent}
-                              >
-                                <Icon icon="lucide:trash-2" width={15} height={15} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-dash-muted">
-                          {op.naviera && (
-                            <div className="flex items-center gap-1.5">
-                              <Icon icon="lucide:ship" width={14} height={14} className="shrink-0 text-dash-muted" />
-                              <span className="truncate">{op.naviera}</span>
-                            </div>
-                          )}
-                          {op.transporte && (
-                            <div className="flex items-center gap-1.5">
-                              <Icon icon="lucide:truck" width={14} height={14} className="shrink-0 text-dash-muted" />
-                              <span className="truncate">{op.transporte}</span>
-                            </div>
-                          )}
-                          {op.contenedor && (
-                            <div className="flex items-center gap-1.5">
-                              <Icon icon="lucide:container" width={14} height={14} className="shrink-0 text-dash-muted" />
-                              <span className="truncate font-mono">{op.contenedor}</span>
-                            </div>
-                          )}
-                          {op.booking && (
-                            <div className="flex items-center gap-1.5">
-                              <Icon icon="lucide:hash" width={14} height={14} className="shrink-0 text-dash-muted" />
-                              <span className="truncate font-mono">{op.booking}</span>
-                            </div>
-                          )}
-                          <div className="col-span-2 mt-1 flex items-center gap-1.5 border-t border-dash-border pt-1">
-                            <Icon icon="lucide:clock" width={14} height={14} className="shrink-0 text-red-400" />
-                            <span className="font-medium text-red-400">Eliminado: {formatDate(op.transporte_deleted_at)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="dash-card-static hidden overflow-hidden rounded-xl border border-dash-border md:block">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-control)_92%,transparent)]">
-                          <th className="w-10 px-4 py-3">
-                            <input
-                              type="checkbox"
-                              checked={allSelected}
-                              onChange={handleSelectAll}
-                              className="h-4 w-4 rounded accent-[var(--dash-neon)]"
-                            />
-                          </th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colRef}</th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colClient}</th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colCarrier}</th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colBooking}</th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colTransport}</th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colContainer}</th>
-                          <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colType}</th>
-                          <th className="min-w-[8rem] whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colDeleted}</th>
-                          <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wider text-dash-muted">{tr.colActions}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {operaciones.map((op, idx) => {
-                          const badge = tipoBadge(op.tipo_reserva_transporte);
-                          const sel = selectedIds.has(op.id);
-                          return (
-                            <tr
-                              key={op.id}
-                              onClick={() => handleSelect(op.id)}
-                              className={`cursor-pointer transition-colors ${
-                                sel
-                                  ? "bg-dash-neon/15"
-                                  : idx % 2 === 0
-                                  ? "bg-transparent hover:bg-dash-neon/10"
-                                  : "bg-dash-control/30 hover:bg-dash-neon/10"
-                              }`}
-                            >
-                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="checkbox"
-                                  checked={sel}
-                                  onChange={() => handleSelect(op.id)}
-                                  className="h-4 w-4 rounded accent-[var(--dash-neon)]"
-                                />
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="text-sm font-bold text-dash-fg">
-                                  {op.ref_asli || (op.correlativo ? `#${op.correlativo}` : "-")}
-                                </span>
-                              </td>
-                              <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-dash-fg">{op.cliente || "-"}</td>
-                              <td className="whitespace-nowrap px-4 py-3 text-sm text-dash-muted">{op.naviera || "-"}</td>
-                              <td className="px-4 py-3 font-mono text-sm text-dash-muted">{op.booking || "-"}</td>
-                              <td className="whitespace-nowrap px-4 py-3 text-sm text-dash-muted">{op.transporte || "-"}</td>
-                              <td className="px-4 py-3 font-mono text-sm text-dash-muted">{op.contenedor || "-"}</td>
-                              <td className="px-4 py-3">
-                                <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${badge.cls}`}>
-                                  {badge.label}
-                                </span>
-                              </td>
-                              <td className="min-w-[8rem] whitespace-nowrap px-4 py-3 text-sm font-medium text-red-400">
-                                {formatDate(op.transporte_deleted_at)}
-                              </td>
-                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-center gap-1">
-                                  <button
-                                    onClick={() => void handleRestore([op.id])}
-                                    disabled={actionLoading}
-                                    className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-emerald-500/15 hover:text-emerald-400 disabled:opacity-50"
-                                    title={tr.restore}
-                                  >
-                                    <Icon icon="lucide:undo-2" width={15} height={15} />
-                                  </button>
-                                  {isSuperadmin && (
-                                    <button
-                                      onClick={() => void handleDeletePermanently([op.id])}
-                                      disabled={actionLoading}
-                                      className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-red-500/15 hover:text-red-400 disabled:opacity-50"
-                                      title={tr.deletePermanent}
-                                    >
-                                      <Icon icon="lucide:trash-2" width={15} height={15} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-dash-border bg-dash-control/50 px-4 py-2.5">
-                    <span className="text-sm text-dash-muted">
-                      {operaciones.length} {operaciones.length === 1 ? "elemento" : "elementos"} en papelera
-                    </span>
-                    {selectedIds.size > 0 && (
-                      <span className="text-sm font-semibold text-dash-fg">
-                        {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
-      </div>
-      {confirmDialog && (
-        <ConfirmDialog
-          title={confirmDialog.title}
-          message={confirmDialog.message}
-          confirmLabel={confirmDialog.confirmLabel}
-          cancelLabel="Cancelar"
-          variant="danger"
-          onConfirm={confirmDialog.onConfirm}
-          onCancel={() => setConfirmDialog(null)}
+    <PaginaTransporte theme={theme}>
+      <div className="relative z-10 shrink-0">
+        <CabeceraTransporte
+          titulo={tr.title}
+          subtitulo={operaciones.length === 0 ? tr.trashEmpty : `${operaciones.length} ${tr.itemsInTrash}`}
+          icono="lucide:trash-2"
+          volverLabel={tr.volver}
+          visibles={visibles.length}
+          total={operaciones.length}
+          indicadores={indicadores}
+          activo={origenFiltro}
+          onIndicador={setOrigenFiltro}
+          acciones={
+            isSuperadmin && operaciones.length > 0 ? (
+              <button
+                type="button"
+                onClick={handleEmptyTrash}
+                disabled={actionLoading}
+                className="estado--error estado-chip motion-interactive inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50"
+              >
+                <Icon icon="lucide:trash" width={14} height={14} />
+                <span className="hidden sm:inline">{tr.emptyTrash}</span>
+              </button>
+            ) : undefined
+          }
         />
-      )}
-    </>
+        <BarraFiltrosTransporte
+          busqueda={busqueda}
+          onBusqueda={setBusqueda}
+          placeholder={tr.searchPlaceholder}
+          onRefrescar={() => void fetchOperaciones()}
+          refrescarLabel={tr.refresh}
+        />
+
+        {/* Barra de selección: aparece con la primera casilla marcada. */}
+        {seleccionVisible.length > 0 && (
+          <div className="motion-enter-lift flex flex-wrap items-center gap-2 border-b border-dash-border bg-dash-neon/10 px-3 py-2 sm:px-4">
+            <span className="flex-1 text-sm font-semibold tabular-nums text-dash-fg">
+              {seleccionVisible.length} {seleccionVisible.length === 1 ? tr.seleccionado : tr.seleccionados}
+            </span>
+            <button
+              type="button"
+              onClick={() => void handleRestore(seleccionVisible)}
+              disabled={actionLoading}
+              className="estado--ok estado-chip motion-interactive inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
+            >
+              <Icon icon="lucide:undo-2" width={14} height={14} />
+              {tr.restore}
+            </button>
+            {isSuperadmin && (
+              <button
+                type="button"
+                onClick={() => handleDeletePermanently(seleccionVisible)}
+                disabled={actionLoading}
+                className="estado--error estado-chip motion-interactive inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold disabled:opacity-50"
+              >
+                <Icon icon="lucide:trash-2" width={14} height={14} />
+                <span className="hidden sm:inline">{tr.eliminarDefinitivo}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedIds(new Set())}
+              title={tr.quitarSeleccion}
+              aria-label={tr.quitarSeleccion}
+              className="rounded-lg p-1.5 text-dash-muted transition-colors hover:bg-dash-neon/15 hover:text-dash-fg"
+            >
+              <Icon icon="lucide:x" width={14} height={14} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <MarcoTabla
+        pie={
+          visibles.length > 0 ? (
+            <span className="text-xs font-medium tabular-nums text-dash-muted">
+              {visibles.length} {tr.itemsInTrash}
+              {visibles.length !== operaciones.length && ` · ${operaciones.length}`}
+            </span>
+          ) : undefined
+        }
+      >
+        <thead>
+          <tr>
+            <th className={`${TH} w-10`}>
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={handleSelectAll}
+                aria-label={tr.seleccionados}
+                className="h-4 w-4 rounded accent-[var(--dash-neon)]"
+              />
+            </th>
+            <th className={TH}>{tr.colRef}</th>
+            <th className={TH}>{tr.colClient}</th>
+            <th className={TH}>{tr.colBooking}</th>
+            <th className={TH}>{tr.colContainer}</th>
+            <th className={TH}>{tr.colCarrier}</th>
+            <th className={TH}>{tr.colTransport}</th>
+            <th className={TH}>{tr.colType}</th>
+            <th className={TH}>{tr.colDeleted}</th>
+            <th className={`${TH} text-center`}>{tr.colActions}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibles.length === 0 ? (
+            <FilaVacia
+              colSpan={COLS}
+              icono="lucide:trash-2"
+              texto={operaciones.length === 0 ? tr.trashEmpty : tr.sinResultados}
+              accion={
+                hayFiltros ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBusqueda("");
+                      setOrigenFiltro("");
+                    }}
+                    className="mt-1 text-xs font-medium text-dash-fg hover:underline"
+                  >
+                    {tr.limpiarFiltros}
+                  </button>
+                ) : undefined
+              }
+            />
+          ) : (
+            visibles.map((op, idx) => {
+              const sel = selectedIds.has(op.id);
+              const esExt = op.origen === "ext";
+              return (
+                <tr
+                  key={op.id}
+                  onClick={() => handleSelect(op.id)}
+                  className={`cursor-pointer border-b border-dash-border transition-colors ${
+                    sel
+                      ? "bg-dash-neon/15"
+                      : idx % 2 === 0
+                        ? "bg-transparent hover:bg-dash-neon/10"
+                        : "bg-dash-control/30 hover:bg-dash-neon/10"
+                  }`}
+                >
+                  <td className={`${TD} relative`} onClick={(e) => e.stopPropagation()}>
+                    {/* El canto dice de dónde viene, como el chip de tipo. */}
+                    <span
+                      className={`${esExt ? "estado--transito" : "estado--curso"} estado-barra absolute inset-y-0 left-0 w-[3px]`}
+                      aria-hidden
+                    />
+                    <input
+                      type="checkbox"
+                      checked={sel}
+                      onChange={() => handleSelect(op.id)}
+                      className="h-4 w-4 rounded accent-[var(--dash-neon)]"
+                    />
+                  </td>
+                  <td className={`${TD} whitespace-nowrap text-[14px] font-bold tabular-nums tracking-tight text-dash-fg`}>
+                    {displayRefAsli(op.ref_asli, op.correlativo, "—")}
+                  </td>
+                  <td className={`${TD} max-w-[14rem] truncate font-semibold text-dash-fg`}>{op.cliente || "—"}</td>
+                  <td className={`${TD} whitespace-nowrap font-mono text-[12.5px] text-dash-fg`}>{op.booking || "—"}</td>
+                  <td className={`${TD} whitespace-nowrap font-mono text-[12.5px] text-dash-fg`}>{op.contenedor || "—"}</td>
+                  <td className={TD}>
+                    <p className="max-w-[12rem] truncate text-dash-fg">{op.naviera || "—"}</p>
+                    {op.nave && <p className="max-w-[12rem] truncate text-[12px] text-dash-muted">{op.nave}</p>}
+                  </td>
+                  <td className={TD}>
+                    <p className="max-w-[12rem] truncate text-dash-fg">{op.transporte || "—"}</p>
+                    {op.chofer && <p className="max-w-[12rem] truncate text-[12px] text-dash-muted">{op.chofer}</p>}
+                  </td>
+                  <td className={TD}>
+                    <ChipEstado tono={esExt ? "estado--transito" : "estado--curso"} label={esExt ? tr.tipoExt : tr.tipoAsli} />
+                  </td>
+                  <td className={`${TD} whitespace-nowrap tabular-nums text-dash-muted`}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon icon="lucide:clock" width={13} height={13} aria-hidden />
+                      {formatDate(op.transporte_deleted_at)}
+                    </span>
+                  </td>
+                  <td className={TD} onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => void handleRestore([op.id])}
+                        disabled={actionLoading}
+                        className={`${btnFila} hover:bg-[color-mix(in_srgb,var(--estado-ok)_14%,transparent)] hover:text-[var(--estado-ok)]`}
+                        title={tr.restore}
+                        aria-label={tr.restore}
+                      >
+                        <Icon icon="lucide:undo-2" width={15} height={15} />
+                      </button>
+                      {isSuperadmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePermanently([op.id])}
+                          disabled={actionLoading}
+                          className={`${btnFila} hover:bg-[color-mix(in_srgb,var(--estado-error)_14%,transparent)] hover:text-[var(--estado-error)]`}
+                          title={tr.eliminarDefinitivo}
+                          aria-label={tr.eliminarDefinitivo}
+                        >
+                          <Icon icon="lucide:trash-2" width={15} height={15} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </MarcoTabla>
+
+      {confirmDialog &&
+        createPortal(
+          <ConfirmDialog
+            title={confirmDialog.title}
+            message={confirmDialog.message}
+            confirmLabel={confirmDialog.confirmLabel}
+            cancelLabel={tr.cancelar}
+            variant="danger"
+            onConfirm={confirmDialog.onConfirm}
+            onCancel={() => setConfirmDialog(null)}
+          />,
+          document.body,
+        )}
+    </PaginaTransporte>
   );
 }

@@ -288,14 +288,15 @@ export function MarcoTabla({
   pie,
   children,
 }: {
-  scrollProps: ReturnType<typeof useFilaDesplegable>["scrollProps"];
+  /** De `useFilaDesplegable`; sin filas que se desplieguen, se omite. */
+  scrollProps?: ReturnType<typeof useFilaDesplegable>["scrollProps"];
   pie?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div className="relative z-10 min-h-0 flex-1 overflow-hidden p-2 sm:p-3">
       <div className="dash-card-static flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-dash-border bg-[color-mix(in_srgb,var(--dash-surface)_92%,transparent)]">
-        <div {...scrollProps} className={`min-h-0 flex-1 ${scrollProps.className}`}>
+        <div {...scrollProps} className={`min-h-0 flex-1 ${scrollProps?.className ?? "overflow-auto"}`}>
           <table className="w-full text-[13.5px]">{children}</table>
         </div>
         {pie && (
