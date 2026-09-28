@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { withBase } from "@/lib/basePath";
 import "./centro-mando.css";
 import catalogo from "./oficina.json";
@@ -28,9 +28,81 @@ type AgenteOficina = {
   resumen: string;
 };
 
+const PARADAS = new Set([
+  "de", "la", "el", "en", "y", "que", "un", "una", "para", "con", "por", "del", "los", "las",
+  "al", "lo", "se", "su", "sus", "tus", "tu", "mi", "me", "quiero", "necesito", "hacer", "como",
+  "mas", "the", "and", "for",
+]);
+
+function piezas(texto: string) {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 2 && !PARADAS.has(t));
+}
+
+type Recomendacion = {
+  nombre: string;
+  titulo: string;
+  resumen: string;
+  porque: string;
+};
+
+function recomendarAgentes(texto: string): Recomendacion[] {
+  const busca = piezas(texto);
+  if (busca.length === 0) return [];
+  const ranked = oficina.agentes.map((a) => {
+    const depto = oficina.departamentos.find((d) => d.id === a.departamento)?.nombre ?? "";
+    const campos = [
+      { peso: 4, tokens: piezas(a.titulo) },
+      { peso: 3, tokens: piezas(a.nombre.replaceAll("-", " ")) },
+      { peso: 2, tokens: piezas(a.resumen) },
+      { peso: 2, tokens: piezas(depto) },
+    ];
+    let total = 0;
+    const vistos = new Set<string>();
+    for (const palabra of busca) {
+      for (const campo of campos) {
+        if (campo.tokens.some((t) => t.includes(palabra) || palabra.includes(t))) {
+          total += campo.peso;
+          vistos.add(palabra);
+          break;
+        }
+      }
+    }
+    return { a, total, vistos: [...vistos] };
+  });
+  return ranked
+    .filter((p) => p.total > 0)
+    .sort((x, y) => y.total - x.total)
+    .slice(0, 5)
+    .map((p) => ({
+      nombre: p.a.nombre,
+      titulo: p.a.titulo,
+      resumen: p.a.resumen,
+      porque: p.vistos.length > 0 ? `Coincide con: ${p.vistos.slice(0, 4).join(", ")}` : p.a.resumen,
+    }));
+}
+
 const oficina = catalogo as {
   departamentos: { id: string; nombre: string }[];
   agentes: AgenteOficina[];
+};
+
+const COLORES_SALA: Record<string, string> = {
+  direccion: "#8B5CF6",
+  marketing: "#EC4899",
+  "seo-cro": "#F97316",
+  ventas: "#EAB308",
+  producto: "#14B8A6",
+  ingenieria: "#3B82F6",
+  "datos-ia": "#06B6D4",
+  seguridad: "#EF4444",
+  calidad: "#84CC16",
+  finanzas: "#22C55E",
+  herramientas: "#94A3B8",
 };
 
 type Pedido = {
@@ -77,9 +149,13 @@ export function CentroDeMandoContent() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [aviso, setAviso] = useState<string | null>(null);
   const [vista, setVista] = useState<Vista>("pedido");
-  const [sala, setSala] = useState("todas");
   const [busca, setBusca] = useState("");
-  const [ficha, setFicha] = useState<string | null>(null);
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [necesidad, setNecesidad] = useState("");
+  const [recomendados, setRecomendados] = useState<Recomendacion[]>([]);
+  const [motorAgente, setMotorAgente] = useState<Motor>("claude");
+  const [avisoAgente, setAvisoAgente] = useState<string | null>(null);
+  const [enviandoAgente, setEnviandoAgente] = useState(false);
   const llevaVideo = tipo === "video" || tipo === "pack";
 
   useEffect(() => {
@@ -96,14 +172,28 @@ export function CentroDeMandoContent() {
 
   const visibles = useMemo(() => {
     const q = busca.trim().toLowerCase();
+    if (!q) return oficina.agentes;
     return oficina.agentes.filter((a) => {
-      if (sala !== "todas" && a.departamento !== sala) return false;
-      if (!q) return true;
-      return `${a.titulo} ${a.nombre} ${a.resumen}`.toLowerCase().includes(q);
+      const depto = oficina.departamentos.find((d) => d.id === a.departamento)?.nombre ?? "";
+      return `${a.titulo} ${a.nombre} ${a.resumen} ${depto}`.toLowerCase().includes(q);
     });
-  }, [busca, sala]);
+  }, [busca]);
 
-  const elegido = oficina.agentes.find((a) => a.nombre === ficha) ?? null;
+  const salasPlano = useMemo(() => {
+    const porSala = new Map<string, AgenteOficina[]>();
+    for (const agente of visibles) {
+      const lista = porSala.get(agente.departamento) ?? [];
+      lista.push(agente);
+      porSala.set(agente.departamento, lista);
+    }
+    return oficina.departamentos
+      .map((d) => ({
+        ...d,
+        color: COLORES_SALA[d.id] ?? "#94A3B8",
+        agentes: porSala.get(d.id) ?? [],
+      }))
+      .filter((d) => d.agentes.length > 0);
+  }, [visibles]);
 
   function alternarFormato(id: FormatoId) {
     setFormatos((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
@@ -155,9 +245,70 @@ export function CentroDeMandoContent() {
     setImagenes((prev) => [...prev, ...Array.from(lista).map((f) => f.name)]);
   }
 
+  function alternarMarca(nombre: string) {
+    setMarcados((prev) => (prev.includes(nombre) ? prev.filter((n) => n !== nombre) : [...prev, nombre]));
+  }
+
+  function sugerir() {
+    if (necesidad.trim().length < 8) {
+      setRecomendados([]);
+      setAvisoAgente("Describe un poco más qué quieres resolver.");
+      return;
+    }
+    const lista = recomendarAgentes(necesidad);
+    setRecomendados(lista);
+    setAvisoAgente(lista.length === 0 ? "Ningún agente calza. Márcalos en el plano." : null);
+  }
+
+  function usarRecomendacion() {
+    setMarcados((prev) => [...new Set([...prev, ...recomendados.map((r) => r.nombre)])]);
+  }
+
+  async function encargarAgentes() {
+    if (marcados.length === 0) {
+      setAvisoAgente("Marca al menos un agente, o acepta la recomendación.");
+      return;
+    }
+    if (necesidad.trim() === "") {
+      setAvisoAgente("Escribe qué necesitas.");
+      return;
+    }
+    setEnviandoAgente(true);
+    try {
+      const res = await fetch("http://127.0.0.1:4317/api/tareas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentes: marcados,
+          texto: necesidad.trim(),
+          modelo: motorAgente === "cursor" ? "composer-2.5" : "sonnet",
+          permiso: "lectura",
+          motor: motorAgente,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "No se pudo encargar.");
+      const quien = motorAgente === "cursor" ? "Cursor" : "Claude";
+      setAvisoAgente(
+        marcados.length === 1
+          ? `${quien} ya tiene el encargo. Lo ves en la oficina en vivo.`
+          : `${quien} ya tiene el encargo de ${marcados.length} agentes. Lo ves en la oficina en vivo.`,
+      );
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : "";
+      setAvisoAgente(
+        mensaje && mensaje !== "Failed to fetch"
+          ? mensaje
+          : "La oficina atiende en esta computadora. Ábrela y vuelve a encargar.",
+      );
+    } finally {
+      setEnviandoAgente(false);
+    }
+  }
+
   return (
     <main className="cmd">
-      <div className="cmd-ficheros" role="tablist" aria-label="Pantallas">
+      <div className="cmd-ficheros" role="tablist" aria-label="Secciones">
         <button
           type="button"
           role="tab"
@@ -165,7 +316,7 @@ export function CentroDeMandoContent() {
           aria-selected={vista === "pedido"}
           onClick={() => setVista("pedido")}
         >
-          Centro de mando
+          Creador de contenido
         </button>
         <button
           type="button"
@@ -178,18 +329,147 @@ export function CentroDeMandoContent() {
         </button>
       </div>
       <div className="cmd-chasis">
+        {vista === "oficina" ? (
+          <section className="of" aria-label="Oficina de agentes">
+            <header className="of-barra">
+              <div className="of-marca">
+                <span className="of-lampara" aria-hidden="true" />
+                <h1>Oficina de agentes</h1>
+              </div>
+              <p className="of-pulso">
+                <b>{visibles.length}</b> en su escritorio
+              </p>
+              <input
+                type="search"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar agente…"
+                aria-label="Buscar agente"
+              />
+            </header>
+            <div className="of-cuerpo">
+            {salasPlano.length === 0 ? (
+              <p className="of-vacio">Ningún agente coincide con la búsqueda.</p>
+            ) : (
+              <div className="of-plano">
+                {salasPlano.map((sala) => (
+                  <section key={sala.id} className="of-sala" style={{ "--color-sala": sala.color } as CSSProperties}>
+                    <div className="of-sala-cabecera">
+                      <h2>{sala.nombre}</h2>
+                      <span>{sala.agentes.length} agentes</span>
+                    </div>
+                    <div className="of-escritorios">
+                      {sala.agentes.map((a) => (
+                        <button
+                          key={a.nombre}
+                          type="button"
+                          className={[
+                            "of-escritorio",
+                            marcados.includes(a.nombre) ? "of-escritorio-activo" : "",
+                            recomendados.some((r) => r.nombre === a.nombre) ? "of-escritorio-sugerido" : "",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          aria-pressed={marcados.includes(a.nombre)}
+                          onClick={() => alternarMarca(a.nombre)}
+                        >
+                          <span className="of-luz" aria-hidden="true" />
+                          <span className="of-nombre">{a.titulo}</span>
+                          <span className="of-resumen">{a.resumen}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+            <aside className="of-encargo" aria-label="Encargo a agentes">
+              <h2>Encargo</h2>
+              <p className="of-ayuda">
+                Marca uno o varios escritorios, o describe lo que quieres y te recomiendo agentes.
+              </p>
+              <label className="of-campo">
+                Qué necesitas
+                <textarea
+                  value={necesidad}
+                  onChange={(e) => setNecesidad(e.target.value)}
+                  rows={5}
+                  placeholder="Un reel de cereza, marítimo y aéreo, para exportadores."
+                />
+              </label>
+              <button type="button" className="of-btn" onClick={sugerir}>
+                Recomendar agentes
+              </button>
+              {recomendados.length > 0 ? (
+                <>
+                  <ul className="of-recs">
+                    {recomendados.map((r) => (
+                      <li key={r.nombre}>
+                        <button
+                          type="button"
+                          className={marcados.includes(r.nombre) ? "of-rec of-rec-on" : "of-rec"}
+                          aria-pressed={marcados.includes(r.nombre)}
+                          onClick={() => alternarMarca(r.nombre)}
+                        >
+                          <strong>{r.titulo}</strong>
+                          <span>{r.porque}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button type="button" className="of-btn" onClick={usarRecomendacion}>
+                    Marcar la recomendación
+                  </button>
+                </>
+              ) : null}
+              <p className="of-marcados">
+                {marcados.length === 0 ? "Ningún escritorio marcado." : `${marcados.length} marcados`}
+              </p>
+              <div className="of-chips">
+                {marcados.map((nombre) => (
+                  <button key={nombre} type="button" className="of-chip" onClick={() => alternarMarca(nombre)}>
+                    {oficina.agentes.find((a) => a.nombre === nombre)?.titulo ?? nombre}
+                  </button>
+                ))}
+              </div>
+              <div className="of-motores" role="group" aria-label="A quién encargar">
+                <button
+                  type="button"
+                  className={motorAgente === "claude" ? "of-btn of-btn-on" : "of-btn"}
+                  aria-pressed={motorAgente === "claude"}
+                  onClick={() => setMotorAgente("claude")}
+                >
+                  Claude
+                </button>
+                <button
+                  type="button"
+                  className={motorAgente === "cursor" ? "of-btn of-btn-on" : "of-btn"}
+                  aria-pressed={motorAgente === "cursor"}
+                  onClick={() => setMotorAgente("cursor")}
+                >
+                  Cursor
+                </button>
+              </div>
+              <button type="button" className="of-btn of-btn-primario" disabled={enviandoAgente} onClick={encargarAgentes}>
+                {enviandoAgente ? "Encargando…" : "Hacer el pedido"}
+              </button>
+              {avisoAgente ? <p className="of-aviso">{avisoAgente}</p> : null}
+            </aside>
+            </div>
+          </section>
+        ) : (
+        <div className="cmd-mando">
         <header className="cmd-frente">
           <div className="cmd-marca">
             <span className="cmd-lampara" aria-hidden="true" />
             <div>
               <p className="cmd-kicker">ПУЛЬТ · ASLI</p>
-              <h1 className="cmd-titulo">{vista === "pedido" ? "Centro de mando" : "Oficina de agentes"}</h1>
+              <h1 className="cmd-titulo">Creador de contenido</h1>
             </div>
           </div>
           <p className="cmd-serie">ЭВМ-186 · CURICÓ</p>
         </header>
-
-        {vista === "pedido" ? (
+        <div className="cmd-mando-cuerpo">
         <div className="cmd-rejilla">
           <section className="cmd-pantalla" aria-label="Pedido">
             <div className="cmd-cuerpo">
@@ -405,78 +685,8 @@ export function CentroDeMandoContent() {
             </div>
           </aside>
         </div>
-        ) : (
-          <section className="cmd-pantalla" aria-label="Oficina de agentes">
-            <div className="cmd-cuerpo">
-              <div className="cmd-oficina-barra">
-                <label className="cmd-campo">
-                  Buscar agente
-                  <input
-                    type="text"
-                    value={busca}
-                    onChange={(e) => setBusca(e.target.value)}
-                    placeholder="seo, cfo, cereza, copy…"
-                  />
-                </label>
-                <a className="cmd-enlace" href="http://127.0.0.1:4317" target="_blank" rel="noreferrer">
-                  Abrir la oficina en vivo
-                </a>
-              </div>
-              <div className="cmd-formatos">
-                <button
-                  type="button"
-                  className="cmd-tecla"
-                  aria-pressed={sala === "todas"}
-                  onClick={() => setSala("todas")}
-                >
-                  Todas · {oficina.agentes.length}
-                </button>
-                {oficina.departamentos.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className="cmd-tecla"
-                    aria-pressed={sala === d.id}
-                    onClick={() => setSala(d.id)}
-                  >
-                    {d.nombre}
-                  </button>
-                ))}
-              </div>
-              <div className="cmd-planta">
-                <ul className="cmd-escritorios">
-                  {visibles.map((a) => (
-                    <li key={a.nombre}>
-                      <button
-                        type="button"
-                        className={ficha === a.nombre ? "cmd-escritorio cmd-escritorio-activo" : "cmd-escritorio"}
-                        onClick={() => setFicha(a.nombre)}
-                      >
-                        <span>{a.titulo}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <aside className="cmd-ficha-agente">
-                  {elegido ? (
-                    <>
-                      <p className="cmd-cuando">
-                        {oficina.departamentos.find((d) => d.id === elegido.departamento)?.nombre}
-                      </p>
-                      <h2>{elegido.titulo}</h2>
-                      <p>{elegido.resumen}</p>
-                    </>
-                  ) : (
-                    <p className="cmd-vacio">
-                      {visibles.length === 0
-                        ? "Ningún agente coincide con la búsqueda."
-                        : "Elige un escritorio para ver qué hace."}
-                    </p>
-                  )}
-                </aside>
-              </div>
-            </div>
-          </section>
+        </div>
+        </div>
         )}
       </div>
     </main>
