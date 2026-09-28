@@ -25,6 +25,8 @@ type Operacion = {
   tramo: string | null;
   tipo_reserva_transporte: string | null;
   transporte_deleted_at: string;
+  /** De qué tabla viene: la operación (ASLI) o `transportes_reservas_ext`. */
+  origen: "asli" | "ext";
 };
 
 export function PapeleraTransportesContent() {
@@ -67,13 +69,44 @@ export function PapeleraTransportesContent() {
     }
     q = aplicarFiltroTemporada(q, temporadaActiva);
 
-    const { data, error } = await q.order("transporte_deleted_at", { ascending: false });
-
-    if (error) {
-      if (process.env.NODE_ENV === "development") console.error("Error loading papelera transportes:", error);
-    } else {
-      setOperaciones(data || []);
+    /* Las reservas externas viven en su propia tabla y no tienen temporada:
+       se listan todas las que están en la papelera. */
+    let qExt = supabase
+      .from("transportes_reservas_ext")
+      .select("id, cliente, naviera, nave, booking, transporte, chofer, contenedor, tramo, deleted_at")
+      .not("deleted_at", "is", null);
+    if (empresaNombres.length > 0) {
+      qExt = qExt.in("cliente", empresaNombres);
     }
+
+    const [{ data, error }, ext] = await Promise.all([
+      q.order("transporte_deleted_at", { ascending: false }),
+      qExt.order("deleted_at", { ascending: false }),
+    ]);
+
+    if (error || ext.error) {
+      if (process.env.NODE_ENV === "development") console.error("Error loading papelera transportes:", error ?? ext.error);
+    }
+    const asli: Operacion[] = (data ?? []).map((o) => ({ ...(o as Omit<Operacion, "origen">), origen: "asli" as const }));
+    const externas: Operacion[] = (ext.data ?? []).map((r) => ({
+      id: r.id as string,
+      correlativo: null,
+      ref_asli: null,
+      cliente: r.cliente as string | null,
+      naviera: r.naviera as string | null,
+      nave: r.nave as string | null,
+      booking: r.booking as string | null,
+      transporte: r.transporte as string | null,
+      chofer: r.chofer as string | null,
+      contenedor: r.contenedor as string | null,
+      tramo: r.tramo as string | null,
+      tipo_reserva_transporte: "externa",
+      transporte_deleted_at: r.deleted_at as string,
+      origen: "ext" as const,
+    }));
+    setOperaciones(
+      [...asli, ...externas].sort((a, b) => b.transporte_deleted_at.localeCompare(a.transporte_deleted_at)),
+    );
     setLoading(false);
   }, [supabase, authLoading, temporadaLoading, temporadaActiva, isCliente, empresaNombres]);
 
@@ -102,13 +135,21 @@ export function PapeleraTransportesContent() {
     setSelectedIds(s);
   };
 
+  /* Cada fila vuelve a (o sale de) su propia tabla. */
+  const separar = (ids: string[]) => {
+    const ext = new Set(operaciones.filter((o) => o.origen === "ext").map((o) => o.id));
+    return { asli: ids.filter((id) => !ext.has(id)), ext: ids.filter((id) => ext.has(id)) };
+  };
+
   const handleRestore = async (ids: string[]) => {
     if (!supabase || ids.length === 0) return;
     setActionLoading(true);
-    const { error } = await supabase
-      .from("operaciones")
-      .update({ transporte_deleted_at: null })
-      .in("id", ids);
+    const { asli, ext } = separar(ids);
+    const [r1, r2] = await Promise.all([
+      asli.length ? supabase.from("operaciones").update({ transporte_deleted_at: null }).in("id", asli) : null,
+      ext.length ? supabase.from("transportes_reservas_ext").update({ deleted_at: null }).in("id", ext) : null,
+    ]);
+    const error = r1?.error ?? r2?.error;
     if (error) {
       sileo.error({ title: tr.errorRestoring });
     } else {
@@ -159,7 +200,13 @@ export function PapeleraTransportesContent() {
       observaciones: null,
     };
 
-    const { error } = await supabase.from("operaciones").update(cleared).in("id", ids);
+    const { asli, ext } = separar(ids);
+    const [r1, r2] = await Promise.all([
+      asli.length ? supabase.from("operaciones").update(cleared).in("id", asli) : null,
+      // Una reserva externa no tiene operación que limpiar: se borra la fila.
+      ext.length ? supabase.from("transportes_reservas_ext").delete().in("id", ext) : null,
+    ]);
+    const error = r1?.error ?? r2?.error;
 
     if (error) {
       sileo.error({ title: tr.errorDeleting });

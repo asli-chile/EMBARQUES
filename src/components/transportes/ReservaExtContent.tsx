@@ -331,7 +331,7 @@ export function ReservaExtContent() {
     setLoading(true);
 
     const [reservasRes, empresasRes, tramosRes, navierasRes, navesRes, destinosRes, plantasRes, depositosRes] = await Promise.all([
-      supabase.from("transportes_reservas_ext").select("*").order("created_at", { ascending: false }),
+      supabase.from("transportes_reservas_ext").select("*").is("deleted_at", null).order("created_at", { ascending: false }),
       supabase.from("transportes_empresas").select("id, nombre, rut").order("nombre"),
       supabase.from("transportes_tramos").select("id, origen, destino, valor, moneda, activo").eq("activo", true).order("origen"),
       supabase.from("navieras").select("id, nombre").order("nombre"),
@@ -967,14 +967,17 @@ export function ReservaExtContent() {
 
   const handleDelete = async (id: string) => {
     if (!supabase) return;
+    // A la papelera, no un DELETE: desde ahí se restaura o se borra del todo.
     const { error: err } = await supabase
       .from("transportes_reservas_ext")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id);
     if (err) {
       setError(err.message);
+      setConfirmDelete(null);
       return;
     }
+    sileo.success({ title: tf.extEnviadaPapelera });
     // Si era la abierta, sale de la lista y la ficha se repliega sola.
     setReservas((prev) => prev.filter((r) => r.id !== id));
     setConfirmDelete(null);
@@ -1504,11 +1507,21 @@ export function ReservaExtContent() {
             activo={estadoFiltro}
             onIndicador={setEstadoFiltro}
             acciones={
+              <>
+              <a
+                href={withBase("/transportes/papelera")}
+                className="dash-control rounded-lg p-2 text-dash-muted hover:text-dash-fg"
+                title={tf.asliPapelera}
+                aria-label={tf.asliPapelera}
+              >
+                <Icon icon="lucide:trash-2" width={14} height={14} />
+              </a>
               <button type="button" onClick={handleNewReserva} className="dash-cta inline-flex items-center gap-1.5 px-3 py-2 text-sm">
                 <Icon icon="lucide:plus" width={13} height={13} />
                 <span className="hidden sm:inline">{tr.newReserva}</span>
                 <span className="sm:hidden">{tr.newReservaMobile}</span>
               </button>
+              </>
             }
           />
           <BarraFiltrosTransporte
@@ -1680,7 +1693,7 @@ export function ReservaExtContent() {
             variant="danger"
             title={tf.extEliminarTitulo}
             message={tf.extEliminarMensaje}
-            confirmLabel={tr.deleteBtn}
+            confirmLabel={tf.extEnviarPapelera}
             cancelLabel={tf.cancelar}
             onConfirm={() => void handleDelete(confirmDelete)}
             onCancel={() => setConfirmDelete(null)}

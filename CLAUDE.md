@@ -361,6 +361,9 @@ campo) ordenado como recorrido de pasos. Las fechas van con
 toma el idioma del sistema operativo y mostraba `MM/DD/YYYY` con AM/PM.
 Al guardar una reserva, RUT, teléfono y remolque se copian al catálogo del
 chofer y del camión (`src/lib/transportes/catalogo.ts`).
+Eliminar nunca borra: ASLI marca `operaciones.transporte_deleted_at` y
+Externa marca `transportes_reservas_ext.deleted_at`; la papelera de
+transportes muestra las dos, y solo "Eliminar definitivamente" hace el DELETE.
 
 En Mis Reservas la ficha se **edita en el lugar** para `superadmin`, `admin` y
 `ejecutivo` (este último solo ve —y RLS solo le deja escribir— las reservas de
