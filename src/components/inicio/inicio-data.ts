@@ -260,7 +260,7 @@ export const kpiConfig = [
     descKey: "kpiCompletedDesc" as const,
     dataKey: "operacionesCompletadas" as const,
     icon: "lucide:check-circle-2",
-    accent: "rose" as const,
+    accent: "teal" as const,
   },
 ] as const;
 

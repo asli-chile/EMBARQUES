@@ -613,6 +613,7 @@
 .inicio-kpi-card--violet { --inicio-kpi-accent: #8b5cf6; }
 .inicio-kpi-card--emerald { --inicio-kpi-accent: #10b981; }
 .inicio-kpi-card--rose { --inicio-kpi-accent: #f43f5e; }
+.inicio-kpi-card--teal { --inicio-kpi-accent: #14b8a6; }
 
 .inicio-kpi-icon {
   display: flex;

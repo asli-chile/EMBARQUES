@@ -278,7 +278,14 @@ export function NavitrackContent() {
           .not("nave", "is", null)
           .or("estado_operacion.is.null,estado_operacion.neq.CANCELADA")
           .or(`eta.gte.${desde},eta.is.null`);
-        if (empresasAcotadas) q = q.in("cliente", empresasAcotadas);
+        if (empresasAcotadas) {
+          q = q.in("cliente", empresasAcotadas);
+        } else {
+          /* Vista interna (staff): ASLI es un perfil de demostración con
+             temporada propia y no debe mezclarse con la flota real. Quien
+             entra como ASLI sí la ve, porque cae en la rama de arriba. */
+          q = q.neq("temporada", "asli");
+        }
         return q.order("eta", { ascending: true }).limit(500);
       })(),
       supabase.from("naves").select("nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(5000),
