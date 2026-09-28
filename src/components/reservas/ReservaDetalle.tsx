@@ -99,6 +99,7 @@ const GRUPOS: Grupo[] = [
       { key: "tipo_atmosfera", labelKey: "colAtmosphereType" },
       { key: "tratamiento_frio_o2", labelKey: "colO2", formato: "numero", entero: true },
       { key: "tratamiento_frio_co2", labelKey: "colCO2", formato: "numero", entero: true },
+      { key: "tratamiento_cuarentenario", labelKey: "colQuarantine" },
       { key: "pallets", labelKey: "colPallets", formato: "numero", entero: true },
       { key: "peso_bruto", labelKey: "colGrossWeight", formato: "numero" },
       { key: "peso_neto", labelKey: "colNetWeight", formato: "numero" },

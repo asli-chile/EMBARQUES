@@ -15,7 +15,18 @@ import { saveDestinoToCatalog } from "@/lib/destinos-service";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { isClienteNombrePermitido } from "@/lib/auth/operacionesClienteScope";
 import { filterRowsByNombreVisible } from "@/lib/clientesOcultos";
-import { format, parse, differenceInDays } from "date-fns";
+import {
+  addDays,
+  addWeeks,
+  differenceInDays,
+  format,
+  getISOWeek,
+  getISOWeekYear,
+  parse,
+  setISOWeek,
+  startOfISOWeek,
+} from "date-fns";
+import { es } from "date-fns/locale";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import {
   STACKING_DRAFTS_STORAGE_KEY,
@@ -260,6 +271,12 @@ type FormData = {
   tratamiento_frio_o2: string;
   tratamiento_frio_co2: string;
   tipo_atmosfera: string;
+  /** Tratamiento de frío cuarentenario: "SI" | "NO" | "" (no informado). */
+  tratamiento_cuarentenario: string;
+  /** Pallets estimados (solicitud del cliente). */
+  pallets: string;
+  /** Semana de embarque elegida por el cliente, como "2026-W40". */
+  semana: string;
   tipo_unidad: string;
   naviera: string;
   nave: string;
@@ -302,6 +319,9 @@ const initialFormData: FormData = {
   tratamiento_frio_o2: "",
   tratamiento_frio_co2: "",
   tipo_atmosfera: "",
+  tratamiento_cuarentenario: "",
+  pallets: "",
+  semana: "",
   tipo_unidad: "40RF",
   naviera: "",
   nave: "",
@@ -355,6 +375,38 @@ const SECTION_ORDER: SectionKey[] = [
   "deposito",
   "observaciones",
 ];
+
+/**
+ * Semanas que el cliente puede elegir: de la actual a 20 semanas adelante,
+ * con su rango de fechas para que no haya duda de cuál es.
+ */
+function semanasEmbarque(etiqueta: string): { value: string; label: string }[] {
+  const hoy = new Date();
+  return Array.from({ length: 21 }, (_, i) => {
+    const lunes = startOfISOWeek(addWeeks(hoy, i));
+    const domingo = addDays(lunes, 6);
+    const n = getISOWeek(lunes);
+    return {
+      value: `${getISOWeekYear(lunes)}-W${n}`,
+      label: `${etiqueta} ${n} · ${format(lunes, "d MMM", { locale: es })} – ${format(domingo, "d MMM yyyy", { locale: es })}`,
+    };
+  });
+}
+
+/** "2026-W40" → 40 (lo que guarda `operaciones.semana`). */
+function semanaNumero(v: string): number | null {
+  const m = /-W(\d{1,2})$/.exec(v);
+  return m ? Number(m[1]) : null;
+}
+
+/** "2026-W40" → "Semana 40 · 28 sep – 4 oct 2026". */
+function semanaLabel(v: string, etiqueta: string): string {
+  const m = /^(\d{4})-W(\d{1,2})$/.exec(v);
+  if (!m) return "";
+  const lunes = startOfISOWeek(setISOWeek(new Date(Number(m[1]), 5, 1), Number(m[2])));
+  const domingo = addDays(lunes, 6);
+  return `${etiqueta} ${m[2]} · ${format(lunes, "d MMM", { locale: es })} – ${format(domingo, "d MMM yyyy", { locale: es })}`;
+}
 
 function FieldGrid({ children }: { children: ReactNode }) {
   return (
@@ -974,15 +1026,19 @@ export function CrearReservaContent() {
         formData.ejecutivo &&
         formData.cliente
       ),
-      comercial: Boolean(
-        formData.incoterm &&
-        formData.forma_pago
-      ),
+      // El cliente no siempre sabe el incoterm ni la cláusula de venta, pero sí
+      // a quién le vende: el consignatario es lo que se le exige.
+      comercial: isCliente
+        ? Boolean(formData.consignatario)
+        : Boolean(formData.incoterm && formData.forma_pago),
       carga: Boolean(
         formData.especie &&
-        formData.tipo_unidad
+        formData.tipo_unidad &&
+        (!isCliente || formData.temperatura.trim())
       ),
-      naviera: Boolean(
+      // La nave y el viaje los propone ASLI: al cliente se le pide destino y
+      // semana, no una fecha exacta que todavía no conoce.
+      naviera: isCliente ? Boolean(formData.pod && formData.semana) : Boolean(
         formData.naviera &&
         (formData.nave || naveInput.trim()) &&
         formData.viaje &&
@@ -1358,6 +1414,14 @@ export function CrearReservaContent() {
           ? parseInt(formData.tratamiento_frio_co2, 10)
           : null,
       tipo_atmosfera: formData.tratamiento_frio === "SI" ? formData.tipo_atmosfera || null : null,
+      tratamiento_cuarentenario: formData.tratamiento_cuarentenario || null,
+      pallets: (() => {
+        const n = parseInt(formData.pallets, 10);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })(),
+      // Solo el número: la columna no lleva año. La semana que elige el
+      // cliente es siempre próxima, así que no hay ambigüedad en la práctica.
+      semana: semanaNumero(formData.semana),
       tipo_unidad: formData.tipo_unidad || null,
       naviera: formData.naviera
         ? navieras.find((n) => n.id === formData.naviera)?.nombre
@@ -1541,6 +1605,8 @@ export function CrearReservaContent() {
       ["O2",             pct(p.tratamiento_frio_o2)],
       ["CO2",            pct(p.tratamiento_frio_co2)],
       ["Atmosfera",      val(p.tipo_atmosfera)],
+      ["Trat. cuarentenario", val(p.tratamiento_cuarentenario)],
+      ["Pallets estimados",   val(p.pallets)],
     ]);
     const naviera = makeSection("Naviera / Viaje", [
       ["Naviera",   val(p.naviera)],
@@ -1548,6 +1614,7 @@ export function CrearReservaContent() {
       ["Viaje",     val(p.viaje)],
       ["POL",       val(p.pol)],
       ["POD",       val(p.pod)],
+      ["Semana de embarque", val(p.semana)],
       ["ETD",       fmtDate(p.etd)],
       ["ETA",       fmtDate(p.eta)],
       ["Transito",  dias(p.tt)],
@@ -1662,6 +1729,7 @@ export function CrearReservaContent() {
       { header: "Depósito",          value: val(p.deposito) },
       { header: "ETD",               value: fmtDate(p.etd) },
       { header: "ETA",               value: fmtDate(p.eta) },
+      { header: "Semana",            value: val(p.semana) },
       { header: "Especie",           value: val(p.especie) },
       { header: "Tipo Unidad",       value: val(p.tipo_unidad) },
       { header: "T°",                value: val(p.temperatura) },
@@ -1670,6 +1738,8 @@ export function CrearReservaContent() {
       { header: "Atmósfera",         value: val(p.tipo_atmosfera) },
       { header: "O2 %",              value: val(p.tratamiento_frio_o2) },
       { header: "CO2 %",             value: val(p.tratamiento_frio_co2) },
+      { header: "Trat. cuarentenario", value: val(p.tratamiento_cuarentenario) },
+      { header: "Pallets",           value: val(p.pallets) },
       { header: "Planta",            value: val(p.planta_presentacion) },
       { header: "Citación",          value: fmtDt(p.citacion) },
       { header: "Inicio Stacking",   value: fmtDt(p.inicio_stacking) },
@@ -2109,6 +2179,8 @@ export function CrearReservaContent() {
           ...(formData.tratamiento_frio === "SI" && formData.tipo_atmosfera ? [{ label: tr.tipoAtmosfera, value: formData.tipo_atmosfera }] : []),
           ...(formData.tratamiento_frio === "SI" && formData.tratamiento_frio_o2 ? [{ label: tr.o2, value: `${formData.tratamiento_frio_o2}%` }] : []),
           ...(formData.tratamiento_frio === "SI" && formData.tratamiento_frio_co2 ? [{ label: tr.co2, value: `${formData.tratamiento_frio_co2}%` }] : []),
+          ...(formData.tratamiento_cuarentenario ? [{ label: tr.tratamientoCuarentenario, value: formData.tratamiento_cuarentenario === "SI" ? tr.si : tr.no }] : []),
+          ...(formData.pallets ? [{ label: tr.palletsEstimados, value: formData.pallets }] : []),
         ],
       },
       {
@@ -2116,9 +2188,13 @@ export function CrearReservaContent() {
         title: isAereo ? tr.sectionAerolinea : tr.sectionNaviera,
         cols: 4,
         items: [
-          { label: isAereo ? tr.aerolinea : tr.naviera, value: navieraNombre },
-          { label: isAereo ? tr.naveAerea : tr.nave, value: naveNombre },
-          { label: isAereo ? tr.numeroVuelo : tr.viaje, value: formData.viaje },
+          { label: isCliente ? tr.navieraPreferencia : isAereo ? tr.aerolinea : tr.naviera, value: navieraNombre },
+          ...(isCliente
+            ? [{ label: tr.semanaEmbarque, value: semanaLabel(formData.semana, tr.semana) || "—" }]
+            : [
+                { label: isAereo ? tr.naveAerea : tr.nave, value: naveNombre },
+                { label: isAereo ? tr.numeroVuelo : tr.viaje, value: formData.viaje },
+              ]),
           ...(formData.booking ? [{ label: tr.booking, value: formData.booking }] : []),
           ...(transitTime !== null ? [{ label: "TT", value: `${transitTime} días` }] : []),
         ],
@@ -2264,8 +2340,14 @@ export function CrearReservaContent() {
                   </div>
                 </div>
 
-                {(formData.etd || formData.eta || transitTime !== null) && (
+                {(formData.etd || formData.eta || transitTime !== null || formData.semana) && (
                   <div className="mt-3.5 flex items-center gap-5 border-t border-white/15 pt-3.5">
+                    {!formData.etd && formData.semana && (
+                      <div>
+                        <p className="text-sm font-semibold text-white/70">{tr.semanaEmbarque}</p>
+                        <p className="mt-1 text-lg font-bold text-white">{semanaLabel(formData.semana, tr.semana)}</p>
+                      </div>
+                    )}
                     {formData.etd && (
                       <div>
                         <p className="text-sm font-semibold text-white/70">ETD</p>
@@ -2448,7 +2530,7 @@ export function CrearReservaContent() {
     general: tr.sectionGeneralDesc,
     comercial: tr.sectionComercialDesc,
     carga: tr.sectionCargaDesc,
-    naviera: isAereo ? tr.sectionAerolineaDesc : tr.sectionNavieraDesc,
+    naviera: isCliente ? tr.sectionNavieraDescCliente : isAereo ? tr.sectionAerolineaDesc : tr.sectionNavieraDesc,
     planta: tr.sectionPlantaDesc,
     deposito: tr.sectionDepositoDesc,
     observaciones: tr.sectionObservacionesDesc,
@@ -2458,7 +2540,7 @@ export function CrearReservaContent() {
     general: tr.stepHintGeneral,
     comercial: tr.stepHintComercial,
     carga: tr.stepHintCarga,
-    naviera: isAereo ? tr.stepHintAerolinea : tr.stepHintNaviera,
+    naviera: isCliente ? tr.stepHintNavieraCliente : isAereo ? tr.stepHintAerolinea : tr.stepHintNaviera,
     planta: tr.stepHintPlanta,
     deposito: tr.stepHintDeposito,
     observaciones: tr.stepHintObservaciones,
@@ -2642,7 +2724,7 @@ export function CrearReservaContent() {
               {
                 name: "incoterm" as const,
                 label: tr.incoterm,
-                required: true,
+                required: !isCliente,
                 icon: "lucide:globe",
                 placeholder: tr.selectIncoterm,
                 help: tr.helpIncoterm,
@@ -2654,7 +2736,7 @@ export function CrearReservaContent() {
               {
                 name: "forma_pago" as const,
                 label: tr.formaPago,
-                required: true,
+                required: !isCliente,
                 icon: "lucide:credit-card",
                 placeholder: tr.selectFormaPago,
                 help: tr.helpFormaPago,
@@ -2666,7 +2748,7 @@ export function CrearReservaContent() {
               {
                 name: "consignatario" as const,
                 label: tr.consignatario,
-                required: false,
+                required: isCliente,
                 icon: "lucide:building-2",
                 placeholder: tr.selectConsignatario,
                 help: tr.helpConsignatario,
@@ -2737,7 +2819,7 @@ export function CrearReservaContent() {
           />
           {renderCatalogoSelect("tipo_unidad", "tipo_unidad", tr.tipoUnidad, true, true, "lucide:box")}
           <div className="min-w-0">
-            <label htmlFor="temperatura" className={labelClass}>{tr.temperatura}</label>
+            <label htmlFor="temperatura" className={labelClass}>{tr.temperatura}{isCliente && reqMark}</label>
             <div className="relative">
               <Icon
                 icon="lucide:thermometer"
@@ -2789,7 +2871,7 @@ export function CrearReservaContent() {
             </div>
           </div>
           <div className="min-w-0 sm:col-span-2">
-            <p className={labelClass}>{tr.tratamientoFrio}</p>
+            <p className={labelClass}>{isCliente ? tr.atmosferaControlada : tr.tratamientoFrio}</p>
             <div className="grid gap-2.5 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-stretch">
               <div className="flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3 py-2">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dash-neon/35 bg-dash-neon/10 text-dash-neon">
@@ -2816,7 +2898,13 @@ export function CrearReservaContent() {
                                 tratamiento_frio_co2: "",
                               };
                             }
-                            return { ...prev, tratamiento_frio: "SI" };
+                            // El cliente no elige el tipo: marcar sí es pedir
+                            // atmósfera controlada, como en las operaciones ya
+                            // cargadas. La ventilación va en 0, igual que al
+                            // elegir un tipo de atmósfera.
+                            return isCliente
+                              ? { ...prev, tratamiento_frio: "SI", tipo_atmosfera: "CONTROLADA", ventilacion: "0" }
+                              : { ...prev, tratamiento_frio: "SI" };
                           });
                         }}
                         className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors ${
@@ -2834,8 +2922,8 @@ export function CrearReservaContent() {
               <div className="flex items-center gap-3 rounded-xl border border-dash-border bg-dash-control px-3.5 py-2.5">
                 <Icon icon="lucide:info" width={28} height={28} className="shrink-0 self-center text-dash-neon" />
                 <div className="min-w-0 flex-1 self-center">
-                  <p className="text-sm font-bold text-dash-fg">{tr.tratamientoFrioWhatTitle}</p>
-                  <p className="mt-0.5 text-sm leading-snug text-dash-muted">{tr.tratamientoFrioWhatBody}</p>
+                  <p className="text-sm font-bold text-dash-fg">{isCliente ? tr.atmosferaControlada : tr.tratamientoFrioWhatTitle}</p>
+                  <p className="mt-0.5 text-sm leading-snug text-dash-muted">{isCliente ? tr.atmosferaControladaHint : tr.tratamientoFrioWhatBody}</p>
                 </div>
               </div>
             </div>
@@ -2843,7 +2931,7 @@ export function CrearReservaContent() {
         </div>
         {formData.tratamiento_frio === "SI" ? (
           <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-            {renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera, false, true, "lucide:cloud")}
+            {!isCliente && renderCatalogoSelect("tipo_atmosfera", "tipo_atmosfera", tr.tipoAtmosfera, false, true, "lucide:cloud")}
             <div className="min-w-0">
               <label htmlFor="tratamiento_frio_o2" className={labelClass}>{tr.o2}</label>
               <input
@@ -2878,9 +2966,144 @@ export function CrearReservaContent() {
             </div>
           </div>
         ) : null}
+        {isCliente && (
+          <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="min-w-0 sm:col-span-2">
+              <p className={labelClass}>{tr.tratamientoCuarentenario}</p>
+              <div className="grid grid-cols-3 gap-2 sm:max-w-md">
+                {([
+                  { value: "SI", label: tr.si },
+                  { value: "NO", label: tr.no },
+                  { value: "", label: tr.noInformado },
+                ] as const).map((opt) => {
+                  const selected = formData.tratamiento_cuarentenario === opt.value;
+                  return (
+                    <button
+                      key={opt.value || "ns"}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setFormData((prev) => ({ ...prev, tratamiento_cuarentenario: opt.value }))}
+                      className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors ${
+                        selected
+                          ? "border-dash-neon/60 bg-dash-neon text-[#041018]"
+                          : "border-dash-border bg-dash-control text-dash-fg hover:border-dash-neon/40"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.tratamientoCuarentenarioHint}</p>
+            </div>
+            <div className="min-w-0">
+              <label htmlFor="pallets" className={labelClass}>{tr.palletsEstimados}</label>
+              <div className="relative">
+                <Icon
+                  icon="lucide:layers"
+                  width={22}
+                  height={22}
+                  className="pointer-events-none absolute left-3.5 top-1/2 z-[1] -translate-y-1/2 text-dash-neon"
+                />
+                <input
+                  id="pallets"
+                  name="pallets"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  value={formData.pallets}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, pallets: e.target.value }))}
+                  className={`${inputClass} pl-12`}
+                />
+              </div>
+              <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPalletsEstimados}</p>
+            </div>
+          </div>
+        )}
       </div>
     ),
-    naviera: (
+    naviera: isCliente ? (
+      <div className="flex min-h-0 flex-col gap-4">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
+          <div className="min-w-0">
+            <ComboboxInput
+              neon
+              id="pod"
+              icon="lucide:map-pin"
+              label={tr.pod}
+              labelExtra={reqMark}
+              labelClass={labelClass}
+              inputClass={inputClass}
+              value={podInput}
+              options={destinos}
+              onSelect={(opt) => {
+                setPodInput(opt.nombre);
+                setFormData((prev) => ({ ...prev, pod: opt.id }));
+              }}
+              onChange={(val) => {
+                setPodInput(val);
+                setFormData((prev) => ({ ...prev, pod: "" }));
+              }}
+              placeholder={tr.searchDestino}
+              disabled={loadingCatalogos}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPod}</p>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="semana" className={labelClass}>{tr.semanaEmbarque}{reqMark}</label>
+            <FormSelect
+              variant="neon"
+              id="semana"
+              name="semana"
+              icon="lucide:calendar-range"
+              value={formData.semana}
+              placeholder={tr.selectSemana}
+              options={semanasEmbarque(tr.semana)}
+              onChange={(value) => setFormData((prev) => ({ ...prev, semana: value }))}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpSemanaEmbarque}</p>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="naviera" className={labelClass}>{isAereo ? tr.aerolinea : tr.navieraPreferencia}</label>
+            <FormSelect
+              variant="neon"
+              id="naviera"
+              name="naviera"
+              icon={isAereo ? "lucide:plane" : "lucide:building-2"}
+              value={formData.naviera}
+              placeholder={tr.selectPlaceholder}
+              disabled={loadingCatalogos}
+              options={carriersFiltered.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+              onChange={(value) => setFormData((prev) => ({ ...prev, naviera: value, nave: "", viaje: "" }))}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpNavieraPreferencia}</p>
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="pol" className={labelClass}>{tr.polPreferencia}</label>
+            <FormSelect
+              variant="neon"
+              id="pol"
+              name="pol"
+              icon="lucide:map-pin"
+              value={formData.pol}
+              placeholder={tr.selectPlaceholder}
+              disabled={loadingCatalogos}
+              options={puertosOrigen.map((opt) => ({ value: opt.id, label: opt.nombre }))}
+              onChange={(value) => setFormData((prev) => ({ ...prev, pol: value }))}
+            />
+            <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.helpPolCliente}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3.5 rounded-xl border border-dash-border bg-dash-control px-4 py-3.5">
+          <Icon icon="lucide:ship" width={32} height={32} className="shrink-0 self-center text-dash-neon" />
+          <div className="min-w-0 flex-1 self-center">
+            <p className="text-sm font-bold text-dash-neon">{tr.naveSugeridaTitulo}</p>
+            <p className="mt-0.5 text-sm leading-snug text-dash-muted sm:text-base">{tr.naveSugeridaBody}</p>
+          </div>
+        </div>
+      </div>
+    ) : (
       <div className="flex min-h-0 flex-col gap-4">
         <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
           {isAereo ? (

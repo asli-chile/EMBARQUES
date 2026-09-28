@@ -377,6 +377,20 @@ nave, POL, POD, especie, depósito, planta, consignatario, transporte,
 ejecutivo y los de `catalogos`) se eligen de la misma lista que en Crear
 Reserva: `TABLAS_OPCIONES` y `CATEGORIAS_OPCIONES` en `ReservaDetalle.tsx`.
 
+## Solicitar reserva (cliente)
+
+Es Crear Reserva con `isCliente`: se le pide **solo lo que el cliente sabe**.
+Obligatorios: tipo de operación, consignatario, especie, unidad, temperatura,
+POD, semana de embarque y planta (o "por informar"). Incoterm, forma de pago,
+naviera ("de preferencia"), POL, citación y pallets son opcionales. **No se le
+muestran** nave, viaje, booking, ETD/ETA ni depósito: la nave la propone ASLI.
+
+- La semana se guarda en `operaciones.semana` (solo el número). **No se
+  inventa un ETD** a partir de ella: lo pone el equipo al asignar la nave.
+- `tratamiento_frio = SI` es en la práctica **atmósfera controlada** (abre
+  O₂/CO₂); al cliente se le rotula así. El tratamiento de frío cuarentenario
+  es otra columna: `tratamiento_cuarentenario`.
+
 ## Módulo de Transportes
 
 ### Flujo completo
@@ -605,7 +619,7 @@ supabase/migrations/20260830000001_dashboard_resumen_rpc.sql
 
 Crea la función `public.dashboard_resumen(p_temporada, p_empresas)`, que devuelve en un solo JSON todos los agregados del dashboard (KPIs, estados, próximos zarpes, top clientes/navieras/especies, conteo por puerto, vía marítima/aérea y zarpes por semana), más los índices de `etd`, `corte_documental` y `fin_stacking` que sostienen sus filtros de fecha.
 
-Es `SECURITY INVOKER`: las políticas RLS de `operaciones` siguen aplicando al usuario que llama, y los parámetros solo replican los filtros que el frontend ya hacía. **Mientras no se aplique, el dashboard sigue calculando los agregados en el navegador**; el cambio de `DashboardContent.tsx` para consumir la función queda pendiente de verificar la migración contra la base.
+Es `SECURITY INVOKER`: las políticas RLS de `operaciones` siguen aplicando al usuario que llama, y los parámetros solo replican los filtros que el frontend ya hacía. **Ya está aplicada** (verificada el 28-09-2026, ver bitácora); lo pendiente es el código: `DashboardContent.tsx` todavía calcula los agregados en el navegador y no consume la función.
 
 Dueño de reserva:
 
