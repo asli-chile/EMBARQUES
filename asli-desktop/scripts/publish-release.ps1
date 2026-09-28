@@ -1,6 +1,6 @@
 # Publica un release del shell desktop con artefactos de auto-update.
 # Uso (desde asli-desktop/):
-#   $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "<password>"
+#   (la password se lee de keys/asli-desktop.password, o de $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD)
 #   .\scripts\publish-release.ps1
 # Requiere: gh autenticado, keys/asli-desktop.key, npm/tauri.
 
@@ -21,8 +21,12 @@ Write-Host "Version: $version  Tag: $tag"
 
 $key = Get-Content $keyPath -Raw
 $env:TAURI_SIGNING_PRIVATE_KEY = $key
+$passwordPath = Join-Path $root "keys\asli-desktop.password"
+if (-not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD -and (Test-Path $passwordPath)) {
+  $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = (Get-Content $passwordPath -Raw).Trim()
+}
 if (-not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
-  throw "Define TAURI_SIGNING_PRIVATE_KEY_PASSWORD en el entorno antes de publicar."
+  throw "Falta la password de la clave: define TAURI_SIGNING_PRIVATE_KEY_PASSWORD o crea $passwordPath."
 }
 Remove-Item Env:TAURI_SIGNING_PRIVATE_KEY_PATH -ErrorAction SilentlyContinue
 
@@ -69,9 +73,9 @@ $json = ($latestObj | ConvertTo-Json -Depth 6 -Compress)
 $notes = @"
 Shell de escritorio $version.
 
-Aviso de actualizacion con MessageBox de Windows (siempre visible).
-Corrige el boton que no respondia en 0.1.10.
-Al abrir, la ventana arranca maximizada.
+Instalador con el icono de ASLI.
+Al abrir muestra una pantalla de carga mientras revisa actualizaciones y luego entra al ERP.
+Firmado con una clave nueva: si tienes 0.1.14 o anterior, instala este .exe a mano una vez.
 "@
 
 Write-Host "Creando release $tag..."
