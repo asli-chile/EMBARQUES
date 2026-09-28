@@ -55,17 +55,15 @@ Salida típica:
 
 ### Firmar updates (obligatorio para auto-update)
 
-La clave privada está en `keys/asli-desktop.key` (gitignored). En la máquina de build:
+La clave privada está en `keys/asli-desktop.key` y su password en `keys/asli-desktop.password` (ambos gitignored). El script lee la password del archivo, así que publicar es solo:
 
 ```powershell
-$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content .\keys\asli-desktop.key -Raw
-$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "<password de la clave>"
-npm run build
-# o publicar release completo:
 .\scripts\publish-release.ps1
 ```
 
-Guarda un backup seguro de `asli-desktop.key` **y** su password. Si los pierdes, los usuarios con el `.exe` antiguo no podrán actualizar el shell.
+**Respaldo:** `C:\Users\rodri\OneDrive\Documentos\ASLI-respaldos\asli-desktop-firma\` (clave, password y LEEME). Si se pierden, las apps instaladas no pueden actualizarse solas y hay que reinstalar a mano en cada PC.
+
+Eso pasó el 28-09-2026: la password de la clave original se perdió (nunca quedó en un archivo) y se generó una nueva desde la 0.1.15. Quien tenga 0.1.14 o anterior debe instalar la 0.1.15 a mano una vez; la clave vieja quedó en `keys/old-hasta-0.1.14/`.
 
 Endpoint configurado:
 
