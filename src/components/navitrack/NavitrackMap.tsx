@@ -477,7 +477,13 @@ export function NavitrackMap({
               const m = e.target as { resize?: () => void };
               m.resize?.();
               applyBasemapColors();
+              // Al cargar, el mapa recién existe: el efecto de arriba corre antes
+              // y no lo alcanza. Aquí las etiquetas pasan al idioma de la app.
+              etiquetasEnIdioma(e.target as unknown as MapaEtiquetas, locale);
             }}
+            // Cada recarga del estilo (p. ej. al cambiar el tema) vuelve a
+            // traer las etiquetas en inglés.
+            onStyleData={(e) => etiquetasEnIdioma(e.target as unknown as MapaEtiquetas, locale)}
             onError={() => setMapError(true)}
           >
             {/* Tramo restante: guía tenue y punteada, no compite con lo ya navegado. */}
