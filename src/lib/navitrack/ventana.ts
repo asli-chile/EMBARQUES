@@ -25,6 +25,7 @@ import {
   parseOpDate,
 } from "@/components/navitrack/navitrack-model";
 import { ESTADO_META, normalizarEstado } from "@/lib/operaciones/estados";
+import { sinOperacionesDemo } from "@/lib/navitrack/demo";
 
 type Cliente = { from: (tabla: string) => any };
 
@@ -185,13 +186,16 @@ export function naveEnVentana(nombreCatalogo: unknown, v: Ventana): boolean {
 
 export async function calcularVentana(supabase: Cliente, ahora = new Date()): Promise<Ventana> {
   const [opsRes, tramosRes, ultimasRes, recaladasRes] = await Promise.all([
-    supabase
-      .from("operaciones")
-      .select("id, ref_asli, nave, pod, etd, eta, estado_operacion, arribo_confirmado")
-      .is("deleted_at", null)
-      .eq("arribo_confirmado", false)
-      .not("nave", "is", null)
-      .limit(2000),
+    // Sin las de demostración: sus tramos tampoco cuentan, porque la cadena
+    // de cada operación se busca desde esta lista.
+    sinOperacionesDemo(
+      supabase
+        .from("operaciones")
+        .select("id, ref_asli, nave, pod, etd, eta, estado_operacion, arribo_confirmado")
+        .is("deleted_at", null)
+        .eq("arribo_confirmado", false)
+        .not("nave", "is", null),
+    ).limit(2000),
     /*
      * Los tramos cuentan igual que la columna.
      *

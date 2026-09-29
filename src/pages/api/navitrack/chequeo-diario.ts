@@ -24,6 +24,7 @@ import {
   registrarZarpeReal,
   transbordosSinNave,
 } from "@/lib/navitrack/recaladas";
+import { esOperacionDemo, sinOperacionesDemo } from "@/lib/navitrack/demo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Naves que puede revisar una corrida. Freno ante una lista blanca inflada. */
@@ -496,14 +497,15 @@ export const GET: APIRoute = async ({ request, url }) => {
       .filter(([, vigente]) => Boolean(vigente && claveNaveLeida && vigente.startsWith(claveNaveLeida)))
       .map(([id]) => id);
     const { data: ops } = idsDeEstaNave.length
-      ? await supabase
-          .from("operaciones")
-          .select(
-            "id, ref_asli, contenedor, cliente, nave, naviera, pol, pod, etd, eta, estado_operacion, arribo_confirmado",
-          )
-          .in("id", idsDeEstaNave)
-          .is("deleted_at", null)
-          .limit(50)
+      ? await sinOperacionesDemo(
+          supabase
+            .from("operaciones")
+            .select(
+              "id, ref_asli, contenedor, cliente, nave, naviera, pol, pod, etd, eta, estado_operacion, arribo_confirmado",
+            )
+            .in("id", idsDeEstaNave)
+            .is("deleted_at", null),
+        ).limit(50)
       : { data: [] as never[] };
 
     /*
@@ -637,10 +639,10 @@ export const GET: APIRoute = async ({ request, url }) => {
   for (const t of await transbordosSinNave(supabase)) {
     const { data: o } = await supabase
       .from("operaciones")
-      .select("contenedor, ref_asli, arribo_confirmado, deleted_at")
+      .select("contenedor, ref_asli, cliente, arribo_confirmado, deleted_at")
       .eq("id", t.operacionId)
       .maybeSingle();
-    if (!o || o.deleted_at || o.arribo_confirmado) continue;
+    if (!o || o.deleted_at || o.arribo_confirmado || esOperacionDemo(o.cliente)) continue;
     faltaNave.push({
       puerto: t.puerto,
       naveAnterior: t.naveAnterior,
@@ -655,7 +657,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     const [{ data: conModo }, { data: conTramos }, { data: opsVentana }] = await Promise.all([
       supabase.from("navitrack_viajes").select("operacion_id").in("operacion_id", idsVentana),
       supabase.from("navitrack_tramos").select("operacion_id").in("operacion_id", idsVentana),
-      supabase.from("operaciones").select("id, ref_asli, contenedor, nave").in("id", idsVentana),
+      sinOperacionesDemo(supabase.from("operaciones").select("id, ref_asli, contenedor, nave").in("id", idsVentana)),
     ]);
     const definidos = new Set(
       [...(conModo ?? []), ...(conTramos ?? [])].map((r: { operacion_id: string }) => r.operacion_id),

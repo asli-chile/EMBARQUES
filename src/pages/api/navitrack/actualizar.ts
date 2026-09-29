@@ -25,6 +25,7 @@ import { cuerpoProveedor } from "@/components/navitrack/navitrack-model";
 import { correoActualizacionManual } from "@/components/navitrack/navitrack-correo";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
 import { sincronizarSeguimiento } from "@/lib/navitrack/seguimiento";
+import { sinOperacionesDemo } from "@/lib/navitrack/demo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 /** Tope duro de esta acción, pase lo que pase con la lista blanca. */
@@ -134,13 +135,14 @@ async function planificar(supabase: Sesion) {
       .eq("tracking_activo", true)
       .eq("activo", true)
       .limit(MAX_NAVES),
-    supabase
-      .from("operaciones")
-      .select("nave, pol, pod, etd, eta, arribo_confirmado")
-      .is("deleted_at", null)
-      .not("nave", "is", null)
-      .gte("eta", desde)
-      .limit(2000),
+    sinOperacionesDemo(
+      supabase
+        .from("operaciones")
+        .select("nave, pol, pod, etd, eta, arribo_confirmado")
+        .is("deleted_at", null)
+        .not("nave", "is", null)
+        .gte("eta", desde),
+    ).limit(2000),
     supabase.from("navitrack_ais_lecturas").select("id", { count: "exact", head: true }),
     /*
      * Cuándo se actualizó por última vez, y por qué vía.

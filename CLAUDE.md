@@ -297,6 +297,11 @@ Lo mínimo para no perder tiempo:
   ETA del AIS lleva hora.
 - La lógica pura (geodesia, etapa, alertas, timeline) vive en
   `navitrack-model.ts` y `navitrack-estado.ts`, sin React.
+- Las operaciones del **cliente ASLI son de demostración** y no se rastrean
+  ni se reportan: la ventana, la sincronía, el chequeo diario, la
+  actualización manual y el panel de rastreo leen `operaciones` a través de
+  `sinOperacionesDemo()` (`src/lib/navitrack/demo.ts`). Una consulta nueva que
+  decida a quién consultar o qué reportar tiene que pasar por ahí.
 
 ---
 

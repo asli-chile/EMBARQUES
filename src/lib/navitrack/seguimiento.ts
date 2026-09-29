@@ -29,6 +29,7 @@
 import { mismoPuerto } from "@/components/navitrack/navitrack-model";
 import { normalizarEstado, ESTADO_META } from "@/lib/operaciones/estados";
 import { crearTramoCerrado } from "@/lib/navitrack/ventana";
+import { sinOperacionesDemo } from "@/lib/navitrack/demo";
 
 type Cliente = {
   from: (tabla: string) => any;
@@ -81,10 +82,12 @@ export async function sincronizarSeguimiento(supabase: Cliente): Promise<Resulta
   const vacio: ResultadoSincronia = { traspasos: [], encendidas: [], apagadas: [], sinCatalogo: [] };
   const [tramosRes, opsRes, navesRes, recRes] = await Promise.all([
     supabase.from("navitrack_tramos").select("operacion_id, orden, nave, pod, eta").order("orden"),
-    supabase
-      .from("operaciones")
-      .select("id, ref_asli, contenedor, nave, estado_operacion, arribo_confirmado")
-      .is("deleted_at", null),
+    sinOperacionesDemo(
+      supabase
+        .from("operaciones")
+        .select("id, ref_asli, contenedor, nave, estado_operacion, arribo_confirmado")
+        .is("deleted_at", null),
+    ),
     supabase.from("naves").select("id, nombre, imo, mmsi, tracking_activo").eq("activo", true),
     /*
      * Puertos donde consta que el buque paró.

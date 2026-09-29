@@ -16,6 +16,7 @@ import { checkRateLimit } from "@/lib/auth/rateLimit";
 import { llegoAlPod } from "@/components/navitrack/navitrack-model";
 import { consultarSaldo, invalidarSaldo } from "@/lib/navitrack/saldo";
 import { calcularVentana, claveAis, naveEnVentana } from "@/lib/navitrack/ventana";
+import { sinOperacionesDemo } from "@/lib/navitrack/demo";
 
 const DATADOCKED_BASE = "https://datadocked.com/api/vessels_operations";
 const TTL_MIN = numeroDeEntorno(import.meta.env.NAVITRACK_AIS_TTL_MIN, 360);
@@ -131,13 +132,14 @@ export const GET: APIRoute = async ({ cookies }) => {
   const desde = new Date(Date.now() - VENTANA_DIAS * 86_400_000).toISOString().slice(0, 10);
 
   const [opsRes, navesRes, transRes, lecturasRes, gasto, ventana, saldo] = await Promise.all([
-    supabase
-      .from("operaciones")
-      .select("id, nave, pod, etd, eta, arribo_confirmado")
-      .is("deleted_at", null)
-      .not("nave", "is", null)
-      .gte("eta", desde)
-      .limit(2000),
+    sinOperacionesDemo(
+      supabase
+        .from("operaciones")
+        .select("id, nave, pod, etd, eta, arribo_confirmado")
+        .is("deleted_at", null)
+        .not("nave", "is", null)
+        .gte("eta", desde),
+    ).limit(2000),
     supabase.from("naves").select("id, nombre, imo, mmsi, tracking_activo").eq("activo", true).limit(2000),
     // Transbordos ya confirmados: cambian la etapa que se muestra.
     supabase.from("navitrack_transbordos").select("operacion_id, estado"),
