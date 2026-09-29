@@ -14,6 +14,7 @@ import type { ModoViaje, Recalada } from "./NavitrackItinerario";
 import { desvioEta, estadoDesvio, formatoDesvio, sentidoDesvio } from "@/lib/operaciones/desvioEta";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { fmtFecha, fmtFechaHora, fmtNm, fmtRelativo, interpolar } from "./navitrack-format";
+import { formatearDistancia, useUnidadDistancia } from "./navitrack-distancia";
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 import {
   parseOpDate,
@@ -151,6 +152,28 @@ function Velocidad({ nudos, tr }: { nudos: number | null | undefined; tr: Textos
       className="cursor-pointer rounded px-0.5 underline decoration-dotted decoration-dash-muted/60 underline-offset-[3px] transition-colors hover:text-dash-neon focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/60"
     >
       {texto}
+    </button>
+  );
+}
+
+/**
+ * Distancia restante: en km por defecto; un clic la pasa a millas náuticas.
+ * La unidad es compartida, así que cabecera y tarjeta cambian juntas.
+ */
+function Distancia({ mn, tr, locale, plantilla }: { mn: number | null | undefined; tr: Textos; locale: string; plantilla?: string }) {
+  const { unidad, alternar } = useUnidadDistancia();
+  const texto = formatearDistancia(mn, unidad, { km: tr.unidadKm, mn: tr.unidadMillas }, locale);
+  if (texto == null) return <>—</>;
+  const visible = plantilla ? interpolar(plantilla, { d: texto }) : texto;
+  return (
+    <button
+      type="button"
+      onClick={alternar}
+      title={tr.distanciaCambiarUnidad}
+      aria-label={`${visible} — ${tr.distanciaCambiarUnidad}`}
+      className="cursor-pointer rounded px-0.5 underline decoration-dotted decoration-dash-muted/60 underline-offset-[3px] transition-colors hover:text-dash-neon focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/60"
+    >
+      {visible}
     </button>
   );
 }
@@ -795,7 +818,7 @@ export function NavitrackShipment({
             <div className="text-right max-sm:text-left">
               {restantes && (
                 <p className="text-[14px] font-bold text-dash-fg tabular-nums">
-                  {interpolar(tr.restanNm, { nm: restantes })}
+                  <Distancia mn={journey.remainingNm} tr={tr} locale={locale} plantilla={tr.restan} />
                 </p>
               )}
               {actualizado && (
@@ -1570,7 +1593,7 @@ export function NavitrackShipment({
               <Stat
                 icon="lucide:route"
                 label={tr.distanciaRestante}
-                valor={restantes ? `${restantes} ${tr.unidadMillas}` : "—"}
+                valor={<Distancia mn={journey.remainingNm} tr={tr} locale={locale} />}
                 sub={pct != null ? interpolar(tr.pctTrayecto, { pct: String(pct) }) : null}
                 pie={
                   pct != null ? (
