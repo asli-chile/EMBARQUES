@@ -1212,16 +1212,21 @@ export function NavitrackShipment({
           <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto border-t border-dash-border p-3">
             <div className="nt-info-bloque grid grid-cols-1 sm:grid-cols-3">
               <div className="nt-info-col space-y-2.5 px-3.5 py-3">
+                {/* Booking y contenedor, en ese orden y cada uno con su copiar:
+                    son los dos códigos que se pegan en correos y portales. */}
                 <div className="min-w-0">
-                  <p className="nt-eyebrow">{tr.embarque}</p>
+                  <p className="nt-eyebrow">{tr.booking}</p>
                   <div className="flex items-center gap-1">
-                    <p className="truncate text-[15px] font-extrabold text-dash-fg">{titulo}</p>
-                    <BotonCopiar texto={titulo} tr={tr} />
+                    <p className="truncate text-[15px] font-extrabold text-dash-fg tabular-nums">{op.booking || "—"}</p>
+                    {op.booking && <BotonCopiar texto={op.booking} tr={tr} />}
                   </div>
                 </div>
                 <div className="min-w-0">
-                  <p className="nt-eyebrow">{tr.booking}</p>
-                  <p className="truncate text-[15px] font-extrabold text-dash-fg tabular-nums">{op.booking || "—"}</p>
+                  <p className="nt-eyebrow">{tr.nContenedor}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="truncate font-mono text-[15px] font-extrabold tracking-tight text-dash-fg">{op.contenedor || "—"}</p>
+                    {op.contenedor && <BotonCopiar texto={op.contenedor} tr={tr} />}
+                  </div>
                 </div>
                 <div className="min-w-0">
                   <p className="nt-eyebrow">{tr.cliente}</p>
