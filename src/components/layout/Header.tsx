@@ -13,6 +13,8 @@ import { AppMobileNav } from "./AppMobileNav";
 import { ClaudeUsoIndicator } from "./ClaudeUsoIndicator";
 import { DeployIndicator } from "./DeployIndicator";
 import { useLocale } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { resolveSidebarLabel } from "@/lib/sidebarFilter";
 
 /**
  * Rutas cuyo título se muestra en la barra superior, a la izquierda.
@@ -25,15 +27,61 @@ const TITULOS_DE_BARRA: Record<string, string> = {
   "/dashboardcliente": "dashboardCliente",
 };
 
+type ItemMenu = { labelKey: string; href?: string; children?: ItemMenu[] };
+
+/**
+ * Sección del menú a la que pertenece la ruta, con su grupo si lo tiene.
+ * Gana el `href` más largo que calce, así `/transportes/papelera` es la
+ * papelera de transportes y no otra cosa que empiece igual.
+ */
+function seccionDeRuta(pathname: string): { grupo: string | null; seccion: string } | null {
+  let mejor: { grupo: string | null; seccion: string; largo: number } | null = null;
+  const visitar = (items: readonly ItemMenu[], grupo: string | null) => {
+    for (const item of items) {
+      if (item.children) visitar(item.children, item.labelKey);
+      if (!item.href) continue;
+      const calza = pathname === item.href || pathname.startsWith(`${item.href}/`);
+      if (calza && (!mejor || item.href.length > mejor.largo)) {
+        mejor = { grupo, seccion: item.labelKey, largo: item.href.length };
+      }
+    }
+  };
+  visitar(siteConfig.sidebarItems as readonly ItemMenu[], null);
+  return mejor;
+}
+
+/**
+ * Dónde está el usuario: "Grupo › Sección", con los mismos nombres del menú
+ * (para un cliente, "Solicitar reserva" en vez de "Crear reserva"). Antes solo
+ * se mostraba en `/dashboardcliente`, y en el resto de las pantallas la única
+ * pista era el ícono resaltado del rail.
+ */
 function HeaderRouteTitle({ pathname }: { pathname: string }) {
   const { t } = useLocale();
-  const clave = TITULOS_DE_BARRA[pathname.replace(/\/$/, "") || "/"];
-  if (!clave) return null;
-  const titulo = (t.sidebar as Record<string, string>)[clave];
+  const { isCliente } = useAuth();
+  const ruta = pathname.replace(/\/$/, "") || "/";
+  const sidebar = t.sidebar as Record<string, string>;
+
+  const fija = TITULOS_DE_BARRA[ruta];
+  const encontrada = fija ? { grupo: null, seccion: fija } : seccionDeRuta(ruta);
+  if (!encontrada) return null;
+  const titulo = resolveSidebarLabel(encontrada.seccion, sidebar, isCliente);
   if (!titulo) return null;
+  const grupo = encontrada.grupo ? sidebar[encontrada.grupo] : null;
+
   return (
-    <span className="ml-1 max-w-[42vw] truncate text-sm font-semibold text-white/90 md:ml-2 md:max-w-[220px] md:text-base">
-      {titulo}
+    <span className="ml-1 flex min-w-0 max-w-[46vw] items-baseline gap-2 md:ml-3 md:max-w-[520px]">
+      {grupo && (
+        <>
+          <span className="hidden truncate text-base font-semibold text-white/55 md:inline">{grupo}</span>
+          <span className="hidden text-lg text-white/35 md:inline" aria-hidden>
+            ›
+          </span>
+        </>
+      )}
+      <span className="truncate text-base font-extrabold tracking-tight text-white md:text-xl" aria-current="page">
+        {titulo}
+      </span>
     </span>
   );
 }
