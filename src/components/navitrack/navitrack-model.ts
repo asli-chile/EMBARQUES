@@ -1335,16 +1335,43 @@ function viajePorTramos(
    * del dibujo y la del cálculo son cosas distintas a propósito.
    */
   const kmDeTramo = (i: number) => haversineKm(pasos[i].desde, pasos[i].hasta);
-  const totalKm = pasos.reduce((acc, _p, i) => acc + kmDeTramo(i), 0);
+  /** Largo de una cadena de puntos, tramo a tramo en línea recta. */
+  const kmPor = (puntos: LngLat[]) =>
+    puntos.slice(0, -1).reduce((acc, a, k) => acc + haversineKm(a, puntos[k + 1]), 0);
 
+  /*
+   * Lo recorrido y lo que falta se miden por separado, y el total es su suma.
+   *
+   * Antes lo que faltaba salía de restar: total fijo (puerto a puerto) menos
+   * la distancia del puerto de salida del tramo al buque. Si el buque se
+   * alejaba en línea recta más que el propio destino, la resta daba cero:
+   * el A00049 (Cristóbal → Fos-sur-Mer) marcaba "100 % del trayecto, 0 MN"
+   * con el MSC ATHOS frente a Gioia Tauro, que queda más al este que Fos,
+   * con Rotterdam y Fos todavía por delante. Midiendo lo que falta desde el
+   * buque —por sus paradas anunciadas hasta el fin del tramo, más los tramos
+   * siguientes— el avance no llega a 100 % mientras quede algo por navegar.
+   * Es el mismo criterio del viaje directo (`routeFraction`).
+   */
   let recorridoKm = 0;
   for (let i = 0; i < indiceActual; i += 1) recorridoKm += kmDeTramo(i);
+  let faltaKm = 0;
+  for (let i = indiceActual + 1; i < pasos.length; i += 1) faltaKm += kmDeTramo(i);
   if (arribado) {
-    recorridoKm = totalKm;
+    recorridoKm = pasos.reduce((acc, _p, i) => acc + kmDeTramo(i), 0);
+    faltaKm = 0;
   } else if (isValidCoord(posicion)) {
-    recorridoKm += haversineKm(actual.desde, { lng: posicion.lng, lat: posicion.lat });
+    const aqui = { lng: posicion.lng, lat: posicion.lat };
+    const avance = haversineKm(actual.desde, aqui);
+    const porDelante = escalasDe(indiceActual)
+      .filter((x) => haversineKm(actual.desde, x.coord) > avance)
+      .map((x) => x.coord);
+    recorridoKm += avance;
+    faltaKm += kmPor([aqui, ...porDelante, actual.hasta]);
+  } else {
+    // Sin posición no se sabe cuánto del tramo en curso va: cuenta entero por delante.
+    faltaKm += kmDeTramo(indiceActual);
   }
-  const faltaKm = Math.max(0, totalKm - recorridoKm);
+  const totalKm = recorridoKm + faltaKm;
 
   const escalas: Escala[] = [];
   const ultimo = pasos[pasos.length - 1];
