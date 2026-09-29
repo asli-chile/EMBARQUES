@@ -1490,19 +1490,20 @@ export function NavitrackShipment({
               />
               {/* El próximo es el que declara el buque; el destino, el comprometido con el cliente. */}
               {/*
-                * Lo que declara el buque es un anuncio, no un compromiso: se
-                * rotula "por confirmar" y se va actualizando con cada lectura.
+                * Solo lo que el buque anuncia por AIS en la lectura vigente. Sin
+                * anuncio, "Por confirmar": no se rellena con un puerto guardado
+                * de antes, que podría ser un destino que el buque ya cambió.
                 */}
               <Stat
                 icon="lucide:navigation"
-                label={tr.proximoPuertoPorConfirmar}
-                valor={proximoPuerto?.nombre || tr.porConfirmar}
+                label={tr.proximoPuerto}
+                valor={ais?.destination?.trim() || tr.porConfirmar}
                 sub={
-                  proximoPuerto?.eta
-                    ? `${tr.colEta}: ${fmtFechaHora(proximoPuerto.eta, locale) ?? "—"}`
-                    : proximoPuerto
-                      ? tr.proximoPuertoAis
-                      : null
+                  ais?.destination?.trim()
+                    ? ais.eta
+                      ? `${tr.colEta}: ${fmtFechaHora(ais.eta, locale) ?? "—"}`
+                      : tr.proximoPuertoAis
+                    : null
                 }
               />
               {/*
