@@ -313,6 +313,32 @@
   transform: translate(-50%, 0);
   opacity: 1;
 }
+/*
+ * La etiqueta del hover se lee a propósito —el cliente la busca—, así que va
+ * más grande que las fijas de salida y llegada: 13 px el nombre, 11 px la
+ * fecha, y ancho suficiente para "ANTWERP · WEC VAN RIJN" sin cortarse.
+ */
+.navitrack .nt-marca-hover > .nt-map-chip {
+  max-width: 18rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.5rem;
+  font-size: 13px;
+  line-height: 1.3;
+  opacity: 0;
+}
+.navitrack .nt-marca-hover > .nt-map-chip .nt-map-chip-fecha {
+  margin-top: 0.1rem;
+  font-size: 11px;
+}
+.navitrack .nt-marca-hover > .nt-vessel-card {
+  max-width: 18rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.navitrack .nt-marca-hover > .nt-vessel-card p + p {
+  font-size: 11.5px;
+}
 .navitrack .nt-marca-hover:focus-visible > .nt-port-dot {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--nt-port, var(--trk-pol)) 55%, transparent);
 }
