@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react";
 import { format } from "date-fns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { displayRefAsli } from "@/lib/refAsli";
+import { CeldaResumenVista } from "@/components/ui/CeldaResumen";
 import { MARCA_SIN_DATO, aplicarSinDato, esMarcaSinDato, marcadoSinDato, sinDatoDe } from "@/lib/operaciones/sinDato";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
@@ -1165,7 +1166,8 @@ export function ReservaDetalle({
     { label: etiqueta("colContainer"), valor: texto(fila.contenedor), icono: "lucide:container", mono: true },
     { label: etiqueta("colVessel"), valor: [texto(fila.nave), texto(fila.viaje)].filter(Boolean).join(" · ") || null, icono: "lucide:ship" },
     { label: etiqueta("colSpecies"), valor: texto(fila.especie), icono: "lucide:cherry" },
-    { label: etiqueta("colPallets"), valor: texto(fila.pallets), icono: "lucide:layers" },
+    // Marcado "-": se muestra así, no como vacío (ver src/lib/operaciones/sinDato.ts).
+    { label: etiqueta("colPallets"), valor: marcadoSinDato(fila, "pallets") ? MARCA_SIN_DATO : texto(fila.pallets), icono: "lucide:layers" },
     { label: etiqueta("colTemperature"), valor: vacio(fila.temperatura) ? null : `${String(fila.temperatura)} °C`, icono: "lucide:thermometer-snowflake" },
   ];
 
@@ -1321,20 +1323,7 @@ export function ReservaDetalle({
               divisiones finas en vez de seis tarjetas sueltas. */}
           <dl className="rd-vidrio rd-resumen mt-3 grid grid-cols-2 overflow-hidden rounded-xl sm:grid-cols-3 xl:grid-cols-6">
             {resumen.map((r) => (
-              <div key={r.label} className="min-w-0 px-3 py-1.5">
-                <dt className="rd-muted flex items-center gap-1.5 truncate text-[9px] font-bold uppercase tracking-wider">
-                  <Icon icon={r.icono} width={11} height={11} className="rd-acento shrink-0" aria-hidden />
-                  {r.label}
-                </dt>
-                <dd
-                  className={`truncate text-[13px] leading-snug ${r.valor ? "font-bold" : "rd-muted"} ${
-                    r.mono && r.valor ? "font-mono tracking-tight" : ""
-                  }`}
-                  title={r.valor ?? undefined}
-                >
-                  {r.valor ?? "—"}
-                </dd>
-              </div>
+              <CeldaResumenVista key={r.label} celda={r} />
             ))}
           </dl>
         </div>
