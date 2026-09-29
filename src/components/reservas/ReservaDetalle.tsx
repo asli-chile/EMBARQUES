@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { displayRefAsli } from "@/lib/refAsli";
 import { CeldaResumenVista } from "@/components/ui/CeldaResumen";
+import { NavieraLogo } from "@/components/navitrack/NavieraLogo";
 import { MARCA_SIN_DATO, aplicarSinDato, esMarcaSinDato, marcadoSinDato, sinDatoDe } from "@/lib/operaciones/sinDato";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
@@ -1034,6 +1035,8 @@ type Props = {
   /** El padre lo pone en `true` al replegar y desmonta al terminar la salida. */
   cerrando: boolean;
   onClose: () => void;
+  /** Logo de la naviera (`navieras.logo_url`); sin él se dibuja el monograma. */
+  navieraLogoUrl?: string | null;
 };
 
 export function ReservaDetalle({
@@ -1045,6 +1048,7 @@ export function ReservaDetalle({
   onPendientesChange,
   cerrando,
   onClose,
+  navieraLogoUrl = null,
 }: Props) {
   const { completa, estado } = useOperacionCompleta(supabase, op.id);
   const [soloConDatos, setSoloConDatos] = useState(false);
@@ -1226,9 +1230,17 @@ export function ReservaDetalle({
                 )}
                 {estado === "error" && <span className="rd-muted text-xs">{tr.detalleError}</span>}
               </div>
-              <p className="rd-muted mt-1 truncate text-xs font-semibold">
-                {[texto(fila.cliente), texto(fila.naviera)].filter(Boolean).join("  ·  ") || "—"}
-              </p>
+              {/* La naviera, a la vista: con quién viaja la carga es lo primero
+                  que se busca después del número. El cliente, al lado y en chico. */}
+              <div className="mt-1.5 flex min-w-0 items-center gap-2">
+                {texto(fila.naviera) && <NavieraLogo nombre={texto(fila.naviera)} logoUrl={navieraLogoUrl} size={30} />}
+                <span className="truncate text-[17px] font-extrabold leading-tight tracking-tight">
+                  {texto(fila.naviera) ?? "—"}
+                </span>
+                {texto(fila.cliente) && (
+                  <span className="rd-muted truncate text-xs font-semibold">· {texto(fila.cliente)}</span>
+                )}
+              </div>
             </div>
             </div>
             {/* Ruta: se lee de izquierda a derecha, como el viaje. */}

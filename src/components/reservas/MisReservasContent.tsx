@@ -2686,6 +2686,7 @@ export function MisReservasContent() {
                               onPendientesChange={setPendientesDetalle}
                               cerrando={fila.cerrando}
                               onClose={cerrarDetalle}
+                              navieraLogoUrl={op.naviera ? logosNaviera.get(op.naviera.trim().toUpperCase()) ?? null : null}
                             />
                           </td>
                         </tr>
