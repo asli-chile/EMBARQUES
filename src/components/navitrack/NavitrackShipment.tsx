@@ -628,16 +628,6 @@ export function NavitrackShipment({
     return t?.eta ? fmtFecha(parseOpDate(t.eta), locale) : null;
   };
 
-  /*
-   * Qué tan fresca es la señal: cuatro barras hasta 12 h, una pasado dos días.
-   *
-   * El chequeo diario lee una vez al día, así que "fresca" se mide en horas y
-   * no en minutos. Una posición calculada no tiene señal: ninguna barra.
-   */
-  const edadH = journey.position?.at ? (Date.now() - journey.position.at.getTime()) / 3_600_000 : null;
-  const nivelSenal =
-    !esReal || edadH == null ? 0 : edadH <= 12 ? 4 : edadH <= 24 ? 3 : edadH <= 48 ? 2 : 1;
-
   const mapLabels = {
     origen: tr.origen,
     destino: tr.destino,
@@ -1575,28 +1565,6 @@ export function NavitrackShipment({
                       {tr.verEnMapa}
                     </button>
                   ) : null
-                }
-              />
-              {/*
-                * La procedencia de la posición, dicha como un dato más y no como
-                * una advertencia. Las barras miden qué tan fresca es la lectura;
-                * una posición calculada no tiene señal que medir.
-                */}
-              <Stat
-                icon="lucide:satellite-dish"
-                label={tr.aisTitulo}
-                valor={esReal ? tr.aisSenal : tr.aisSinSenal}
-                sub={
-                  esReal && actualizado
-                    ? interpolar(tr.aisActualizado, { hace: actualizado })
-                    : tr.posicionCalculada
-                }
-                extra={
-                  <span className="nt-senal shrink-0" aria-hidden>
-                    {[1, 2, 3, 4].map((b) => (
-                      <span key={b} className={b <= nivelSenal ? "is-on" : ""} style={{ height: `${b * 25}%` }} />
-                    ))}
-                  </span>
                 }
               />
               <Stat
