@@ -7,11 +7,41 @@ import { Icon } from "@iconify/react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { MapWebGLErrorBoundary } from "@/components/itinerario/MapWebGLErrorBoundary";
 import type { NeonTheme } from "@/lib/ui/neonTheme";
+import { useLocale } from "@/lib/i18n";
 import { isValidCoord, type Journey, type LngLat } from "./navitrack-model";
 import { formatearVelocidad, useUnidadVelocidad } from "./navitrack-velocidad";
 
 const MAP_STYLE_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 const MAP_STYLE_LIGHT = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+
+/**
+ * Etiquetas del mapa en el idioma de la aplicación.
+ *
+ * Los estilos de CARTO muestran `name_en` (inglés) en los zooms de un mapa
+ * mundial, y las teselas traen también `name:es`: se reescribe el texto de
+ * cada etiqueta para preferir el español, caer al inglés si falta y, al final,
+ * al nombre local. Solo se toca la capa si su expresión es otra: cambiarla
+ * dispara `styledata`, y sin esa guarda el mapa entraría en un bucle.
+ */
+type MapaEtiquetas = {
+  getStyle: () => { layers?: { id: string }[] } | undefined;
+  getLayoutProperty: (capa: string, propiedad: string) => unknown;
+  setLayoutProperty: (capa: string, propiedad: string, valor: unknown) => void;
+};
+
+function etiquetasEnIdioma(map: MapaEtiquetas, idioma: string) {
+  const campos = idioma === "en" ? ["name_en", "name:en", "name"] : ["name:es", "name_en", "name"];
+  const expr = ["coalesce", ...campos.map((c) => ["get", c])];
+  const objetivo = JSON.stringify(expr);
+  for (const capa of map.getStyle()?.layers ?? []) {
+    const actual = map.getLayoutProperty(capa.id, "text-field");
+    if (actual == null) continue;
+    const texto = JSON.stringify(actual);
+    // Números de casa y otras etiquetas que no son nombres quedan como están.
+    if (!texto.includes("name") || texto === objetivo) continue;
+    map.setLayoutProperty(capa.id, "text-field", expr);
+  }
+}
 
 const WATER_DARK = "#0a3556";
 const WATER_LIGHT = "#a9cfee";
@@ -183,6 +213,7 @@ export function NavitrackMap({
 }: NavitrackMapProps) {
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { locale } = useLocale();
 
   // La unidad la elige el usuario en la ficha del embarque; el mapa la sigue
   // para que las dos vistas del mismo buque no muestren cifras distintas.
@@ -332,11 +363,14 @@ export function NavitrackMap({
       } | null
     )?.getMap?.();
     if (!map) return;
-    const onStyleData = () => applyBasemapColors();
+    const onStyleData = () => {
+      applyBasemapColors();
+      etiquetasEnIdioma(map as unknown as MapaEtiquetas, locale);
+    };
     map.on("styledata", onStyleData);
-    applyBasemapColors();
+    onStyleData();
     return () => map.off("styledata", onStyleData);
-  }, [applyBasemapColors, ready]);
+  }, [applyBasemapColors, ready, locale]);
 
   /** Encuadra la ruta completa: el viaje debe entenderse sin tocar el mapa. */
   useEffect(() => {
