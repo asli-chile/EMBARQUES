@@ -24,22 +24,43 @@ const MAP_STYLE_LIGHT = "https://basemaps.cartocdn.com/gl/positron-gl-style/styl
  * dispara `styledata`, y sin esa guarda el mapa entraría en un bucle.
  */
 type MapaEtiquetas = {
-  getStyle: () => { layers?: { id: string }[] } | undefined;
+  getStyle: () => { layers?: { id: string; layout?: Record<string, unknown> }[] } | undefined;
+  getLayer: (capa: string) => unknown;
   getLayoutProperty: (capa: string, propiedad: string) => unknown;
   setLayoutProperty: (capa: string, propiedad: string, valor: unknown) => void;
 };
 
+/*
+ * `styledata` llega varias veces mientras el estilo se arma, y en las
+ * primeras la lista de capas ya existe pero no todas están creadas:
+ * `getLayoutProperty` sobre una de esas revienta dentro de MapLibre
+ * ("Cannot read properties of undefined (reading 'getValue')") y rompía el
+ * mapa. Por eso se lee el texto de la definición del estilo, se salta la capa
+ * que todavía no existe y cualquier falla de una capa se ignora: el próximo
+ * `styledata` la vuelve a intentar.
+ */
 function etiquetasEnIdioma(map: MapaEtiquetas, idioma: string) {
   const campos = idioma === "en" ? ["name_en", "name:en", "name"] : ["name:es", "name_en", "name"];
   const expr = ["coalesce", ...campos.map((c) => ["get", c])];
   const objetivo = JSON.stringify(expr);
-  for (const capa of map.getStyle()?.layers ?? []) {
-    const actual = map.getLayoutProperty(capa.id, "text-field");
+  let capas: { id: string; layout?: Record<string, unknown> }[] = [];
+  try {
+    capas = map.getStyle()?.layers ?? [];
+  } catch {
+    return;
+  }
+  for (const capa of capas) {
+    const actual = capa.layout?.["text-field"];
     if (actual == null) continue;
     const texto = JSON.stringify(actual);
     // Números de casa y otras etiquetas que no son nombres quedan como están.
     if (!texto.includes("name") || texto === objetivo) continue;
-    map.setLayoutProperty(capa.id, "text-field", expr);
+    try {
+      if (!map.getLayer(capa.id)) continue;
+      map.setLayoutProperty(capa.id, "text-field", expr);
+    } catch {
+      /* Capa a medio crear: el próximo styledata la vuelve a intentar. */
+    }
   }
 }
 
