@@ -944,6 +944,12 @@ de verdad desde el navegador.
   no tiene un tono para "algo que mirar hoy", y pintarlo con un color de marca
   lo haría pasar por éxito o por error.
 - **Soft delete**: `deleted_at IS NULL` en operaciones — nunca borrar físicamente
+- **"-" = sin dato / no aplica**: en operaciones se puede cerrar cualquier
+  campo con "-". En texto se guarda tal cual; en número y fecha la columna
+  queda NULL y su nombre va a `operaciones.sin_dato` (un 0 en pallets diría
+  "cero pallets"). La base quita la marca sola al escribir el dato real. Regla
+  y lista de columnas en `src/lib/operaciones/sinDato.ts`; la usan la ficha de
+  Mis Reservas (botón "-" junto a número/fecha) y Registros (escribir "-")
 - **Fechas**: almacenar en ISO 8601, mostrar con `date-fns` + locale `es`
 - **Monedas**: CLP sin decimales, USD/EUR con 2 decimales
 - **Contenedores**: `MEDU123456-0` (4 letras, 6 dígitos, guion, dígito

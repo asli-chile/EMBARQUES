@@ -4,6 +4,7 @@ import { Icon } from "@iconify/react";
 import { format } from "date-fns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { displayRefAsli } from "@/lib/refAsli";
+import { MARCA_SIN_DATO, aplicarSinDato, esMarcaSinDato, marcadoSinDato, sinDatoDe } from "@/lib/operaciones/sinDato";
 import { etiquetaEstado } from "@/lib/operaciones/estados";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { staggerStyle } from "@/lib/ui/motion";
@@ -339,6 +340,8 @@ function camposDe(g: Grupo, fila: Fila): Campo[] {
  */
 function valorDe(c: Campo, fila: Fila): unknown {
   const v = fila[c.key];
+  // Marcada "-": no hay dato y así se dijo, que no es lo mismo que vacío.
+  if (marcadoSinDato(fila, c.key)) return MARCA_SIN_DATO;
   if (c.key === "ventilacion" && vacio(v)) return 0;
   return v;
 }
@@ -377,6 +380,7 @@ export function fmtFecha(raw: string): string {
 
 function fmtValor(campo: Campo, v: unknown, fila: Fila, si: string, no: string): string {
   if (vacio(v)) return "—";
+  if (esMarcaSinDato(v)) return MARCA_SIN_DATO;
   switch (campo.formato) {
     case "fecha":
       return fmtFecha(String(v));
@@ -540,6 +544,8 @@ function editable(g: Grupo, c: Campo): boolean {
 
 function valorParaInput(campo: Campo, v: unknown): string {
   if (vacio(v)) return "";
+  // Los controles de número y fecha no pueden mostrar "-": se abren vacíos.
+  if (esMarcaSinDato(v)) return campoGuardaTexto(campo) ? MARCA_SIN_DATO : "";
   const s = String(v).trim();
   if (campo.formato !== "fecha") return s;
   if (SOLO_FECHA.has(campo.key)) return s.slice(0, 10);
@@ -547,9 +553,16 @@ function valorParaInput(campo: Campo, v: unknown): string {
   return Number.isNaN(d.getTime()) ? "" : format(d, "yyyy-MM-dd'T'HH:mm");
 }
 
+/** La columna guarda texto, así que el "-" se escribe tal cual. */
+function campoGuardaTexto(campo: Campo): boolean {
+  return campo.formato !== "fecha" && !(campo.formato === "numero" && !campo.columnaTexto);
+}
+
 function valorParaGuardar(campo: Campo, raw: string): ValorCampo | undefined {
   const s = raw.trim();
   if (s === "") return null;
+  // "-" vale en cualquier campo; al guardar se decide cómo (ver aplicarSinDato).
+  if (esMarcaSinDato(s)) return MARCA_SIN_DATO;
   if (campo.formato === "fecha") {
     if (SOLO_FECHA.has(campo.key)) return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined;
     /* `datetime-local` viene sin zona: se interpreta en la hora local, que es
@@ -600,7 +613,7 @@ function ValorEditable({
   opciones?: ComboboxOption[];
   si: string;
   no: string;
-  labels: { editar: string; invalido: string; pendiente: string };
+  labels: { editar: string; invalido: string; pendiente: string; sinDato: string };
 }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState("");
@@ -686,7 +699,7 @@ function ValorEditable({
     }
     const esFecha = campo.formato === "fecha";
     const esNumero = campo.formato === "numero" && !campo.columnaTexto;
-    return (
+    const input = (
       <input
         autoFocus
         type={esFecha ? (SOLO_FECHA.has(campo.key) ? "date" : "datetime-local") : esNumero ? "number" : "text"}
@@ -703,6 +716,24 @@ function ValorEditable({
         onKeyDown={onKeyDown}
         className={`${clase} ${campo.mayus ? "uppercase" : ""}`}
       />
+    );
+    if (!esFecha && !esNumero) return input;
+    /* El control nativo de número o fecha no deja escribir "-": este botón lo
+       anota. onMouseDown evita que el campo pierda el foco y confirme vacío. */
+    return (
+      <div className="mt-0.5 flex items-center gap-1">
+        <div className="min-w-0 flex-1 [&>input]:mt-0">{input}</div>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => confirmar(MARCA_SIN_DATO)}
+          title={labels.sinDato}
+          aria-label={labels.sinDato}
+          className="shrink-0 rounded-md border border-dash-border bg-dash-control px-2 py-1 text-[13px] font-bold leading-none text-dash-muted hover:text-dash-fg"
+        >
+          {MARCA_SIN_DATO}
+        </button>
+      </div>
     );
   }
 
@@ -823,6 +854,7 @@ export function SeccionesOperacion({
     editar: tr.detalleEditarCampo,
     invalido: tr.detalleValorInvalido,
     pendiente: tr.detalleCampoPendiente,
+    sinDato: tr.detalleSinDatoMarca,
   };
   const si = campos.yes ?? "Sí";
   const no = campos.no ?? "No";
@@ -1066,6 +1098,18 @@ export function ReservaDetalle({
     for (const [key, valor] of Object.entries(pendientes)) {
       cambios[key] = typeof valor === "string" ? valor.trim() || null : valor;
       anteriores[key] = base[key] ?? null;
+    }
+    {
+      const porClave = new Map(GRUPOS.flatMap((g) => g.campos).map((c) => [c.key, c] as const));
+      const hecho = aplicarSinDato(cambios, sinDatoDe(base), (key) => {
+        const c = porClave.get(key);
+        return c ? campoGuardaTexto(c) : true;
+      });
+      Object.assign(cambios, hecho.cambios);
+      if (hecho.sinDato) {
+        cambios.sin_dato = hecho.sinDato as unknown as ValorCampo;
+        anteriores.sin_dato = sinDatoDe(base);
+      }
     }
     /* Otras pantallas leen todavía la columna: se deja al día con el ETD. */
     if ("etd" in cambios) {

@@ -3,7 +3,8 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-balham.css";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ModuleRegistry, SELECTION_COLUMN_ID } from "ag-grid-community";
-import type { ColDef, ColGroupDef, CellContextMenuEvent } from "ag-grid-community";
+import type { ColDef, ColGroupDef, CellContextMenuEvent, GridApi, IRowNode, ValueFormatterParams } from "ag-grid-community";
+import { COLUMNAS_NO_TEXTO, MARCA_SIN_DATO, esMarcaSinDato, marcadoSinDato, sinDatoDe } from "@/lib/operaciones/sinDato";
 import { Icon } from "@iconify/react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -26,6 +27,8 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 export type OperacionRow = {
   id: string;
+  /** Columnas marcadas "-" (sin dato / no aplica). Ver src/lib/operaciones/sinDato.ts. */
+  sin_dato: string[];
   correlativo: number;
   ref_asli: string;
   referencia_externa: string;
@@ -534,6 +537,7 @@ function createToRow(locale: string) {
   return function toRow(db: DbOperacion): OperacionRow {
     return {
       id: db.id,
+      sin_dato: sinDatoDe(db as unknown as Record<string, unknown>),
       correlativo: db.correlativo,
       ref_asli: formatRefAsli(db.ref_asli, db.correlativo) ?? "",
       referencia_externa: db.referencia_externa ?? "",
@@ -1307,7 +1311,21 @@ export function RegistrosContent() {
   );
 
   const columnDefs = useMemo<(ColDef<OperacionRow> | ColGroupDef<OperacionRow>)[]>(() => {
-    const c = leafCols;
+    /* Número y fecha marcados "-" (sin dato / no aplica): la celda está vacía
+       en la base y se muestra "-", para distinguirla de una que nadie llenó. */
+    const c = leafCols.map((cd) => {
+      const field = cd.field as string | undefined;
+      if (!field || !COLUMNAS_NO_TEXTO.has(field)) return cd;
+      const original = cd.valueFormatter;
+      return {
+        ...cd,
+        valueFormatter: (p: ValueFormatterParams<OperacionRow>) => {
+          if (p.data && marcadoSinDato(p.data as unknown as Record<string, unknown>, field)) return MARCA_SIN_DATO;
+          if (typeof original === "function") return original(p);
+          return p.value == null ? "" : String(p.value);
+        },
+      } as ColDef<OperacionRow>;
+    });
     return [
       { headerName: "Identificación y Control",       children: c.slice(0,  7)  },
       { headerName: "Cliente y Condiciones",          children: c.slice(7,  14) },
@@ -1538,9 +1556,37 @@ export function RegistrosContent() {
   }, [supabase, getSelectedRows, clasificarPorTipoTransporte]);
 
   const handleCellValueChanged = useCallback(
-    async (e: { data: OperacionRow; colDef: { field?: string }; newValue: unknown; oldValue: unknown; node: { setDataValue: (field: string, value: unknown) => void } }) => {
+    async (e: {
+      data: OperacionRow;
+      colDef: { field?: string };
+      newValue: unknown;
+      oldValue: unknown;
+      node: { setDataValue: (field: string, value: unknown) => void };
+      api?: GridApi<OperacionRow>;
+    }) => {
       const field = e.colDef.field;
       if (!supabase || !field || e.newValue === e.oldValue) return;
+
+      /* "-" en una columna de número o fecha: no se puede guardar el guion,
+         así que la columna queda vacía y se marca en `sin_dato`. */
+      const marcasFila = e.data.sin_dato ?? [];
+      if (COLUMNAS_NO_TEXTO.has(field) && esMarcaSinDato(e.newValue)) {
+        const marcas = [...new Set([...marcasFila, field])].sort();
+        const { error: errMarca } = await supabase
+          .from("operaciones")
+          .update({ [field]: null, sin_dato: marcas })
+          .eq("id", e.data.id);
+        if (errMarca) { setError(errMarca.message); return; }
+        e.data.sin_dato = marcas;
+        (e.data as unknown as Record<string, unknown>)[field] = null;
+        e.api?.refreshCells({ rowNodes: [e.node as unknown as IRowNode<OperacionRow>], columns: [field], force: true });
+        return;
+      }
+      // Un dato real quita la marca (la base lo hace igual; así la celda no
+      // sigue mostrando "-" hasta recargar).
+      if (marcasFila.includes(field) && !esMarcaSinDato(e.newValue) && e.newValue != null && String(e.newValue).trim() !== "") {
+        e.data.sin_dato = marcasFila.filter((k) => k !== field);
+      }
 
       // Convertir fechas al formato ISO para guardar en BD
       let dbValue: unknown = e.newValue ?? null;
