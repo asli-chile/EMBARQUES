@@ -271,8 +271,6 @@ type FormData = {
   tratamiento_frio_o2: string;
   tratamiento_frio_co2: string;
   tipo_atmosfera: string;
-  /** Tratamiento de frío cuarentenario: "SI" | "NO" | "" (no informado). */
-  tratamiento_cuarentenario: string;
   /** Pallets estimados (solicitud del cliente). */
   pallets: string;
   /** Semana de embarque elegida por el cliente, como "2026-W40". */
@@ -319,7 +317,6 @@ const initialFormData: FormData = {
   tratamiento_frio_o2: "",
   tratamiento_frio_co2: "",
   tipo_atmosfera: "",
-  tratamiento_cuarentenario: "",
   pallets: "",
   semana: "",
   tipo_unidad: "40RF",
@@ -1414,7 +1411,6 @@ export function CrearReservaContent() {
           ? parseInt(formData.tratamiento_frio_co2, 10)
           : null,
       tipo_atmosfera: formData.tratamiento_frio === "SI" ? formData.tipo_atmosfera || null : null,
-      tratamiento_cuarentenario: formData.tratamiento_cuarentenario || null,
       pallets: (() => {
         const n = parseInt(formData.pallets, 10);
         return Number.isFinite(n) && n > 0 ? n : null;
@@ -1605,7 +1601,6 @@ export function CrearReservaContent() {
       ["O2",             pct(p.tratamiento_frio_o2)],
       ["CO2",            pct(p.tratamiento_frio_co2)],
       ["Atmosfera",      val(p.tipo_atmosfera)],
-      ["Trat. cuarentenario", val(p.tratamiento_cuarentenario)],
       ["Pallets estimados",   val(p.pallets)],
     ]);
     const naviera = makeSection("Naviera / Viaje", [
@@ -1738,7 +1733,6 @@ export function CrearReservaContent() {
       { header: "Atmósfera",         value: val(p.tipo_atmosfera) },
       { header: "O2 %",              value: val(p.tratamiento_frio_o2) },
       { header: "CO2 %",             value: val(p.tratamiento_frio_co2) },
-      { header: "Trat. cuarentenario", value: val(p.tratamiento_cuarentenario) },
       { header: "Pallets",           value: val(p.pallets) },
       { header: "Planta",            value: val(p.planta_presentacion) },
       { header: "Citación",          value: fmtDt(p.citacion) },
@@ -2179,7 +2173,6 @@ export function CrearReservaContent() {
           ...(formData.tratamiento_frio === "SI" && formData.tipo_atmosfera ? [{ label: tr.tipoAtmosfera, value: formData.tipo_atmosfera }] : []),
           ...(formData.tratamiento_frio === "SI" && formData.tratamiento_frio_o2 ? [{ label: tr.o2, value: `${formData.tratamiento_frio_o2}%` }] : []),
           ...(formData.tratamiento_frio === "SI" && formData.tratamiento_frio_co2 ? [{ label: tr.co2, value: `${formData.tratamiento_frio_co2}%` }] : []),
-          ...(formData.tratamiento_cuarentenario ? [{ label: tr.tratamientoCuarentenario, value: formData.tratamiento_cuarentenario === "SI" ? tr.si : tr.no }] : []),
           ...(formData.pallets ? [{ label: tr.palletsEstimados, value: formData.pallets }] : []),
         ],
       },
@@ -2968,34 +2961,6 @@ export function CrearReservaContent() {
         ) : null}
         {isCliente && (
           <div className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="min-w-0 sm:col-span-2">
-              <p className={labelClass}>{tr.tratamientoCuarentenario}</p>
-              <div className="grid grid-cols-3 gap-2 sm:max-w-md">
-                {([
-                  { value: "SI", label: tr.si },
-                  { value: "NO", label: tr.no },
-                  { value: "", label: tr.noInformado },
-                ] as const).map((opt) => {
-                  const selected = formData.tratamiento_cuarentenario === opt.value;
-                  return (
-                    <button
-                      key={opt.value || "ns"}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setFormData((prev) => ({ ...prev, tratamiento_cuarentenario: opt.value }))}
-                      className={`rounded-lg border px-3 py-2.5 text-sm font-bold transition-colors ${
-                        selected
-                          ? "border-dash-neon/60 bg-dash-neon text-[#041018]"
-                          : "border-dash-border bg-dash-control text-dash-fg hover:border-dash-neon/40"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-sm leading-snug text-dash-muted">{tr.tratamientoCuarentenarioHint}</p>
-            </div>
             <div className="min-w-0">
               <label htmlFor="pallets" className={labelClass}>{tr.palletsEstimados}</label>
               <div className="relative">

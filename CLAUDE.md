@@ -393,8 +393,9 @@ muestran** nave, viaje, booking, ETD/ETA ni depósito: la nave la propone ASLI.
 - La semana se guarda en `operaciones.semana` (solo el número). **No se
   inventa un ETD** a partir de ella: lo pone el equipo al asignar la nave.
 - `tratamiento_frio = SI` es en la práctica **atmósfera controlada** (abre
-  O₂/CO₂); al cliente se le rotula así. El tratamiento de frío cuarentenario
-  es otra columna: `tratamiento_cuarentenario`.
+  O₂/CO₂); al cliente se le rotula así. No existe un dato aparte de
+  "tratamiento de frío cuarentenario": se creó y se retiró el 29-09-2026
+  porque no es parte de las operaciones de ASLI.
 
 ## Módulo de Transportes
 

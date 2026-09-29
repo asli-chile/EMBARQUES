@@ -99,7 +99,6 @@ const GRUPOS: Grupo[] = [
       { key: "tipo_atmosfera", labelKey: "colAtmosphereType" },
       { key: "tratamiento_frio_o2", labelKey: "colO2", formato: "numero", entero: true },
       { key: "tratamiento_frio_co2", labelKey: "colCO2", formato: "numero", entero: true },
-      { key: "tratamiento_cuarentenario", labelKey: "colQuarantine" },
       { key: "pallets", labelKey: "colPallets", formato: "numero", entero: true },
       { key: "peso_bruto", labelKey: "colGrossWeight", formato: "numero" },
       { key: "peso_neto", labelKey: "colNetWeight", formato: "numero" },
@@ -657,24 +656,6 @@ function ValorEditable({
           <option value="NORMAL">Normal</option>
           <option value="LATE">Late</option>
           <option value="EXTRA_LATE">Extra late</option>
-        </select>
-      );
-    }
-    /* La base solo acepta SI o NO (CHECK): desplegable cerrado, no texto. Con
-       texto libre se escribía "-" o "Sí" y el guardado entero se rechazaba. */
-    if (campo.key === "tratamiento_cuarentenario") {
-      return (
-        <select
-          autoFocus
-          value={borrador.toUpperCase()}
-          onChange={(e) => setBorrador(e.target.value)}
-          onBlur={() => confirmar()}
-          onKeyDown={onKeyDown}
-          className={clase}
-        >
-          <option value="">—</option>
-          <option value="SI">{si}</option>
-          <option value="NO">{no}</option>
         </select>
       );
     }
