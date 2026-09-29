@@ -515,6 +515,18 @@ export function NavitrackShipment({
     return salida;
   })();
 
+  /*
+   * Transbordo de la tarjeta: el próximo al que todavía no llega la carga; si
+   * ya pasó por todos, el último. Es el que responde "¿dónde cambia de barco
+   * y a cuál?".
+   */
+  const transbordoTarjeta = (() => {
+    if (!transbordosDelViaje.length) return null;
+    const i = transbordosDelViaje.findIndex((x) => !x.llego);
+    const indice = i < 0 ? transbordosDelViaje.length - 1 : i;
+    return { ...transbordosDelViaje[indice], n: indice + 1, total: transbordosDelViaje.length };
+  })();
+
   /** El primer transbordo al que llegó la carga sin que se sepa a qué nave pasa. */
   const faltaNaveEn = transbordosDelViaje.find((x) => !x.nave && x.llego) ?? null;
 
@@ -1477,16 +1489,56 @@ export function NavitrackShipment({
                 }
               />
               {/* El próximo es el que declara el buque; el destino, el comprometido con el cliente. */}
+              {/*
+                * Lo que declara el buque es un anuncio, no un compromiso: se
+                * rotula "por confirmar" y se va actualizando con cada lectura.
+                */}
               <Stat
                 icon="lucide:navigation"
-                label={tr.proximoPuerto}
-                valor={proximoPuerto?.nombre || tr.proximoPuertoSinDato}
+                label={tr.proximoPuertoPorConfirmar}
+                valor={proximoPuerto?.nombre || tr.porConfirmar}
                 sub={
                   proximoPuerto?.eta
                     ? `${tr.colEta}: ${fmtFechaHora(proximoPuerto.eta, locale) ?? "—"}`
                     : proximoPuerto
-                      ? tr.proximoPuertoSegunBuque
+                      ? tr.proximoPuertoAis
                       : null
+                }
+              />
+              {/*
+                * Dónde cambia de barco la carga, cuándo y a cuál. Sin tramos no
+                * se inventa un transbordo: se dice que es directo, o que nadie
+                * indicó el itinerario todavía.
+                */}
+              <Stat
+                icon="lucide:git-branch"
+                label={
+                  transbordoTarjeta && transbordoTarjeta.total > 1
+                    ? `${tr.puertoTransbordo} · ${interpolar(tr.transbordoDeN, {
+                        n: String(transbordoTarjeta.n),
+                        total: String(transbordoTarjeta.total),
+                      })}`
+                    : tr.puertoTransbordo
+                }
+                valor={
+                  transbordoTarjeta?.puerto ??
+                  (modoViaje === "directo" ? tr.viajeDirecto : tr.porConfirmar)
+                }
+                sub={
+                  transbordoTarjeta
+                    ? [
+                        transbordoTarjeta.real?.recalado_at
+                          ? `${tr.transbordoLlego}: ${fmtFecha(new Date(transbordoTarjeta.real.recalado_at), locale) ?? "—"}`
+                          : transbordoTarjeta.llegada
+                            ? `${tr.transbordoLlegada}: ${fmtFecha(parseOpDate(transbordoTarjeta.llegada), locale) ?? "—"}`
+                            : null,
+                        `${tr.transbordoRecibe}: ${transbordoTarjeta.nave || tr.porConfirmar}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : modoViaje === "directo"
+                      ? null
+                      : tr.transbordoSinIndicar
                 }
               />
               <Stat
