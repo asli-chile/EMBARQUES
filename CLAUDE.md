@@ -968,4 +968,8 @@ de verdad desde el navegador.
   `operaciones` lo toma del catálogo `destinos` al crear la operación o cambiar
   su POD (`20260926000002_pais_desde_pod.sql`). Si un puerto nuevo queda sin
   país, el arreglo es completar `destinos.pais`, no escribirlo en la operación
+- **Días de tránsito (`tt`)**: no se escriben, salen de `eta − etd`. Un
+  trigger los recalcula al crear la operación o cambiar ETD/ETA
+  (`20260929000004_tt_desde_fechas.sql`); sin alguna fecha, o con la ETA
+  antes del ETD, quedan NULL
 - **Numeración facturas transporte**: formato `TRAxxxx` (TRA0001, TRA0002...)

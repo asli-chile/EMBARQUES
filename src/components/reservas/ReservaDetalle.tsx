@@ -135,8 +135,6 @@ const GRUPOS: Grupo[] = [
       { key: "tara", labelKey: "colTare", formato: "numero" },
       { key: "deposito", labelKey: "colWarehouse" },
       { key: "agendamiento_retiro", labelKey: "colPickupSchedule", formato: "fecha" },
-      // La devolución del contenedor vacío es gestión de ASLI con el depósito.
-      { key: "devolucion_unidad", labelKey: "colUnitReturn", formato: "fecha", interno: true },
     ],
   },
   {
@@ -266,7 +264,6 @@ const ICONO_CAMPO: Record<string, string> = {
   tara: "lucide:weight",
   deposito: "lucide:warehouse",
   agendamiento_retiro: "lucide:calendar-clock",
-  devolucion_unidad: "lucide:undo-2",
   planta_presentacion: "lucide:factory",
   citacion: "lucide:calendar-clock",
   llegada_planta: "lucide:log-in",
@@ -1115,6 +1112,19 @@ export function ReservaDetalle({
     if ("etd" in cambios) {
       cambios.semana = semanaIsoDeFecha(typeof cambios.etd === "string" ? cambios.etd : null);
       anteriores.semana = base.semana ?? null;
+    }
+    /* Días de tránsito: los recalcula la base al cambiar ETD o ETA
+       (20260929000004_tt_desde_fechas); se mandan también para que la ficha
+       y la lista los muestren sin recargar. Misma regla: eta − etd, o nada. */
+    if ("etd" in cambios || "eta" in cambios) {
+      const etd = ("etd" in cambios ? cambios.etd : base.etd) as string | null | undefined;
+      const eta = ("eta" in cambios ? cambios.eta : base.eta) as string | null | undefined;
+      const dias =
+        etd && eta
+          ? Math.round((Date.parse(`${String(eta).slice(0, 10)}T00:00:00Z`) - Date.parse(`${String(etd).slice(0, 10)}T00:00:00Z`)) / 86_400_000)
+          : null;
+      cambios.tt = dias != null && Number.isFinite(dias) && dias >= 0 ? dias : null;
+      anteriores.tt = base.tt ?? null;
     }
     /* La base pone el país al guardar el POD; se manda también para que la
        ficha y la lista lo muestren sin recargar. */
