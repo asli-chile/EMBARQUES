@@ -45,6 +45,8 @@ type Campo = {
   mayus?: boolean;
   /** Se muestra como número pero la columna es `text` (temperatura). */
   columnaTexto?: boolean;
+  /** Dato de gestión interna: el cliente no lo ve (como un grupo `interno`). */
+  interno?: boolean;
 };
 
 type Grupo = {
@@ -132,7 +134,8 @@ const GRUPOS: Grupo[] = [
       { key: "tara", labelKey: "colTare", formato: "numero" },
       { key: "deposito", labelKey: "colWarehouse" },
       { key: "agendamiento_retiro", labelKey: "colPickupSchedule", formato: "fecha" },
-      { key: "devolucion_unidad", labelKey: "colUnitReturn", formato: "fecha" },
+      // La devolución del contenedor vacío es gestión de ASLI con el depósito.
+      { key: "devolucion_unidad", labelKey: "colUnitReturn", formato: "fecha", interno: true },
     ],
   },
   {
@@ -778,9 +781,20 @@ export function useOperacionCompleta(supabase: SupabaseClient | null, id: string
   return { completa, estado };
 }
 
+/**
+ * Grupos y campos que ve un rol. Al cliente se le quitan los grupos internos
+ * (costos, facturación) y, dentro de los demás, los campos internos.
+ */
+function gruposParaRol(isCliente: boolean): Grupo[] {
+  if (!isCliente) return GRUPOS;
+  return GRUPOS.filter((g) => !g.interno).map((g) =>
+    g.campos.some((c) => c.interno) ? { ...g, campos: g.campos.filter((c) => !c.interno) } : g,
+  );
+}
+
 /** Grupos de campos que ve un rol, sin los que se pidan excluir. */
 export function gruposOperacion(isCliente: boolean, excluir: readonly string[] = []): Grupo[] {
-  return GRUPOS.filter((g) => !(g.interno && isCliente) && !excluir.includes(g.id));
+  return gruposParaRol(isCliente).filter((g) => !excluir.includes(g.id));
 }
 
 /** Las secciones de datos de una operación, como pasos del viaje. */
@@ -1079,7 +1093,7 @@ export function ReservaDetalle({
     const campo = GRUPOS.flatMap((g) => g.campos).find((c) => c.key === key);
     return campo ? etiqueta(campo.labelKey) : key === "observaciones" ? etiqueta("colObservations") : key;
   };
-  const grupos = GRUPOS.filter((g) => !(g.interno && isCliente));
+  const grupos = gruposParaRol(isCliente);
   const observaciones = texto(fila.observaciones);
   const bookingDoc = texto(fila.booking_doc_url);
   const fueraDeNavitrack = motivoFueraDeNavitrack(fila);
