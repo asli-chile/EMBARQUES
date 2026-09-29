@@ -71,6 +71,18 @@ const LAND_LIGHT = "#f6eee8";
 
 const DEFAULT_VIEW = { longitude: -70, latitude: -20, zoom: 1.4 };
 
+/**
+ * Zoom mínimo para que, alejado al máximo, el mundo llene el recuadro.
+ *
+ * En el zoom 0 el mundo mide 512 px por lado y se duplica con cada nivel. Sin
+ * límite se podía alejar hasta dejarlo como una miniatura repetida varias
+ * veces. Nunca menos de 1.
+ */
+function zoomMinimoPara(ancho: number, alto: number): number {
+  if (ancho <= 0 || alto <= 0) return 1;
+  return Math.max(1, Math.log2(ancho / 512), Math.log2(alto / 512));
+}
+
 type StyleableMap = {
   getStyle?: () => { layers?: { id: string; type: string }[] } | undefined;
   getPaintProperty?: (layer: string, prop: string) => unknown;
@@ -264,6 +276,7 @@ export function NavitrackMap({
 
   const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
+  const [zoomMinimo, setZoomMinimo] = useState(1);
   const [mapError, setMapError] = useState(false);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
@@ -331,6 +344,7 @@ export function NavitrackMap({
     const ro = new ResizeObserver(() => {
       const { width, height } = el.getBoundingClientRect();
       if (width > 0 && height > 0) setReady(true);
+      setZoomMinimo(zoomMinimoPara(width, height));
       (mapRef.current as unknown as { getMap?: () => { resize: () => void } } | null)
         ?.getMap?.()
         ?.resize();
@@ -338,6 +352,7 @@ export function NavitrackMap({
     ro.observe(el);
     const { width, height } = el.getBoundingClientRect();
     if (width > 0 && height > 0) setReady(true);
+    setZoomMinimo(zoomMinimoPara(width, height));
     return () => ro.disconnect();
   }, [mounted]);
 
@@ -490,6 +505,7 @@ export function NavitrackMap({
             initialViewState={DEFAULT_VIEW}
             style={{ width: "100%", height: "100%", position: "absolute", inset: 0 }}
             mapStyle={mapStyle}
+            minZoom={zoomMinimo}
             renderWorldCopies
             dragRotate={false}
             touchPitch={false}
