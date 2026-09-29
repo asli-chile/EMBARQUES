@@ -660,6 +660,24 @@ function ValorEditable({
         </select>
       );
     }
+    /* La base solo acepta SI o NO (CHECK): desplegable cerrado, no texto. Con
+       texto libre se escribía "-" o "Sí" y el guardado entero se rechazaba. */
+    if (campo.key === "tratamiento_cuarentenario") {
+      return (
+        <select
+          autoFocus
+          value={borrador.toUpperCase()}
+          onChange={(e) => setBorrador(e.target.value)}
+          onBlur={() => confirmar()}
+          onKeyDown={onKeyDown}
+          className={clase}
+        >
+          <option value="">—</option>
+          <option value="SI">{si}</option>
+          <option value="NO">{no}</option>
+        </select>
+      );
+    }
     if (opciones) {
       return (
         <ComboboxInput
