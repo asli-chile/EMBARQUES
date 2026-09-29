@@ -278,6 +278,51 @@
 .navitrack .nt-port-dot--pol { --nt-port: var(--trk-pol); }
 .navitrack .nt-port-dot--pod { --nt-port: var(--trk-pod); }
 
+/*
+ * Marcas con nombre al pasar el mouse: puertos intermedios y el buque.
+ *
+ * A la vista queda solo el punto, centrado en su coordenada; la etiqueta
+ * flota encima y aparece con el hover o el foco. Con todas las etiquetas
+ * visibles se tapaban entre sí y con el buque (Thames, Fos, Gioia Tauro y el
+ * MSC ATHOS encimados en el Mediterráneo).
+ */
+.navitrack .nt-marca-hover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Área de hover un poco mayor que el punto: apuntar a 11 px es difícil. */
+  padding: 0.35rem;
+  outline: none;
+}
+.navitrack .nt-marca-hover > .nt-map-chip,
+.navitrack .nt-marca-hover > .nt-vessel-card {
+  position: absolute;
+  bottom: calc(100% - 0.15rem);
+  left: 50%;
+  z-index: 5;
+  transform: translate(-50%, 0.25rem);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.navitrack .nt-marca-hover:hover > .nt-map-chip,
+.navitrack .nt-marca-hover:hover > .nt-vessel-card,
+.navitrack .nt-marca-hover:focus-visible > .nt-map-chip,
+.navitrack .nt-marca-hover:focus-visible > .nt-vessel-card {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+.navitrack .nt-marca-hover:focus-visible > .nt-port-dot {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--nt-port, var(--trk-pol)) 55%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .navitrack .nt-marca-hover > .nt-map-chip,
+  .navitrack .nt-marca-hover > .nt-vessel-card {
+    transition: none;
+  }
+}
+
 .navitrack .nt-vessel-pulse {
   position: absolute;
   height: 2.6rem;

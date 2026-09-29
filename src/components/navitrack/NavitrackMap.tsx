@@ -584,9 +584,15 @@ export function NavitrackMap({
               * que hará, no algo que ya pasó. Confundirlo con una escala
               * cumplida sería presentar una intención como un hecho.
               */}
+            {/*
+              * Intermedios (anunciados, recaladas y transbordos): solo el punto.
+              * El nombre aparece al pasar el mouse o al enfocarlo. Con todos los
+              * nombres a la vista se tapaban entre sí y con el buque; salida y
+              * llegada, que son el compromiso con el cliente, sí van siempre.
+              */}
             {previstos.map((c) => (
               <Marker key={`prev-${c.nombre}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
-                <div className="flex flex-col items-center gap-1">
+                <div className="nt-marca-hover" tabIndex={0} aria-label={c.nombre}>
                   <ChipPuerto nombre={c.nombre} fecha={fecha(c.nombre)} className="nt-map-chip--prevista" />
                   <span className="nt-port-dot nt-port-dot--prevista" aria-hidden />
                 </div>
@@ -595,7 +601,11 @@ export function NavitrackMap({
 
             {conexiones.map((c) => (
               <Marker key={`${c.nombre}-${c.coord.lng}`} longitude={c.coord.lng} latitude={c.coord.lat} anchor="center">
-                <div className="flex flex-col items-center gap-1">
+                <div
+                  className="nt-marca-hover"
+                  tabIndex={0}
+                  aria-label={`${c.nombre}${c.nave ? ` · ${c.nave}` : ""}`}
+                >
                   <ChipPuerto
                     nombre={`${c.nombre}${c.nave ? ` · ${c.nave}` : ""}`}
                     fecha={fecha(c.nombre)}
@@ -635,9 +645,10 @@ export function NavitrackMap({
                     if (enfocado) verRutaCompleta();
                     else enfocarBuque();
                   }}
-                  className="relative flex cursor-pointer items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/60"
+                  className="nt-marca-hover relative flex cursor-pointer items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-dash-neon/60"
                 >
-                  {/* Ficha del buque: nombre y, si hay AIS, velocidad y rumbo reales. */}
+                  {/* Ficha del buque: nombre y, si hay AIS, velocidad y rumbo reales.
+                      Solo al pasar el mouse: a la vista queda el punto del buque. */}
                   <div className="nt-vessel-card">
                     <p className="truncate font-bold">{vesselName || labels.posicionEstimada}</p>
                     {esReal && (vesselSpeed != null || position.course != null) && (
