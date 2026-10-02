@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Icon } from "@iconify/react";
 import { format, parseISO, isValid } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -15,7 +15,23 @@ import {
 import { useTemporadaActiva } from "@/lib/useTemporadaActiva";
 import { normalizarEstado } from "@/lib/operaciones/estados";
 import { desvioEta, formatoDesvio, resumirDesvios, type Desvio } from "@/lib/operaciones/desvioEta";
+import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
 import { DashboardViewTabs, type DashboardView } from "./DashboardViewTabs";
+
+/*
+ * Histórico de volumen: una pizarra de una sola pantalla con la imagen de ASLI.
+ * Estilos en src/styles/historico-marca.css.
+ *
+ * El cliente y el personal interno ven la misma pizarra con distinto contenido:
+ *
+ *   cliente   operaciones, contenedores, destinos y especies. Kilos y desvío
+ *             de llegada solo aparecen cuando al menos el 80 % de sus
+ *             operaciones tiene el dato: una cifra hecha con 1 de 50 no dice
+ *             nada al cliente y además le muestra un vacío de captura.
+ *   interno   suma empresas, desvío y kilos *con* su cobertura ("2/50 con
+ *             dato"), y el tipo de unidad. Al equipo sí le sirve saber qué
+ *             falta cargar.
+ */
 
 type OperacionVolumen = {
   etd: string | null;
@@ -44,13 +60,22 @@ type Props = {
 const COLUMNAS: string =
   "etd, especie, tipo_unidad, contenedor, pallets, peso_neto, estado_operacion, cliente, pod, eta, eta_original, eta_original_heredada, arribo_confirmado, arribo_at";
 
-type KpiTone = "cyan" | "sky" | "emerald" | "violet" | "amber" | "rose" | "blue";
+/** Desde qué cobertura un dato parcial se le muestra al cliente. */
+const COBERTURA_MINIMA_CLIENTE = 0.8;
+/** Filas por panel de desglose; el resto se agrupa en "Otras". */
+const FILAS_POR_PANEL = 6;
 
-type RankingItem = {
-  label: string;
-  operaciones: number;
-  contenedores: number;
-};
+/* El anillo de especies usa solo tonos de marca, en este orden. */
+const TONOS_ANILLO = [
+  "var(--hm-teal-dato)",
+  "var(--hm-oliva-dato)",
+  "var(--hm-texto)",
+  "color-mix(in srgb, var(--hm-teal) 85%, #ffffff)",
+  "color-mix(in srgb, var(--hm-hondo) 55%, #ffffff)",
+  "#c9b9a6",
+];
+
+type Fila = { label: string; valor: number; iso?: string | null };
 
 function num(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -71,48 +96,102 @@ function contenedorKey(value: string | null | undefined): string | null {
   return cont || null;
 }
 
-function rankByField(
-  ops: OperacionVolumen[],
-  field: "cliente" | "pod",
-  limit = 5
-): { items: RankingItem[]; maxOps: number; maxCont: number; distinct: number } {
-  const acc = new Map<string, { operaciones: number; contenedores: Set<string> }>();
-  for (const op of ops) {
-    const label = (op[field] ?? "").trim();
-    if (!label) continue;
-    let row = acc.get(label);
-    if (!row) {
-      row = { operaciones: 0, contenedores: new Set() };
-      acc.set(label, row);
-    }
-    row.operaciones += 1;
-    const cont = contenedorKey(op.contenedor);
-    if (cont) row.contenedores.add(cont);
-  }
-  const items = Array.from(acc.entries())
-    .map(([label, v]) => ({
-      label,
-      operaciones: v.operaciones,
-      contenedores: v.contenedores.size,
-    }))
-    .sort(
-      (a, b) =>
-        b.contenedores - a.contenedores ||
-        b.operaciones - a.operaciones ||
-        a.label.localeCompare(b.label, "es")
-    );
-  return {
-    items: items.slice(0, limit),
-    maxOps: Math.max(...items.map((i) => i.operaciones), 1),
-    maxCont: Math.max(...items.map((i) => i.contenedores), 1),
-    distinct: acc.size,
-  };
+/** Ordena de mayor a menor y agrupa lo que no cabe en una fila "Otras". */
+function agrupar(acc: Map<string, number>, otras: string): { filas: Fila[]; distintos: number } {
+  const orden = Array.from(acc.entries())
+    .map(([label, valor]) => ({ label, valor }))
+    .sort((a, b) => b.valor - a.valor || a.label.localeCompare(b.label, "es"));
+  if (orden.length <= FILAS_POR_PANEL) return { filas: orden, distintos: orden.length };
+  const visibles = orden.slice(0, FILAS_POR_PANEL - 1);
+  const resto = orden.slice(FILAS_POR_PANEL - 1).reduce((s, f) => s + f.valor, 0);
+  return { filas: [...visibles, { label: otras, valor: resto }], distintos: orden.length };
 }
 
-export function DashboardHistoricoContent({
-  view,
-  onViewChange,
-}: Props) {
+/** Escala del gráfico: pasos redondos y espacio arriba para la etiqueta del pico. */
+function escala(max: number): { tope: number; paso: number } {
+  const paso = max <= 8 ? 2 : max <= 20 ? 4 : max <= 50 ? 10 : Math.ceil(max / 40) * 10;
+  return { tope: Math.max(paso, Math.ceil((max * 1.18) / paso) * paso), paso };
+}
+
+function prefiereMenosMovimiento(): boolean {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * Se pone en `true` dos cuadros después de cada cambio de `clave`, para que el
+ * navegador pinte primero el estado inicial y la entrada tenga desde dónde
+ * animar. Al cambiar de temporada vuelve a `false` y la pizarra entra de nuevo.
+ */
+function useEntrada(clave: string): boolean {
+  const [listo, setListo] = useState(false);
+  useEffect(() => {
+    setListo(false);
+    let a = 0;
+    let b = 0;
+    a = requestAnimationFrame(() => {
+      b = requestAnimationFrame(() => setListo(true));
+    });
+    return () => {
+      cancelAnimationFrame(a);
+      cancelAnimationFrame(b);
+    };
+  }, [clave]);
+  return listo;
+}
+
+/** Cifra que cuenta desde 0 una sola vez (1,1 s, frenando al final). */
+function Cifra({
+  valor,
+  activo,
+  retraso = 0,
+  formato,
+}: {
+  valor: number;
+  activo: boolean;
+  retraso?: number;
+  formato: (n: number) => string;
+}) {
+  const [mostrado, setMostrado] = useState(0);
+  useEffect(() => {
+    if (!activo) {
+      setMostrado(0);
+      return;
+    }
+    if (prefiereMenosMovimiento()) {
+      setMostrado(valor);
+      return;
+    }
+    let raf = 0;
+    let t0: number | null = null;
+    const paso = (ahora: number) => {
+      t0 ??= ahora; // el reloj arranca en el primer cuadro, no antes
+      const k = Math.min(1, Math.max(0, (ahora - t0) / 1100));
+      setMostrado(valor * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) raf = requestAnimationFrame(paso);
+    };
+    const timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(paso);
+    }, retraso);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
+    };
+  }, [valor, activo, retraso]);
+  return <>{formato(mostrado)}</>;
+}
+
+type Kpi = {
+  key: string;
+  label: string;
+  icon: string;
+  /** Número que cuenta. Si no hay, se muestra `texto` tal cual. */
+  valor?: number;
+  texto?: string;
+  nota?: string;
+  banderas?: string[];
+};
+
+export function DashboardHistoricoContent({ view, onViewChange }: Props) {
   const { t, locale } = useLocale();
   const tr = t.dashboard;
   const {
@@ -133,8 +212,8 @@ export function DashboardHistoricoContent({
   /** Descarta respuestas viejas si cambia la temporada a mitad de una consulta. */
   const fetchGen = useRef(0);
 
-  /** Indicadores de empresa / destino: solo roles comerciales y administración. */
-  const showEmpresaInsights = isSuperadmin || isAdmin || isEjecutivo;
+  /** Empresas, cobertura y tipo de unidad: solo personal interno. */
+  const esInterno = isSuperadmin || isAdmin || isEjecutivo;
 
   const supabase = useMemo(() => {
     try {
@@ -145,7 +224,8 @@ export function DashboardHistoricoContent({
   }, []);
 
   const intl = locale === "es" ? "es-CL" : "en-US";
-  const fmt = useCallback((value: number) => value.toLocaleString(intl, { maximumFractionDigits: 0 }), [intl]);
+  const fechaLocale = locale === "es" ? es : enUS;
+  const fmt = useCallback((value: number) => Math.round(value).toLocaleString(intl, { maximumFractionDigits: 0 }), [intl]);
 
   useEffect(() => {
     if (temporadaLoading) return;
@@ -174,10 +254,7 @@ export function DashboardHistoricoContent({
     setLoading(true);
     let query = supabase.from("operaciones").select(COLUMNAS).is("deleted_at", null);
     query = applyOperacionesClienteFilter(query, { isCliente, isEjecutivo, empresaNombres });
-    query = aplicarFiltroTemporada(
-      query,
-      temporadaSel !== TEMPORADA_TODAS ? temporadaSel : null
-    );
+    query = aplicarFiltroTemporada(query, temporadaSel !== TEMPORADA_TODAS ? temporadaSel : null);
     const { data } = await query.limit(5000);
     if (gen !== fetchGen.current) return;
     setOperaciones((data ?? []) as unknown as OperacionVolumen[]);
@@ -191,305 +268,297 @@ export function DashboardHistoricoContent({
   /** El volumen embarcado excluye las canceladas: nunca se movió carga. */
   const embarcadas = useMemo(
     () => operaciones.filter((op) => normalizarEstado(op.estado_operacion) !== "CANCELADA"),
-    [operaciones]
+    [operaciones],
   );
+  const total = embarcadas.length;
 
-  /**
-   * Cada magnitud lleva su cobertura (cuántas operaciones tienen el dato
-   * cargado). Sin eso, un campo que casi nadie llena se ve como un cero y
-   * parece un error del dashboard en lugar de un vacío de captura.
-   */
-  const totales = useMemo(() => {
+  const resumen = useMemo(() => {
     const contenedores = new Set<string>();
-    const suma = { pallets: 0, pesoNeto: 0 };
-    const cobertura = { pallets: 0, pesoNeto: 0 };
-    let sinEtd = 0;
-
-    const acumular = (campo: keyof typeof suma, valor: number | null) => {
-      const n = num(valor);
-      suma[campo] += n;
-      if (n > 0) cobertura[campo] += 1;
-    };
+    const porDestino = new Map<string, number>();
+    const porEspecie = new Map<string, number>();
+    const porUnidad = new Map<string, number>();
+    const contPorEmpresa = new Map<string, Set<string>>();
+    const opsPorEmpresa = new Map<string, number>();
+    let pesoNeto = 0;
+    let conPeso = 0;
+    let conUnidad = 0;
 
     for (const op of embarcadas) {
       const cont = contenedorKey(op.contenedor);
       if (cont) contenedores.add(cont);
-      acumular("pallets", op.pallets);
-      acumular("pesoNeto", op.peso_neto);
-      if (!parseEtd(op.etd)) sinEtd += 1;
+      const pod = (op.pod ?? "").trim();
+      if (pod) porDestino.set(pod, (porDestino.get(pod) ?? 0) + 1);
+      const especie = (op.especie ?? "").trim();
+      if (especie) porEspecie.set(especie, (porEspecie.get(especie) ?? 0) + 1);
+      const unidad = (op.tipo_unidad ?? "").trim().toUpperCase();
+      if (unidad) {
+        porUnidad.set(unidad, (porUnidad.get(unidad) ?? 0) + 1);
+        conUnidad += 1;
+      }
+      const empresa = (op.cliente ?? "").trim();
+      if (empresa) {
+        opsPorEmpresa.set(empresa, (opsPorEmpresa.get(empresa) ?? 0) + 1);
+        if (cont) {
+          const set = contPorEmpresa.get(empresa) ?? new Set<string>();
+          set.add(cont);
+          contPorEmpresa.set(empresa, set);
+        }
+      }
+      const kg = num(op.peso_neto);
+      if (kg > 0) {
+        pesoNeto += kg;
+        conPeso += 1;
+      }
     }
 
+    // Empresas por contenedores; si una no tiene contenedor cargado, cuenta por operaciones.
+    const porEmpresa = new Map<string, number>();
+    for (const [empresa, ops] of opsPorEmpresa) porEmpresa.set(empresa, contPorEmpresa.get(empresa)?.size || ops);
+
     return {
-      operaciones: embarcadas.length,
       contenedores: contenedores.size,
-      suma,
-      cobertura,
-      sinEtd,
-      palletsPorOperacion: cobertura.pallets > 0 ? suma.pallets / cobertura.pallets : 0,
+      destinos: agrupar(porDestino, tr.histOthersM),
+      especies: agrupar(porEspecie, tr.histOthers),
+      unidades: agrupar(porUnidad, tr.histOthers),
+      empresas: agrupar(porEmpresa, tr.histOthers),
+      pesoNeto,
+      conPeso,
+      conUnidad,
     };
-  }, [embarcadas]);
+  }, [embarcadas, tr.histOthers, tr.histOthersM]);
 
   /*
    * Cumplimiento de la llegada: el arribo real contra lo prometido en la
-   * reserva. El cero es `eta_original` y el desvío va en días con signo.
-   *
-   * Es la única tarjeta de esta pantalla que no mide volumen, y por eso encaja:
-   * su cobertura se lee igual que la de pallets o kilos —cuántas operaciones
-   * tienen el dato— y el guion cuando nadie lo llenó significa lo mismo.
+   * reserva. El cero es `eta_original` y el desvío va en días con signo; se usa
+   * la mediana para que un embarque con un mes de atraso no arrastre todo.
    */
   const cumplimiento = useMemo(
     () => resumirDesvios(embarcadas.map((op) => desvioEta(op)).filter((d): d is Desvio => d != null)),
     [embarcadas],
   );
 
+  /* Meses de zarpe, con los meses sin zarpes en 0 para que la serie no salte. */
   const porMes = useMemo(() => {
-    const buckets = new Map<string, { inicio: Date; operaciones: number; pallets: number }>();
+    const conteo = new Map<string, number>();
+    let primero: Date | null = null;
+    let ultimo: Date | null = null;
     for (const op of embarcadas) {
       const etd = parseEtd(op.etd);
       if (!etd) continue;
       const inicio = new Date(etd.getFullYear(), etd.getMonth(), 1);
       const clave = format(inicio, "yyyy-MM");
-      const actual = buckets.get(clave);
-      if (actual) {
-        actual.operaciones += 1;
-        actual.pallets += num(op.pallets);
-      } else {
-        buckets.set(clave, { inicio, operaciones: 1, pallets: num(op.pallets) });
+      conteo.set(clave, (conteo.get(clave) ?? 0) + 1);
+      if (!primero || inicio < primero) primero = inicio;
+      if (!ultimo || inicio > ultimo) ultimo = inicio;
+    }
+    const items: { inicio: Date; operaciones: number }[] = [];
+    if (primero && ultimo) {
+      for (let d = new Date(primero); d <= ultimo; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+        items.push({ inicio: d, operaciones: conteo.get(format(d, "yyyy-MM")) ?? 0 });
       }
     }
-    const items = Array.from(buckets.values()).sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
-    return { items, max: Math.max(...items.map((i) => i.operaciones), 1) };
+    const max = Math.max(0, ...items.map((i) => i.operaciones));
+    const pico = items.find((i) => i.operaciones === max && max > 0) ?? null;
+    return { items, max, pico, ...escala(Math.max(max, 1)) };
   }, [embarcadas]);
 
-  const porTipoUnidad = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const op of embarcadas) {
-      const tipo = (op.tipo_unidad ?? "").trim().toUpperCase();
-      if (!tipo) continue;
-      counts.set(tipo, (counts.get(tipo) ?? 0) + 1);
-    }
-    const items = Array.from(counts.entries())
-      .map(([tipo, cantidad]) => ({ tipo, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad || a.tipo.localeCompare(b.tipo));
-    return { items: items.slice(0, 6), max: Math.max(...items.map((i) => i.cantidad), 1) };
-  }, [embarcadas]);
+  const cobertura = (conDato: number) => `${fmt(conDato)}/${fmt(total)} ${tr.volumeCoverage}`;
+  const alcanza = (conDato: number) => total > 0 && conDato / total >= COBERTURA_MINIMA_CLIENTE;
 
-  const porEspecie = useMemo(() => {
-    const acc = new Map<string, { operaciones: number; pallets: number }>();
-    for (const op of embarcadas) {
-      const especie = (op.especie ?? "").trim();
-      if (!especie) continue;
-      const actual = acc.get(especie);
-      if (actual) {
-        actual.operaciones += 1;
-        actual.pallets += num(op.pallets);
-      } else {
-        acc.set(especie, { operaciones: 1, pallets: num(op.pallets) });
-      }
-    }
-    const items = Array.from(acc.entries())
-      .map(([especie, v]) => ({ especie, ...v }))
-      .sort((a, b) => b.operaciones - a.operaciones || a.especie.localeCompare(b.especie, "es"));
-    return { items: items.slice(0, 6), max: Math.max(...items.map((i) => i.operaciones), 1) };
-  }, [embarcadas]);
-
-  const porEmpresa = useMemo(
-    () => (showEmpresaInsights ? rankByField(embarcadas, "cliente") : null),
-    [embarcadas, showEmpresaInsights]
-  );
-
-  const porDestino = useMemo(
-    () => (showEmpresaInsights ? rankByField(embarcadas, "pod") : null),
-    [embarcadas, showEmpresaInsights]
-  );
-
-  const coberturaHint = (conDato: number) =>
-    conDato === 0
-      ? tr.volumeNoCoverage
-      : `${fmt(conDato)}/${fmt(totales.operaciones)} ${tr.volumeCoverage}`;
-
-  const kpis: Array<{
-    key: string;
-    label: string;
-    value: string;
-    hint: string;
-    icon: string;
-    iconAlt: string;
-    tone: KpiTone;
-    numeric: number;
-  }> = [
+  const kpis: Kpi[] = [
     {
       key: "ops",
       label: tr.volumeOperations,
-      value: fmt(totales.operaciones),
-      hint: tr.volumeCancelledExcluded,
       icon: "lucide:layers",
-      iconAlt: "lucide:activity",
-      tone: "cyan",
-      numeric: totales.operaciones,
+      valor: total,
+      nota: porMes.pico
+        ? tr.histPeakMonth.replace("{{mes}}", format(porMes.pico.inicio, "MMMM", { locale: fechaLocale }))
+        : undefined,
     },
-    {
-      key: "cont",
-      label: tr.volumeContainers,
-      value: fmt(totales.contenedores),
-      hint: coberturaHint(totales.contenedores),
-      icon: "lucide:container",
-      iconAlt: "lucide:box",
-      tone: "sky",
-      numeric: totales.contenedores,
-    },
-    {
-      /*
-       * Desvío típico: mediana y no promedio, porque un embarque con un mes de
-       * atraso arrastraría el número de toda la temporada.
-       */
+    { key: "cont", label: tr.volumeContainers, icon: "lucide:container", valor: resumen.contenedores, nota: tr.histShippedM },
+  ];
+  if (esInterno) {
+    kpis.push({ key: "empresas", label: tr.volumeCompanies, icon: "lucide:building-2", valor: resumen.empresas.distintos, nota: tr.histWithOperations });
+  }
+  kpis.push({
+    key: "destinos",
+    label: tr.volumeDestinations,
+    icon: "lucide:map-pin",
+    valor: resumen.destinos.distintos,
+    banderas: resumen.destinos.filas
+      .map((f) => isoDePuerto(f.label))
+      .filter((iso): iso is string => Boolean(iso))
+      .slice(0, 6),
+  });
+  if (!esInterno) {
+    kpis.push({ key: "especies", label: tr.histSpecies, icon: "lucide:sprout", valor: resumen.especies.distintos, nota: tr.histShippedF });
+  }
+  if (esInterno || alcanza(cumplimiento.total)) {
+    kpis.push({
       key: "desvio",
       label: tr.volumeDeviation,
-      value: cumplimiento.mediana != null ? formatoDesvio(cumplimiento.mediana) : "—",
-      hint:
-        cumplimiento.total === 0
-          ? tr.volumeNoCoverage
-          : `${fmt(cumplimiento.total)}/${fmt(totales.operaciones)} ${tr.volumeCoverage}`,
       icon: "lucide:target",
-      iconAlt: "lucide:crosshair",
-      // Ámbar: es lo que hay que mirar, no un éxito ni un error.
-      tone: "amber",
-      numeric: cumplimiento.mediana ?? 0,
-    },
-    {
+      texto: cumplimiento.mediana != null ? formatoDesvio(cumplimiento.mediana) : "—",
+      nota: esInterno ? (cumplimiento.total === 0 ? tr.volumeNoCoverage : cobertura(cumplimiento.total)) : undefined,
+    });
+  }
+  if (esInterno || alcanza(resumen.conPeso)) {
+    kpis.push({
       key: "kg",
       label: tr.volumeNetKg,
-      value: totales.cobertura.pesoNeto > 0 ? fmt(totales.suma.pesoNeto) : "—",
-      hint: coberturaHint(totales.cobertura.pesoNeto),
       icon: "lucide:weight",
-      iconAlt: "lucide:scale",
-      tone: "violet",
-      numeric: totales.suma.pesoNeto,
-    },
-  ];
-
-  if (showEmpresaInsights && porEmpresa && porDestino) {
-    kpis.splice(
-      2,
-      0,
-      {
-        key: "empresas",
-        label: tr.volumeCompanies,
-        value: fmt(porEmpresa.distinct),
-        hint: tr.volumeByCompany,
-        icon: "lucide:building-2",
-        iconAlt: "lucide:users",
-        tone: "blue",
-        numeric: porEmpresa.distinct,
-      },
-      {
-        key: "destinos",
-        label: tr.volumeDestinations,
-        value: fmt(porDestino.distinct),
-        hint: tr.volumeByDestination,
-        icon: "lucide:map-pin",
-        iconAlt: "lucide:globe-2",
-        tone: "emerald",
-        numeric: porDestino.distinct,
-      }
-    );
+      valor: resumen.conPeso > 0 ? resumen.pesoNeto : undefined,
+      texto: resumen.conPeso > 0 ? undefined : "—",
+      nota: esInterno ? (resumen.conPeso === 0 ? tr.volumeNoCoverage : cobertura(resumen.conPeso)) : undefined,
+    });
   }
 
-  /* Las columnas siguen a cuántas tarjetas hay: seis con los desgloses de
-     empresa y destino, cuatro sin ellos. Dejarlo en ocho estiraba las que
-     quedan hasta dejarlas huecas. */
-  const kpiGridClass = showEmpresaInsights
-    ? "grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 lg:gap-3"
-    : "grid grid-cols-2 sm:grid-cols-4 gap-2.5 lg:gap-3";
+  const listo = useEntrada(loading ? "cargando" : `${temporadaSel}-${total}-${locale}`);
 
-  const rankingTable = (
-    ranking: NonNullable<typeof porEmpresa>,
-    opts: {
-      title: string;
-      icon: string;
-      labelHeader: string;
-      barClass: string;
-      pctClass: string;
-      useContainersForPct: boolean;
-    }
-  ) => (
-    <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-      <div className="dash-section-head shrink-0 px-3.5 py-2.5 flex items-center justify-between gap-2">
-        <p className="inline-flex items-center gap-2 text-sm font-bold text-dash-fg truncate sm:text-base">
-          <Icon icon={opts.icon} width={16} height={16} className="text-dash-neon shrink-0" />
-          {opts.title}
-        </p>
-        <p className="text-xl font-bold text-dash-neon tabular-nums sm:text-2xl">{ranking.distinct}</p>
-      </div>
-      <div className="lg:flex-1 lg:min-h-0 lg:overflow-auto">
-        {ranking.items.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-dash-muted">{tr.noData}</p>
+  const subtitulo = (temporadaSel === TEMPORADA_TODAS ? tr.histSubtitleAll : tr.histSubtitle)
+    .replace("{{temporada}}", temporadaSel ?? "")
+    .replace("{{n}}", fmt(total));
+
+  const rango = (() => {
+    const items = porMes.items;
+    if (items.length === 0) return "";
+    const a = items[0].inicio;
+    const b = items[items.length - 1].inicio;
+    if (items.length === 1) return format(a, "MMMM yyyy", { locale: fechaLocale });
+    return a.getFullYear() === b.getFullYear()
+      ? `${format(a, "MMMM", { locale: fechaLocale })} – ${format(b, "MMMM yyyy", { locale: fechaLocale })}`
+      : `${format(a, "MMM yyyy", { locale: fechaLocale })} – ${format(b, "MMM yyyy", { locale: fechaLocale })}`;
+  })();
+
+  const d = (ms: number) => ({ "--hm-d": `${ms}ms` }) as CSSProperties;
+  const opsTexto = (n: number) => `${fmt(n)} ${n === 1 ? tr.histOp1 : tr.histOpN}`;
+
+  const panelLista = (titulo: string, sub: string, datos: { filas: Fila[] }, retraso: number, conBandera: boolean) => {
+    const base = Math.max(1, ...datos.filas.map((f) => f.valor));
+    const suma = datos.filas.reduce((s, f) => s + f.valor, 0) || 1;
+    return (
+      <div className="hm-panel hm-bloque hm-aparece min-h-[15rem] lg:min-h-0" style={d(retraso)}>
+        <div className="hm-bloque-cab">
+          <h2>{titulo}</h2>
+          <span>{sub}</span>
+        </div>
+        {datos.filas.length === 0 ? (
+          <p className="hm-vacio">{tr.noData}</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-dash-surface">
-              <tr className="text-dash-muted border-b border-cyan-300/10">
-                <th className="px-3.5 py-1.5 font-bold">{opts.labelHeader}</th>
-                <th className="px-2 py-1.5 font-bold text-right">{tr.volumeColContainers}</th>
-                <th className="px-2 py-1.5 font-bold text-right hidden sm:table-cell">{tr.colOperations}</th>
-                <th className="px-3.5 py-1.5 font-bold w-[34%]">{tr.colPct}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-cyan-300/10">
-              {ranking.items.map((item) => {
-                const pctBase = opts.useContainersForPct
-                  ? totales.contenedores
-                  : Math.max(totales.operaciones, 1);
-                const pctValue = opts.useContainersForPct ? item.contenedores : item.operaciones;
-                const pct = pctBase > 0 ? Math.round((pctValue / pctBase) * 100) : 0;
-                const barRatio = opts.useContainersForPct
-                  ? item.contenedores / ranking.maxCont
-                  : item.operaciones / ranking.maxOps;
-                return (
-                  <tr key={item.label} className="hover:bg-cyan-400/5">
-                    <td className="px-3.5 py-2 text-dash-fg font-semibold truncate max-w-[8rem]">
-                      {item.label}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums text-dash-fg font-bold">
-                      {fmt(item.contenedores)}
-                    </td>
-                    <td className="px-2 py-2 text-right tabular-nums text-dash-muted font-semibold hidden sm:table-cell">
-                      {fmt(item.operaciones)}
-                    </td>
-                    <td className="px-3.5 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full bg-cyan-950/50 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${opts.barClass}`}
-                            style={{ width: `${Math.max(barRatio * 100, 4)}%` }}
-                          />
-                        </div>
-                        <span className={`text-[11px] tabular-nums font-bold w-8 text-right ${opts.pctClass}`}>
-                          {pct}%
-                        </span>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="hm-lista">
+            {datos.filas.map((f, i) => {
+              const iso = conBandera ? isoDePuerto(f.label) : null;
+              return (
+                <div key={f.label} className="hm-item">
+                  <div className="hm-item-nombre">
+                    {conBandera &&
+                      (iso ? (
+                        <Icon icon={`circle-flags:${iso.toLowerCase()}`} width={18} height={18} className="shrink-0" aria-hidden />
+                      ) : (
+                        <Icon icon="lucide:globe" width={16} height={16} className="shrink-0 opacity-60" aria-hidden />
+                      ))}
+                    <span title={f.label}>{f.label}</span>
+                  </div>
+                  <div className="hm-item-num">
+                    <Cifra valor={f.valor} activo={listo} retraso={retraso + 120 + i * 45} formato={fmt} />
+                    <small>{Math.round((f.valor / suma) * 100)}%</small>
+                  </div>
+                  <div className="hm-riel">
+                    <i style={{ width: `${(f.valor / base) * 100}%`, ...d(retraso + 120 + i * 45) }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
+
+  const panelEspecies = (retraso: number) => {
+    const filas = resumen.especies.filas;
+    const suma = filas.reduce((s, f) => s + f.valor, 0);
+    const r = 50;
+    const largo = 2 * Math.PI * r;
+    const respiro = filas.length > 1 ? 1.6 : 0;
+    let acumulado = 0;
+    return (
+      <div className="hm-panel hm-bloque hm-aparece min-h-[15rem] lg:min-h-0" style={d(retraso)}>
+        <div className="hm-bloque-cab">
+          <h2>{tr.histSpecies}</h2>
+          <span>{tr.histSpeciesSub}</span>
+        </div>
+        {filas.length === 0 ? (
+          <p className="hm-vacio">{tr.noData}</p>
+        ) : (
+          <div className="hm-especies">
+            <div className="hm-anillo">
+              <svg viewBox="0 0 120 120" role="img" aria-label={filas.map((f) => `${f.label} ${f.valor}`).join(", ")}>
+                <circle className="hm-pista-anillo" cx="60" cy="60" r={r} />
+                {filas.map((f, i) => {
+                  const arco = (f.valor / suma) * largo;
+                  const visible = Math.max(arco - respiro, 0.01);
+                  const offset = -(acumulado + respiro / 2);
+                  acumulado += arco;
+                  return (
+                    <circle
+                      key={f.label}
+                      className="hm-seg"
+                      cx="60"
+                      cy="60"
+                      r={r}
+                      style={{
+                        stroke: TONOS_ANILLO[i % TONOS_ANILLO.length],
+                        strokeDashoffset: offset,
+                        strokeDasharray: listo ? `${visible} ${largo}` : `0 ${largo}`,
+                        transitionDelay: `${retraso + 150 + i * 80}ms`,
+                      }}
+                    />
+                  );
+                })}
+              </svg>
+              <div className="hm-anillo-centro">
+                <b>
+                  <Cifra valor={resumen.especies.distintos} activo={listo} retraso={retraso + 150} formato={fmt} />
+                </b>
+                <span>{tr.histSpeciesCenter}</span>
+              </div>
+            </div>
+            <div className="hm-leyenda">
+              {filas.map((f, i) => (
+                <div key={f.label}>
+                  <i style={{ background: TONOS_ANILLO[i % TONOS_ANILLO.length] }} />
+                  <span title={f.label}>{f.label}</span>
+                  <b>
+                    <Cifra valor={f.valor} activo={listo} retraso={retraso + 150 + i * 60} formato={fmt} />
+                  </b>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const nMeses = Math.max(porMes.items.length, 1);
+  const columnasMes = { gridTemplateColumns: `repeat(${nMeses}, minmax(0, 1fr))`, gap: "clamp(8px, 1.3vw, 22px)" };
+  const ticks = Array.from({ length: Math.floor(porMes.tope / porMes.paso) + 1 }, (_, i) => i * porMes.paso);
 
   return (
-    <main className="dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto text-base lg:overflow-hidden">
-      <div className="dash-toolbar relative z-10 shrink-0">
-        <div className="flex w-full items-center justify-between gap-3 px-4 py-2.5 sm:px-5 lg:py-3">
+    <main
+      className={`hm ${listo ? "hm--listo" : ""} dash-page relative flex min-h-0 flex-1 flex-col overflow-y-auto text-base lg:overflow-hidden`}
+    >
+      <svg className="hm-ruta" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden>
+        <path d="M -40 760 C 300 700 420 520 700 540 S 1150 760 1380 520 S 1560 140 1680 90" />
+      </svg>
+
+      <div className="relative flex min-h-0 flex-1 flex-col gap-3 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-4 lg:gap-4 lg:px-6 lg:py-5">
+        {/* cabecera */}
+        <header className="hm-aparece flex shrink-0 flex-wrap items-center justify-between gap-3" style={d(0)}>
           <div className="min-w-0">
-            <h1 className="dash-title text-xl font-bold leading-tight tracking-tight sm:text-2xl lg:text-3xl">
-              {tr.historicTitle}
-            </h1>
-            <p className="dash-subtitle mt-0.5 truncate text-sm">
-              {tr.volumeCancelledExcluded}
-              {totales.sinEtd > 0 && <> · {fmt(totales.sinEtd)} {tr.volumeNoEtd}</>}
-            </p>
+            <h1 className="hm-titulo">{tr.historicTitle}</h1>
+            <p className="hm-sub truncate">{loading ? "…" : subtitulo}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <DashboardViewTabs view={view} onChange={onViewChange} />
@@ -498,299 +567,164 @@ export function DashboardHistoricoContent({
               id="dashboard-temporada"
               value={temporadaSel ?? ""}
               onChange={(e) => setTemporadaSel(e.target.value || TEMPORADA_TODAS)}
-              className="dash-control rounded-lg px-3 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
+              className="hm-control px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hm-teal-dato)]"
             >
-              <option value={TEMPORADA_TODAS}>
-                {tr.seasonAll}
-              </option>
+              <option value={TEMPORADA_TODAS}>{tr.seasonAll}</option>
               {temporadas.map((tp) => (
                 <option key={tp.id} value={tp.nombre}>
                   {tp.nombre}
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              onClick={() => void fetchVolumen()}
-              className="dash-control rounded-lg p-2.5 transition-colors"
-              title={tr.refresh}
-            >
-              <Icon icon="lucide:refresh-cw" className="h-5 w-5" />
+            <button type="button" onClick={() => void fetchVolumen()} className="hm-control p-2.5" title={tr.refresh} aria-label={tr.refresh}>
+              <Icon icon="lucide:refresh-cw" className="h-4 w-4" />
             </button>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {loading ? (
-        <div className="relative flex flex-col gap-3 p-4 lg:flex-1 lg:min-h-0 lg:overflow-hidden">
-          <div className={`${kpiGridClass} h-24 shrink-0`}>
-            {Array.from({ length: showEmpresaInsights ? 8 : 6 }).map((_, i) => (
-              <div key={i} className="motion-skeleton motion-skeleton-on-dark dash-card rounded-2xl" />
-            ))}
+        {loading ? (
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <div className="grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="hm-panel motion-skeleton motion-skeleton-on-dark h-24" />
+              ))}
+            </div>
+            <div className="hm-panel motion-skeleton motion-skeleton-on-dark min-h-[16rem] flex-1" />
           </div>
-          <div className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl flex-1 min-h-[12rem]" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0 lg:min-h-[9rem]">
-            <div className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl h-36 lg:h-full" />
-            <div className="motion-skeleton motion-skeleton-on-dark dash-card rounded-xl h-36 lg:h-full" />
-          </div>
-        </div>
-      ) : (
-        <div className="relative flex flex-col gap-3 p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-4 lg:flex-1 lg:min-h-0 lg:overflow-hidden lg:gap-3">
-          <div className={`shrink-0 ${kpiGridClass}`}>
-            {kpis.map((kpi) => {
-              const spark = Array.from({ length: 7 }, (_, i) => {
-                const n = ((Math.abs(kpi.numeric) + 1) * (i + 3) * 19) % 51;
-                return 0.28 + (n / 51) * 0.72;
-              });
-              return (
-                <div
-                  key={kpi.key}
-                  className={`dash-card dash-kpi-card dash-kpi-card--${kpi.tone} min-w-0 rounded-2xl px-2.5 py-2.5 lg:px-3 lg:py-2.5`}
-                >
-                  <div className="relative z-[1] flex items-start justify-between gap-2">
-                    <span className="dash-kpi-icon" aria-hidden>
-                      <Icon icon={kpi.icon} width={16} height={16} />
+        ) : (
+          <>
+            {/* indicadores */}
+            <section
+              className="grid shrink-0 grid-cols-2 gap-3 lg:[grid-template-columns:repeat(var(--hm-n),minmax(0,1fr))] lg:gap-3.5"
+              style={{ "--hm-n": kpis.length } as CSSProperties}
+              aria-label={tr.historicTitle}
+            >
+              {kpis.map((k, i) => (
+                <div key={k.key} className="hm-panel hm-kpi hm-aparece" style={d(80 + i * 60)}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="hm-kpi-nombre truncate">{k.label}</span>
+                    <span className="hm-kpi-ico" aria-hidden>
+                      <Icon icon={k.icon} width={16} height={16} />
                     </span>
-                    <Icon
-                      icon={kpi.iconAlt}
-                      width={14}
-                      height={14}
-                      className="dash-kpi-icon-alt shrink-0 mt-0.5"
-                      aria-hidden
-                    />
                   </div>
-                  <p className="dash-kpi-label relative z-[1] mt-1.5 text-dash-fg leading-snug line-clamp-2 text-[11px] sm:text-sm">
-                    {kpi.label}
-                  </p>
-                  <div className="relative z-[1] mt-1.5 flex items-end justify-between gap-1.5">
-                    <div className="min-w-0">
-                      <p className="dash-kpi-value text-2xl font-bold sm:text-[1.75rem] lg:text-[1.85rem] tabular-nums leading-none">
-                        {kpi.value}
-                      </p>
-                      <p className="dash-kpi-hint mt-1 text-[10px] leading-snug line-clamp-1 sm:text-[11px]">
-                        {kpi.hint}
-                      </p>
+                  <div className="flex min-w-0 items-baseline gap-3">
+                    <b className="hm-kpi-valor tabular-nums">
+                      {k.valor != null ? <Cifra valor={k.valor} activo={listo} retraso={180 + i * 60} formato={fmt} /> : k.texto}
+                    </b>
+                    {k.banderas && k.banderas.length > 0 ? (
+                      <span className="flex self-center" aria-hidden>
+                        {k.banderas.map((iso, j) => (
+                          <Icon
+                            key={iso + j}
+                            icon={`circle-flags:${iso.toLowerCase()}`}
+                            width={18}
+                            height={18}
+                            className="rounded-full"
+                            style={{ marginLeft: j === 0 ? 0 : -3, boxShadow: "0 0 0 2px var(--hm-navy)" }}
+                          />
+                        ))}
+                      </span>
+                    ) : (
+                      k.nota && <span className="hm-kpi-nota min-w-0 truncate">{k.nota}</span>
+                    )}
+                  </div>
+                  {k.banderas && k.nota && <span className="hm-kpi-nota truncate">{k.nota}</span>}
+                  <span className="hm-franja" style={d(80 + i * 60)} />
+                </div>
+              ))}
+            </section>
+
+            {/* gráfico + desglose */}
+            <section
+              className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:gap-3.5 ${
+                esInterno
+                  ? "lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)]"
+                  : "lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]"
+              }`}
+            >
+              <div className="hm-panel hm-bloque hm-aparece min-h-[18rem] lg:min-h-0" style={d(320)}>
+                <div className="hm-bloque-cab">
+                  <h2>{tr.histMonthTitle}</h2>
+                  <span>{rango}</span>
+                </div>
+                {porMes.items.length === 0 ? (
+                  <p className="hm-vacio">{tr.noData}</p>
+                ) : (
+                  <div className="hm-grafico">
+                    <div className="hm-eje" aria-hidden>
+                      {ticks.map((v) => (
+                        <span key={v} style={{ bottom: `${(v / porMes.tope) * 100}%` }}>
+                          {v}
+                        </span>
+                      ))}
                     </div>
-                    <div className="dash-kpi-spark hidden sm:flex" aria-hidden>
-                      {spark.map((h, i) => (
-                        <span key={i} style={{ height: `${Math.round(h * 100)}%` }} />
+                    <div
+                      className="hm-area"
+                      style={columnasMes}
+                      role="img"
+                      aria-label={porMes.items
+                        .map((m) => `${format(m.inicio, "MMM yyyy", { locale: fechaLocale })}: ${m.operaciones}`)
+                        .join(", ")}
+                    >
+                      {ticks.slice(1).map((v) => (
+                        <div key={v} className="hm-grilla" style={{ bottom: `${(v / porMes.tope) * 100}%` }} />
+                      ))}
+                      {porMes.items.map((m, i) => {
+                        const alto = (m.operaciones / porMes.tope) * 100;
+                        const esPico = porMes.pico === m;
+                        return (
+                          <div
+                            key={m.inicio.toISOString()}
+                            className={`hm-columna ${esPico ? "es-pico" : ""} ${m.operaciones === 0 ? "es-cero" : ""}`}
+                            style={d(560 + i * 45)}
+                          >
+                            <i style={{ height: `${Math.max(alto, 0.8)}%` }} />
+                            <em style={{ bottom: `${alto}%` }}>{m.operaciones}</em>
+                            <span className="hm-tip" style={{ bottom: `calc(${alto}% + 34px)` }}>
+                              {format(m.inicio, "MMMM yyyy", { locale: fechaLocale })} · {opsTexto(m.operaciones)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="hm-meses" style={columnasMes} aria-hidden>
+                      {porMes.items.map((m) => (
+                        <span key={m.inicio.toISOString()} className={porMes.pico === m ? "es-pico" : ""}>
+                          {format(m.inicio, porMes.items.length > 12 ? "MMM yy" : "MMM", { locale: fechaLocale }).replace(".", "")}
+                        </span>
                       ))}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Fila media: ocupa el alto restante en desktop */}
-          <div
-            className={
-              showEmpresaInsights
-                ? "grid grid-cols-1 gap-3 lg:flex-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)]"
-                : "grid grid-cols-1 gap-3 lg:flex-1 lg:min-h-0 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]"
-            }
-          >
-            <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-              <div className="dash-section-head shrink-0 px-3.5 py-2.5 flex items-baseline justify-between gap-2">
-                <p className="inline-flex items-center gap-2 text-sm font-bold text-dash-fg sm:text-base">
-                  <Icon icon="lucide:calendar-range" width={16} height={16} className="text-dash-neon shrink-0" />
-                  {tr.volumeByMonth}
-                </p>
-                {totales.cobertura.pallets > 0 && (
-                  <p className="text-xs text-dash-muted truncate sm:text-sm">
-                    {tr.volumeAvgPallets}:{" "}
-                    {totales.palletsPorOperacion.toLocaleString(intl, { maximumFractionDigits: 1 })}
-                  </p>
                 )}
               </div>
-              {porMes.items.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center px-4 py-8">
-                  <p className="text-sm text-dash-muted">{tr.noData}</p>
-                </div>
+
+              {esInterno ? (
+                <>
+                  <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-rows-2 lg:gap-3.5">
+                    {panelLista(tr.volumeCompanies, tr.histCompaniesSub, resumen.empresas, 380, false)}
+                    {panelLista(tr.volumeDestinations, tr.histDestinationsSub, resumen.destinos, 440, true)}
+                  </div>
+                  <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-rows-2 lg:gap-3.5">
+                    {panelEspecies(500)}
+                    {panelLista(
+                      tr.volumeByUnitType,
+                      resumen.conUnidad === 0 ? tr.volumeNoCoverage : cobertura(resumen.conUnidad),
+                      resumen.unidades,
+                      560,
+                      false,
+                    )}
+                  </div>
+                </>
               ) : (
-                <div className="px-3 py-3 flex items-end gap-1.5 overflow-x-auto lg:flex-1 lg:min-h-0 sm:gap-2 sm:px-4">
-                  {porMes.items.map((item) => {
-                    const height = (item.operaciones / porMes.max) * 100;
-                    return (
-                      <div
-                        key={item.inicio.toISOString()}
-                        className="flex-1 min-w-[2.5rem] flex flex-col items-center gap-1 lg:h-full"
-                      >
-                        <span className="text-xs font-semibold text-dash-neon tabular-nums sm:text-sm">
-                          {item.operaciones}
-                        </span>
-                        <div className="w-full h-28 flex items-end bg-cyan-950/45 rounded-md overflow-hidden lg:h-full lg:min-h-0">
-                          <div
-                            className="w-full bg-gradient-to-t from-sky-500/70 to-cyan-300 rounded-md"
-                            style={{ height: `${Math.max(height, 4)}%` }}
-                            title={
-                              item.pallets > 0
-                                ? `${item.operaciones} · ${fmt(item.pallets)} ${tr.volumePallets.toLowerCase()}`
-                                : String(item.operaciones)
-                            }
-                          />
-                        </div>
-                        <span className="text-[10px] text-dash-muted whitespace-nowrap sm:text-xs">
-                          {format(item.inicio, "MMM yy", { locale: locale === "es" ? es : undefined })}
-                        </span>
-                      </div>
-                    );
-                  })}
+                <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-rows-2 lg:gap-3.5">
+                  {panelLista(tr.volumeDestinations, tr.histDestinationsSub, resumen.destinos, 380, true)}
+                  {panelEspecies(440)}
                 </div>
               )}
-            </div>
-
-            {showEmpresaInsights && porEmpresa && porDestino ? (
-              <>
-                {rankingTable(porEmpresa, {
-                  title: tr.volumeContainersByCompany,
-                  icon: "lucide:building-2",
-                  labelHeader: tr.colClient,
-                  barClass: "bg-sky-400",
-                  pctClass: "text-dash-neon",
-                  useContainersForPct: true,
-                })}
-                {rankingTable(porDestino, {
-                  title: tr.volumeByDestination,
-                  icon: "lucide:map-pin",
-                  labelHeader: tr.colPod,
-                  barClass: "bg-emerald-400",
-                  pctClass: "text-emerald-300",
-                  useContainersForPct: totales.contenedores > 0,
-                })}
-              </>
-            ) : (
-              <>
-                <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-                  <div className="dash-section-head shrink-0 px-3.5 py-2.5">
-                    <p className="inline-flex items-center gap-2 text-sm font-bold text-dash-fg sm:text-base">
-                      <Icon icon="lucide:container" width={16} height={16} className="text-dash-neon shrink-0" />
-                      {tr.volumeByUnitType}
-                    </p>
-                  </div>
-                  <div className="px-3.5 py-2.5 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-                    {porTipoUnidad.items.length === 0 ? (
-                      <p className="text-sm text-dash-muted">{tr.noData}</p>
-                    ) : (
-                      porTipoUnidad.items.map((item) => (
-                        <div key={item.tipo}>
-                          <div className="flex justify-between gap-2 text-sm mb-1">
-                            <span className="text-dash-fg truncate font-semibold">{item.tipo}</span>
-                            <span className="tabular-nums text-dash-neon shrink-0 font-bold">{fmt(item.cantidad)}</span>
-                          </div>
-                          <div className="h-1.5 bg-cyan-950/45 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-sky-400 rounded-full"
-                              style={{ width: `${Math.max((item.cantidad / porTipoUnidad.max) * 100, 6)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-                <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-                  <div className="shrink-0 px-3.5 py-2.5 border-b border-fuchsia-300/15 flex items-center justify-between gap-2">
-                    <p className="inline-flex items-center gap-2 text-sm font-bold text-fuchsia-200/90 sm:text-base">
-                      <Icon icon="lucide:sprout" width={16} height={16} className="text-fuchsia-300 shrink-0" />
-                      {tr.volumeBySpecies}
-                    </p>
-                    <p className="text-xl font-bold text-fuchsia-300 tabular-nums">{porEspecie.items.length}</p>
-                  </div>
-                  <div className="px-3.5 py-2.5 space-y-2 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-                    {porEspecie.items.length === 0 ? (
-                      <p className="text-sm text-dash-muted">{tr.noData}</p>
-                    ) : (
-                      porEspecie.items.map((item) => (
-                        <div key={item.especie}>
-                          <div className="flex justify-between gap-2 text-sm mb-1">
-                            <span className="text-dash-fg truncate font-semibold">{item.especie}</span>
-                            <span className="tabular-nums text-fuchsia-200 shrink-0 font-semibold">
-                              {fmt(item.operaciones)}
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-cyan-950/45 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-fuchsia-400 rounded-full"
-                              style={{ width: `${Math.max((item.operaciones / porEspecie.max) * 100, 6)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Fila inferior: solo cuando hay insights de empresa (unidad + especie) */}
-          {showEmpresaInsights && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:shrink-0 lg:min-h-[9.5rem] lg:max-h-[11rem]">
-              <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-                <div className="dash-section-head shrink-0 px-3.5 py-2">
-                  <p className="inline-flex items-center gap-2 text-sm font-bold text-dash-fg">
-                    <Icon icon="lucide:container" width={15} height={15} className="text-dash-neon shrink-0" />
-                    {tr.volumeByUnitType}
-                  </p>
-                </div>
-                <div className="px-3.5 py-2 space-y-1.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-                  {porTipoUnidad.items.length === 0 ? (
-                    <p className="text-sm text-dash-muted">{tr.noData}</p>
-                  ) : (
-                    porTipoUnidad.items.slice(0, 4).map((item) => (
-                      <div key={item.tipo}>
-                        <div className="flex justify-between gap-2 text-xs mb-0.5 sm:text-sm">
-                          <span className="text-dash-fg truncate font-semibold">{item.tipo}</span>
-                          <span className="tabular-nums text-dash-neon shrink-0 font-bold">{fmt(item.cantidad)}</span>
-                        </div>
-                        <div className="h-1.5 bg-cyan-950/45 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-sky-400 rounded-full"
-                            style={{ width: `${Math.max((item.cantidad / porTipoUnidad.max) * 100, 6)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className="dash-card rounded-xl overflow-hidden flex flex-col lg:min-h-0">
-                <div className="shrink-0 px-3.5 py-2 border-b border-fuchsia-300/15 flex items-center justify-between gap-2">
-                  <p className="inline-flex items-center gap-2 text-sm font-bold text-fuchsia-200/90">
-                    <Icon icon="lucide:sprout" width={15} height={15} className="text-fuchsia-300 shrink-0" />
-                    {tr.volumeBySpecies}
-                  </p>
-                  <p className="text-lg font-bold text-fuchsia-300 tabular-nums">{porEspecie.items.length}</p>
-                </div>
-                <div className="px-3.5 py-2 space-y-1.5 lg:flex-1 lg:min-h-0 lg:overflow-auto">
-                  {porEspecie.items.length === 0 ? (
-                    <p className="text-sm text-dash-muted">{tr.noData}</p>
-                  ) : (
-                    porEspecie.items.slice(0, 4).map((item) => (
-                      <div key={item.especie}>
-                        <div className="flex justify-between gap-2 text-xs mb-0.5 sm:text-sm">
-                          <span className="text-dash-fg truncate font-semibold">{item.especie}</span>
-                          <span className="tabular-nums text-fuchsia-200 shrink-0 font-semibold">
-                            {fmt(item.operaciones)}
-                          </span>
-                        </div>
-                        <div className="h-1.5 bg-cyan-950/45 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-fuchsia-400 rounded-full"
-                            style={{ width: `${Math.max((item.operaciones / porEspecie.max) * 100, 6)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+            </section>
+          </>
+        )}
+      </div>
     </main>
   );
 }

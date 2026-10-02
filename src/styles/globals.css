@@ -1,6 +1,7 @@
 /* Sistema de motion design (tokens + utilidades). Ver docs/MOTION-DESIGN.md */
 @import "./motion.css";
 @import "./dashboard-neon.css";
+@import "./historico-marca.css";
 
 @tailwind base;
 @tailwind components;

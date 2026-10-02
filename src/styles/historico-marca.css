@@ -1,0 +1,229 @@
+/*
+ * Histórico de volumen — pizarra con la imagen de ASLI.
+ *
+ * Una pantalla sin scroll en escritorio: indicadores arriba y, debajo, el
+ * gráfico mensual con los paneles de desglose al lado. Colores de brand.ts:
+ * navy → teal oscuro de fondo, crema para texto y líneas, teal y oliva para los
+ * datos (aclarados con color-mix sobre oscuro, como el resto del dashboard).
+ * Formas sobrias, radio 10 px (ESTILOS-VISUALES: "cuadrado tipo Windows").
+ *
+ * Movimiento (MOTION-DESIGN): entra una vez, con --motion-ease-enter; cifras que
+ * cuentan, barras y rieles con transform, anillo con stroke-dasharray. Con
+ * "reducir movimiento" solo se desvanece.
+ */
+
+.hm {
+  --hm-navy: #11224e;
+  --hm-hondo: #003f5a;
+  --hm-teal: #007a7b;
+  --hm-oliva: #669900;
+  --hm-crema: #f6eee8;
+  --hm-teal-dato: color-mix(in srgb, #007a7b 62%, #ffffff);
+  --hm-oliva-dato: color-mix(in srgb, #669900 76%, #ffffff);
+  --hm-texto: #f6eee8;
+  --hm-suave: rgba(246, 238, 232, 0.64);
+  --hm-tenue: rgba(246, 238, 232, 0.4);
+  --hm-linea: rgba(246, 238, 232, 0.11);
+  --hm-base: rgba(246, 238, 232, 0.22);
+  --hm-panel: rgba(246, 238, 232, 0.045);
+  --hm-pista: rgba(246, 238, 232, 0.08);
+  --hm-sombra: 0 18px 40px -24px rgba(0, 0, 0, 0.6);
+  --hm-pico-texto: #11224e;
+  --hm-ease: var(--motion-ease-enter, cubic-bezier(0.22, 1, 0.36, 1));
+
+  position: relative;
+  color: var(--hm-texto);
+  background:
+    radial-gradient(60% 70% at 100% 0%, rgba(0, 122, 123, 0.28), transparent 65%),
+    radial-gradient(50% 60% at 0% 100%, rgba(102, 153, 0, 0.1), transparent 70%),
+    linear-gradient(135deg, #0b1736 0%, var(--hm-navy) 42%, #0a3550 78%, var(--hm-hondo) 100%);
+  font-feature-settings: "tnum" 1;
+}
+
+.dash-neon[data-theme="light"] .hm {
+  --hm-teal-dato: #007a7b;
+  --hm-oliva-dato: #669900;
+  --hm-texto: #11224e;
+  --hm-suave: rgba(17, 34, 78, 0.66);
+  --hm-tenue: rgba(17, 34, 78, 0.45);
+  --hm-linea: rgba(17, 34, 78, 0.12);
+  --hm-base: rgba(17, 34, 78, 0.25);
+  --hm-panel: rgba(255, 255, 255, 0.72);
+  --hm-pista: rgba(17, 34, 78, 0.08);
+  --hm-sombra: 0 16px 36px -26px rgba(17, 34, 78, 0.45);
+  --hm-pico-texto: #ffffff;
+  background:
+    radial-gradient(60% 70% at 100% 0%, rgba(0, 122, 123, 0.14), transparent 65%),
+    radial-gradient(50% 60% at 0% 100%, rgba(102, 153, 0, 0.08), transparent 70%),
+    linear-gradient(135deg, #f6eee8 0%, #fbf8f5 45%, #e9f1f1 100%);
+}
+
+/* la ruta de la marca, apenas visible detrás de todo */
+.hm-ruta {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.hm-ruta path {
+  fill: none;
+  stroke: var(--hm-linea);
+  stroke-width: 1.5;
+  stroke-dasharray: 2 9;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.hm-panel {
+  position: relative;
+  background: var(--hm-panel);
+  border: 1px solid var(--hm-linea);
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--hm-sombra);
+}
+
+/* cabecera */
+.hm-titulo {
+  margin: 0;
+  font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif);
+  font-weight: 700;
+  font-size: clamp(22px, 3vh, 30px);
+  line-height: 1.05;
+}
+.hm-sub { color: var(--hm-suave); font-size: 13.5px; margin-top: 3px; }
+.hm-control {
+  border: 1px solid var(--hm-linea);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--hm-texto);
+  transition: background-color 160ms ease, transform 90ms var(--hm-ease);
+}
+.hm-control:active { transform: scale(0.985); }
+@media (hover: hover) and (pointer: fine) {
+  .hm-control:hover { background: var(--hm-pista); }
+}
+.hm-control option { color: #11224e; }
+
+/* indicadores */
+.hm-kpi { padding: clamp(12px, 1.8vh, 18px) 18px clamp(12px, 1.8vh, 16px); display: grid; gap: 6px; overflow: hidden; min-width: 0; }
+.hm-kpi-nombre { font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--hm-suave); }
+.hm-kpi-ico { width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; border: 1px solid var(--hm-linea); color: var(--hm-teal-dato); flex: none; }
+.hm-kpi-valor {
+  font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif);
+  font-weight: 600;
+  font-size: clamp(34px, 5vh, 52px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+.hm-kpi-nota { color: var(--hm-suave); font-size: 13px; line-height: 1.3; }
+.hm-franja { display: block; height: 2px; width: 42px; border-radius: 2px; background: linear-gradient(90deg, var(--hm-teal-dato), var(--hm-oliva-dato)); transform-origin: left; }
+
+/* paneles de desglose */
+.hm-bloque { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.hm-bloque-cab { flex: none; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 13px 18px 4px; }
+.hm-bloque-cab h2 {
+  margin: 0;
+  font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif);
+  font-size: 17px;
+  font-weight: 600;
+}
+.hm-bloque-cab span { color: var(--hm-tenue); font-size: 12.5px; text-align: right; }
+
+/* gráfico mensual */
+.hm-grafico { flex: 1; min-height: 0; display: grid; grid-template-columns: 26px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; column-gap: 12px; padding: 18px 22px 14px 14px; }
+.hm-eje { position: relative; }
+.hm-eje span { position: absolute; right: 0; transform: translateY(50%); font-size: 11.5px; color: var(--hm-tenue); }
+.hm-area { position: relative; display: grid; align-items: end; border-bottom: 1px solid var(--hm-base); }
+.hm-grilla { position: absolute; left: 0; right: 0; border-top: 1px solid var(--hm-pista); }
+.hm-columna { position: relative; height: 100%; display: flex; justify-content: center; align-items: flex-end; }
+.hm-columna i { display: block; width: min(100%, 52px); border-radius: 4px 4px 0 0; transform-origin: bottom; background: linear-gradient(180deg, var(--hm-teal-dato), color-mix(in srgb, var(--hm-teal) 70%, transparent)); }
+.hm-columna.es-pico i { background: linear-gradient(180deg, var(--hm-oliva-dato), color-mix(in srgb, var(--hm-oliva) 75%, transparent)); }
+.hm-columna.es-cero i { background: var(--hm-pista); }
+.hm-columna em {
+  position: absolute;
+  font-style: normal;
+  font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif);
+  font-weight: 600;
+  font-size: 15px;
+  transform: translateY(-120%);
+}
+.hm-columna.es-pico em { color: var(--hm-pico-texto); background: var(--hm-oliva-dato); padding: 0 8px; border-radius: 5px; }
+.hm-columna.es-cero em { color: var(--hm-tenue); }
+.hm-meses { grid-column: 2; display: grid; margin-top: 9px; }
+.hm-meses span { text-align: center; font-size: 12.5px; color: var(--hm-suave); text-transform: capitalize; }
+.hm-meses span.es-pico { color: var(--hm-oliva-dato); font-weight: 600; }
+.hm-tip {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: var(--hm-crema);
+  color: var(--hm-navy);
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(4px) scale(0.97);
+  transition: opacity 160ms var(--hm-ease), transform 160ms var(--hm-ease);
+  pointer-events: none;
+  z-index: 2;
+}
+.dash-neon[data-theme="light"] .hm-tip { background: var(--hm-navy); color: var(--hm-crema); }
+@media (hover: hover) and (pointer: fine) {
+  .hm-columna:hover .hm-tip { opacity: 1; transform: none; }
+  .hm-columna:hover i { filter: brightness(1.12); }
+}
+
+/* listas con riel */
+.hm-lista { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: space-evenly; padding: 2px 18px 12px; }
+.hm-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; }
+.hm-item-nombre { display: flex; align-items: center; gap: 9px; font-weight: 500; font-size: 14px; min-width: 0; }
+.hm-item-nombre span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-item-num { font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif); font-weight: 600; font-size: 15px; }
+.hm-item-num small { display: inline-block; min-width: 3.4ch; text-align: right; color: var(--hm-tenue); font-family: inherit; font-weight: 400; font-size: 12.5px; margin-left: 8px; }
+.hm-riel { grid-column: 1 / -1; height: 3px; background: var(--hm-pista); }
+.hm-riel i { display: block; height: 100%; transform-origin: left; background: var(--hm-teal-dato); }
+.hm-item:first-child .hm-riel i { background: linear-gradient(90deg, var(--hm-teal-dato), var(--hm-oliva-dato)); }
+.hm-vacio { flex: 1; display: grid; place-items: center; color: var(--hm-tenue); font-size: 13.5px; padding: 16px; }
+
+/* anillo de especies */
+.hm-especies { flex: 1; min-height: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 20px; align-items: center; padding: 4px 18px 14px; }
+.hm-anillo { position: relative; height: 100%; max-height: min(250px, 100%); aspect-ratio: 1; max-width: 100%; }
+.hm-anillo svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hm-anillo circle { fill: none; stroke-width: 11; }
+.hm-anillo .hm-pista-anillo { stroke: var(--hm-pista); }
+.hm-anillo .hm-seg { transition: stroke-dasharray 900ms var(--hm-ease); }
+.hm-anillo-centro { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.hm-anillo-centro b { font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif); font-weight: 600; font-size: clamp(26px, 3.8vh, 38px); line-height: 1; }
+.hm-anillo-centro span { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--hm-tenue); margin-top: 4px; }
+.hm-leyenda { display: grid; gap: clamp(4px, 0.9vh, 9px); min-width: 0; }
+.hm-leyenda div { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: 13.5px; }
+.hm-leyenda i { width: 8px; height: 8px; border-radius: 2px; }
+.hm-leyenda span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-leyenda b { font-family: var(--font-condensed, "Fira Sans Condensed", "Fira Sans", sans-serif); font-weight: 600; font-size: 15px; }
+
+/* ---------- entrada, una vez por carga de datos ---------- */
+.hm-aparece { opacity: 0; transform: translateY(14px); }
+.hm .hm-columna i { transform: scaleY(0); }
+.hm .hm-franja, .hm .hm-riel i { transform: scaleX(0); }
+.hm .hm-columna em { opacity: 0; }
+
+.hm.hm--listo .hm-aparece { opacity: 1; transform: none; transition: opacity 360ms var(--hm-ease), transform 520ms var(--hm-ease); transition-delay: var(--hm-d, 0ms); }
+.hm.hm--listo .hm-columna i { transform: scaleY(1); transition: transform 800ms var(--hm-ease); transition-delay: var(--hm-d, 0ms); }
+.hm.hm--listo .hm-franja { transform: scaleX(1); transition: transform 700ms var(--hm-ease); transition-delay: calc(var(--hm-d, 0ms) + 600ms); }
+.hm.hm--listo .hm-riel i { transform: scaleX(1); transition: transform 800ms var(--hm-ease); transition-delay: var(--hm-d, 0ms); }
+.hm.hm--listo .hm-columna em { opacity: 1; transition: opacity 240ms var(--hm-ease); transition-delay: calc(var(--hm-d, 0ms) + 450ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-aparece, .hm .hm-columna i, .hm .hm-franja, .hm .hm-riel i { transform: none; }
+  .hm.hm--listo .hm-aparece,
+  .hm.hm--listo .hm-columna i,
+  .hm.hm--listo .hm-franja,
+  .hm.hm--listo .hm-riel i,
+  .hm.hm--listo .hm-columna em { transition: opacity 240ms ease; transition-delay: 0ms; }
+  .hm-anillo .hm-seg { transition: none; }
+}
