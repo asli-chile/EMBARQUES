@@ -1245,6 +1245,8 @@ export const translations = {
       // Mediana de días entre el ETA de la reserva y el arribo real.
       volumeDeviation: "Desvío típico de llegada",
       // Pizarra del histórico (DashboardHistoricoContent)
+      statusOthers: "Otros estados",
+      statusSub: "operaciones por estado",
       histSubtitle: "Temporada {{temporada}} · {{n}} operaciones embarcadas",
       histSubtitleAll: "Todas las temporadas · {{n}} operaciones embarcadas",
       histPeakMonth: "mayor mes: {{mes}}",
@@ -4885,6 +4887,8 @@ export const translations = {
       volumeCoverage: "with data",
       volumeNoCoverage: "No data captured",
       volumeDeviation: "Typical arrival deviation",
+      statusOthers: "Other statuses",
+      statusSub: "operations by status",
       histSubtitle: "Season {{temporada}} · {{n}} shipped operations",
       histSubtitleAll: "All seasons · {{n}} shipped operations",
       histPeakMonth: "top month: {{mes}}",

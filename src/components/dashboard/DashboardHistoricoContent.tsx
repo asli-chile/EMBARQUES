@@ -17,6 +17,7 @@ import { normalizarEstado } from "@/lib/operaciones/estados";
 import { desvioEta, formatoDesvio, resumirDesvios, type Desvio } from "@/lib/operaciones/desvioEta";
 import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
 import { DashboardViewTabs, type DashboardView } from "./DashboardViewTabs";
+import { AnilloPizarra, Cifra, ListaRieles, PanelPizarra, retrasoEntrada, useEntrada, type FilaPizarra } from "./pizarra";
 
 /*
  * Histórico de volumen: una pizarra de una sola pantalla con la imagen de ASLI.
@@ -65,17 +66,7 @@ const COBERTURA_MINIMA_CLIENTE = 0.8;
 /** Filas por panel de desglose; el resto se agrupa en "Otras". */
 const FILAS_POR_PANEL = 6;
 
-/* El anillo de especies usa solo tonos de marca, en este orden. */
-const TONOS_ANILLO = [
-  "var(--hm-teal-dato)",
-  "var(--hm-oliva-dato)",
-  "var(--hm-texto)",
-  "color-mix(in srgb, var(--hm-teal) 85%, #ffffff)",
-  "color-mix(in srgb, var(--hm-hondo) 55%, #ffffff)",
-  "#c9b9a6",
-];
-
-type Fila = { label: string; valor: number; iso?: string | null };
+type Fila = FilaPizarra;
 
 function num(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
@@ -111,73 +102,6 @@ function agrupar(acc: Map<string, number>, otras: string): { filas: Fila[]; dist
 function escala(max: number): { tope: number; paso: number } {
   const paso = max <= 8 ? 2 : max <= 20 ? 4 : max <= 50 ? 10 : Math.ceil(max / 40) * 10;
   return { tope: Math.max(paso, Math.ceil((max * 1.18) / paso) * paso), paso };
-}
-
-function prefiereMenosMovimiento(): boolean {
-  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-}
-
-/**
- * Se pone en `true` dos cuadros después de cada cambio de `clave`, para que el
- * navegador pinte primero el estado inicial y la entrada tenga desde dónde
- * animar. Al cambiar de temporada vuelve a `false` y la pizarra entra de nuevo.
- */
-function useEntrada(clave: string): boolean {
-  const [listo, setListo] = useState(false);
-  useEffect(() => {
-    setListo(false);
-    let a = 0;
-    let b = 0;
-    a = requestAnimationFrame(() => {
-      b = requestAnimationFrame(() => setListo(true));
-    });
-    return () => {
-      cancelAnimationFrame(a);
-      cancelAnimationFrame(b);
-    };
-  }, [clave]);
-  return listo;
-}
-
-/** Cifra que cuenta desde 0 una sola vez (1,1 s, frenando al final). */
-function Cifra({
-  valor,
-  activo,
-  retraso = 0,
-  formato,
-}: {
-  valor: number;
-  activo: boolean;
-  retraso?: number;
-  formato: (n: number) => string;
-}) {
-  const [mostrado, setMostrado] = useState(0);
-  useEffect(() => {
-    if (!activo) {
-      setMostrado(0);
-      return;
-    }
-    if (prefiereMenosMovimiento()) {
-      setMostrado(valor);
-      return;
-    }
-    let raf = 0;
-    let t0: number | null = null;
-    const paso = (ahora: number) => {
-      t0 ??= ahora; // el reloj arranca en el primer cuadro, no antes
-      const k = Math.min(1, Math.max(0, (ahora - t0) / 1100));
-      setMostrado(valor * (1 - Math.pow(1 - k, 3)));
-      if (k < 1) raf = requestAnimationFrame(paso);
-    };
-    const timer = window.setTimeout(() => {
-      raf = requestAnimationFrame(paso);
-    }, retraso);
-    return () => {
-      window.clearTimeout(timer);
-      cancelAnimationFrame(raf);
-    };
-  }, [valor, activo, retraso]);
-  return <>{formato(mostrado)}</>;
 }
 
 type Kpi = {
@@ -430,116 +354,29 @@ export function DashboardHistoricoContent({ view, onViewChange }: Props) {
       : `${format(a, "MMM yyyy", { locale: fechaLocale })} – ${format(b, "MMM yyyy", { locale: fechaLocale })}`;
   })();
 
-  const d = (ms: number) => ({ "--hm-d": `${ms}ms` }) as CSSProperties;
+  const d = retrasoEntrada;
   const opsTexto = (n: number) => `${fmt(n)} ${n === 1 ? tr.histOp1 : tr.histOpN}`;
 
-  const panelLista = (titulo: string, sub: string, datos: { filas: Fila[] }, retraso: number, conBandera: boolean) => {
-    const base = Math.max(1, ...datos.filas.map((f) => f.valor));
-    const suma = datos.filas.reduce((s, f) => s + f.valor, 0) || 1;
-    return (
-      <div className="hm-panel hm-bloque hm-aparece min-h-[15rem] lg:min-h-0" style={d(retraso)}>
-        <div className="hm-bloque-cab">
-          <h2>{titulo}</h2>
-          <span>{sub}</span>
-        </div>
-        {datos.filas.length === 0 ? (
-          <p className="hm-vacio">{tr.noData}</p>
-        ) : (
-          <div className="hm-lista">
-            {datos.filas.map((f, i) => {
-              const iso = conBandera ? isoDePuerto(f.label) : null;
-              return (
-                <div key={f.label} className="hm-item">
-                  <div className="hm-item-nombre">
-                    {conBandera &&
-                      (iso ? (
-                        <Icon icon={`circle-flags:${iso.toLowerCase()}`} width={18} height={18} className="shrink-0" aria-hidden />
-                      ) : (
-                        <Icon icon="lucide:globe" width={16} height={16} className="shrink-0 opacity-60" aria-hidden />
-                      ))}
-                    <span title={f.label}>{f.label}</span>
-                  </div>
-                  <div className="hm-item-num">
-                    <Cifra valor={f.valor} activo={listo} retraso={retraso + 120 + i * 45} formato={fmt} />
-                    <small>{Math.round((f.valor / suma) * 100)}%</small>
-                  </div>
-                  <div className="hm-riel">
-                    <i style={{ width: `${(f.valor / base) * 100}%`, ...d(retraso + 120 + i * 45) }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const panelLista = (titulo: string, sub: string, datos: { filas: Fila[] }, retraso: number, conBandera: boolean) => (
+    <PanelPizarra titulo={titulo} extra={sub} retraso={retraso} className="min-h-[15rem] lg:min-h-0">
+      <ListaRieles filas={datos.filas} listo={listo} retraso={retraso} formato={fmt} vacio={tr.noData} banderas={conBandera} />
+    </PanelPizarra>
+  );
 
-  const panelEspecies = (retraso: number) => {
-    const filas = resumen.especies.filas;
-    const suma = filas.reduce((s, f) => s + f.valor, 0);
-    const r = 50;
-    const largo = 2 * Math.PI * r;
-    const respiro = filas.length > 1 ? 1.6 : 0;
-    let acumulado = 0;
-    return (
-      <div className="hm-panel hm-bloque hm-aparece min-h-[15rem] lg:min-h-0" style={d(retraso)}>
-        <div className="hm-bloque-cab">
-          <h2>{tr.histSpecies}</h2>
-          <span>{tr.histSpeciesSub}</span>
-        </div>
-        {filas.length === 0 ? (
-          <p className="hm-vacio">{tr.noData}</p>
-        ) : (
-          <div className="hm-especies">
-            <div className="hm-anillo">
-              <svg viewBox="0 0 120 120" role="img" aria-label={filas.map((f) => `${f.label} ${f.valor}`).join(", ")}>
-                <circle className="hm-pista-anillo" cx="60" cy="60" r={r} />
-                {filas.map((f, i) => {
-                  const arco = (f.valor / suma) * largo;
-                  const visible = Math.max(arco - respiro, 0.01);
-                  const offset = -(acumulado + respiro / 2);
-                  acumulado += arco;
-                  return (
-                    <circle
-                      key={f.label}
-                      className="hm-seg"
-                      cx="60"
-                      cy="60"
-                      r={r}
-                      style={{
-                        stroke: TONOS_ANILLO[i % TONOS_ANILLO.length],
-                        strokeDashoffset: offset,
-                        strokeDasharray: listo ? `${visible} ${largo}` : `0 ${largo}`,
-                        transitionDelay: `${retraso + 150 + i * 80}ms`,
-                      }}
-                    />
-                  );
-                })}
-              </svg>
-              <div className="hm-anillo-centro">
-                <b>
-                  <Cifra valor={resumen.especies.distintos} activo={listo} retraso={retraso + 150} formato={fmt} />
-                </b>
-                <span>{tr.histSpeciesCenter}</span>
-              </div>
-            </div>
-            <div className="hm-leyenda">
-              {filas.map((f, i) => (
-                <div key={f.label}>
-                  <i style={{ background: TONOS_ANILLO[i % TONOS_ANILLO.length] }} />
-                  <span title={f.label}>{f.label}</span>
-                  <b>
-                    <Cifra valor={f.valor} activo={listo} retraso={retraso + 150 + i * 60} formato={fmt} />
-                  </b>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const panelEspecies = (retraso: number) => (
+    <PanelPizarra titulo={tr.histSpecies} extra={tr.histSpeciesSub} retraso={retraso} className="min-h-[15rem] lg:min-h-0">
+      <AnilloPizarra
+        filas={resumen.especies.filas}
+        listo={listo}
+        retraso={retraso}
+        formato={fmt}
+        centro={resumen.especies.distintos}
+        centroTexto={tr.histSpeciesCenter}
+        vacio={tr.noData}
+        etiqueta={tr.histSpecies}
+      />
+    </PanelPizarra>
+  );
 
   const nMeses = Math.max(porMes.items.length, 1);
   const columnasMes = { gridTemplateColumns: `repeat(${nMeses}, minmax(0, 1fr))`, gap: "clamp(8px, 1.3vw, 22px)" };
