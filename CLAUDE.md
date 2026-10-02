@@ -259,7 +259,7 @@ Desde el 02-10-2026 el histórico es una **pizarra de una sola pantalla** con la
 
 Para el personal interno, las tarjetas del histórico muestran la **cobertura** de cada dato (cuántas operaciones lo tienen cargado) y un guion cuando nadie lo llenó. Es deliberado: `peso_neto` está casi vacío en producción, y un cero se leería como un error del dashboard en vez de como un vacío de captura.
 
-Los indicadores de **pallets y de cajas de 25/5 kg se retiraron** el 17-09-2026: llevaban tanto tiempo en guion que ocupaban cuatro de las seis tarjetas de primera línea para no decir nada. `pallets` sobrevive como contexto —promedio por operación en la cabecera del gráfico mensual, y detalle de las barras y del ranking por especie—; las cajas ya no se consultan. Si algún día se capturan de verdad, la tarjeta se vuelve a agregar con su cobertura, como el resto.
+Los indicadores de **pallets y de cajas de 25/5 kg se retiraron** el 17-09-2026: llevaban tanto tiempo en guion que ocupaban cuatro de las seis tarjetas de primera línea para no decir nada. `pallets` se sigue consultando pero ya no se muestra (la pizarra del 02-10-2026 quitó el promedio por operación de la cabecera del gráfico); las cajas ya no se consultan. Si algún día se capturan de verdad, la tarjeta se vuelve a agregar con su cobertura, como el resto.
 
 ## NaviTrack — Seguimiento marítimo (en desarrollo)
 
