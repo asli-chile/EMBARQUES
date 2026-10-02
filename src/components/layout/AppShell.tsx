@@ -4,6 +4,7 @@ import { ViewAsBanner } from "./ViewAsControl";
 import { AppIconRail } from "./AppIconRail";
 import { ConfigGuard } from "./ConfigGuard";
 import { CartolasNuboxGuard } from "./CartolasNuboxGuard";
+import { DuenoGuard } from "./DuenoGuard";
 import { ModuleWithVisitorInfo } from "./ModuleWithVisitorInfo";
 import { LocaleProvider } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth/AuthContext";
@@ -271,14 +272,11 @@ export function AppShell({ children, pathname }: AppShellProps) {
         </Sus>
       </ConfigGuard>
     ) : pathname === "/creador-publicidad" ? (
-      <ConfigGuard
-        allowAdmin={false}
-        forbiddenMessage="No tienes acceso al creador de publicidad. Solo el superadmin puede verlo."
-      >
+      <DuenoGuard>
         <Sus>
           <LazyCreadorPublicidadContent />
         </Sus>
-      </ConfigGuard>
+      </DuenoGuard>
     ) : pathname === "/centrodecomando" ? (
       <ConfigGuard
         allowAdmin={false}
@@ -349,9 +347,11 @@ export function AppShell({ children, pathname }: AppShellProps) {
         </Sus>
       </CartolasNuboxGuard>
     ) : pathname === "/comunicaciones/informativos" ? (
-      <Sus>
-        <LazyInformativosContent />
-      </Sus>
+      <DuenoGuard>
+        <Sus>
+          <LazyInformativosContent />
+        </Sus>
+      </DuenoGuard>
     ) : (
       children
     );

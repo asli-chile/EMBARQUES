@@ -1,4 +1,5 @@
 import { canAccessCartolasNubox } from "@/lib/cartolas-nubox-access";
+import { esDueno } from "@/lib/herramientas-dueno";
 import type { PageSession } from "@/lib/auth/resolvePageSession";
 import { isOperationalRole, isStaffRole } from "@/lib/auth/roles";
 
@@ -8,7 +9,9 @@ export type RouteRule =
   | { kind: "operational" }
   | { kind: "admin" }
   | { kind: "superadmin" }
-  | { kind: "cartolasNubox" };
+  | { kind: "cartolasNubox" }
+  /** Solo Rodrigo (ver herramientas-dueno). */
+  | { kind: "dueno" };
 
 export type RouteAccessFailure = "unauthenticated" | "forbidden";
 
@@ -38,7 +41,7 @@ const ROUTE_RULES: Record<string, RouteRule> = {
   "/dashboard": { kind: "operational" },
   "/tareas": { kind: "superadmin" },
   "/registros": { kind: "staff" },
-  "/comunicaciones/informativos": { kind: "staff" },
+  "/comunicaciones/informativos": { kind: "dueno" },
   "/reservas/crear": { kind: "operational" },
   "/reservas/mis-reservas": { kind: "operational" },
   "/reservas/papelera": { kind: "staff" },
@@ -57,7 +60,7 @@ const ROUTE_RULES: Record<string, RouteRule> = {
   "/configuracion/usuarios": { kind: "superadmin" },
   "/configuracion/temporadas": { kind: "superadmin" },
   "/configuracion/naves-tracking": { kind: "superadmin" },
-  "/creador-publicidad": { kind: "superadmin" },
+  "/creador-publicidad": { kind: "dueno" },
   "/centrodecomando": { kind: "superadmin" },
   "/cartolas-nubox": { kind: "cartolasNubox" },
   "/cliente": { kind: "operational" },
@@ -113,6 +116,8 @@ export function checkRouteAccess(
         : { ok: false, reason: "forbidden" };
     case "superadmin":
       return rol === "superadmin" ? { ok: true } : { ok: false, reason: "forbidden" };
+    case "dueno":
+      return esDueno(email) ? { ok: true } : { ok: false, reason: "forbidden" };
     case "cartolasNubox":
       return canAccessCartolasNubox(email)
         ? { ok: true }

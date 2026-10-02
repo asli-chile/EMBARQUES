@@ -1,5 +1,6 @@
 import { brand, icons } from "./brand";
 import { CARTOLAS_NUBOX_ALLOWED_EMAILS } from "./cartolas-nubox-access";
+import { CORREO_DUENO } from "./herramientas-dueno";
 
 /** @deprecated Usar withBase("/inicio") para el logo del header dentro del ERP. */
 export const marketingHomeUrl = "/" as const;
@@ -54,16 +55,20 @@ export const siteConfig = {
      */
     { labelKey: "navitrack", id: "navitrack", href: "/navitrack", operational: true },
     { labelKey: "registros", id: "registros", href: "/registros", staffOnly: true },
+    /*
+     * Comunicaciones (Informativos) y Creador de publicidad: solo Rodrigo.
+     * La ruta la protege DuenoGuard en AppShell; esto solo los saca del menú.
+     */
     {
       labelKey: "comunicaciones",
       id: "comunicaciones",
-      staffOnly: true,
+      allowedEmails: [CORREO_DUENO],
       children: [
         {
           labelKey: "informativos",
           id: "informativos",
           href: "/comunicaciones/informativos",
-          staffOnly: true,
+          allowedEmails: [CORREO_DUENO],
         },
       ],
     },
@@ -77,7 +82,7 @@ export const siteConfig = {
       labelKey: "creadorPublicidad",
       id: "creador-publicidad",
       href: "/creador-publicidad",
-      superadminOnly: true,
+      allowedEmails: [CORREO_DUENO],
     },
     {
       labelKey: "centroDeMando",
