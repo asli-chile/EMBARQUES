@@ -1044,3 +1044,113 @@ html[data-erp-neon="light"] {
 .btn-marca:hover {
   background: color-mix(in srgb, var(--marca-teal) 85%, #000000);
 }
+
+/* ── Buscador de página (BuscadorPagina) ──
+ * Tiene que verse a la primera: fondo propio más claro (o blanco) que la barra,
+ * borde de acento y lupa en color. Antes usaba el fondo de los controles, que
+ * en el tema claro era casi el mismo que el de la barra y el campo desaparecía. */
+.dash-neon {
+  --dash-search-bg: #17294f;
+  --dash-search-border: color-mix(in srgb, var(--dash-neon) 55%, transparent);
+  --dash-search-placeholder: color-mix(in srgb, var(--dash-muted) 85%, transparent);
+}
+.dash-neon[data-theme="dark"] {
+  --dash-search-bg: #17294f;
+}
+.dash-neon[data-theme="light"] {
+  --dash-search-bg: #ffffff;
+  --dash-search-border: color-mix(in srgb, var(--dash-neon) 60%, transparent);
+  --dash-search-placeholder: #5b7a93;
+}
+
+.dash-search {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 2.25rem 0.5rem 2.35rem;
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--dash-search-border, var(--dash-border));
+  background: var(--dash-search-bg, var(--dash-control));
+  color: var(--dash-fg);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 0 0 3px color-mix(in srgb, var(--dash-neon) 8%, transparent);
+  outline: none;
+  transition:
+    border-color 160ms var(--dash-ease, ease),
+    box-shadow 160ms var(--dash-ease, ease);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.dash-search::placeholder {
+  color: var(--dash-search-placeholder, var(--dash-muted));
+  opacity: 1;
+}
+.dash-search:hover {
+  border-color: var(--dash-neon);
+}
+.dash-search:focus {
+  border-color: var(--dash-neon);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 0 0 4px color-mix(in srgb, var(--dash-neon) 28%, transparent);
+}
+/* La "x" nativa de type=search duplica la nuestra. */
+.dash-search::-webkit-search-cancel-button,
+.dash-search::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dash-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--dash-neon);
+}
+
+.dash-search-clear {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.5rem;
+  color: var(--dash-muted);
+  transition: background-color 150ms, color 150ms;
+}
+.dash-search-clear:hover {
+  color: var(--dash-fg);
+  background: color-mix(in srgb, var(--dash-neon) 15%, transparent);
+}
+
+.dash-search-kbd {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.35rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, var(--dash-control) 80%, transparent);
+  color: var(--dash-muted);
+  font: 600 0.72rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  pointer-events: none;
+}
+@media (hover: hover) and (min-width: 640px) {
+  .dash-search-kbd {
+    display: inline-flex;
+  }
+}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { sileo } from "sileo";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n";
@@ -502,21 +503,7 @@ export function NavesTrackingContent() {
         </header>
 
         <div className="dash-card rounded-xl p-3 sm:p-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Icon
-              icon="lucide:search"
-              width={16}
-              height={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted"
-            />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={tr.searchPlaceholder}
-              className={`${neonInput} pl-9`}
-            />
-          </div>
+          <BuscadorPagina valor={search} onCambio={setSearch} placeholder={tr.searchPlaceholder} />
           <label className="inline-flex items-center gap-2 text-sm font-semibold text-dash-fg shrink-0">
             <input
               type="checkbox"

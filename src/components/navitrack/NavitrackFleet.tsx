@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { NavieraLogo } from "./NavieraLogo";
 import type { Locale } from "@/lib/i18n/translations";
 import { ETAPA_LABEL_KEY } from "./NavitrackShipment";
@@ -391,23 +392,7 @@ export function NavitrackFleet({
           </div>
 
           <div className="flex flex-1 flex-wrap items-center justify-end gap-2 max-md:w-full">
-            <div className="relative min-w-0 flex-1 sm:max-w-[300px]">
-              <Icon
-                icon="lucide:search"
-                width={14}
-                height={14}
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-dash-muted"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={busqueda}
-                onChange={(e) => onBusqueda(e.target.value)}
-                placeholder={tr.searchPlaceholder}
-                aria-label={tr.searchPlaceholder}
-                className="dash-control w-full py-2.5 pl-8 pr-2.5 text-[13.5px] text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
-              />
-            </div>
+            <BuscadorPagina valor={busqueda} onCambio={onBusqueda} placeholder={tr.searchPlaceholder} className="sm:max-w-[420px]" />
             {filtro && (
               <button
                 type="button"

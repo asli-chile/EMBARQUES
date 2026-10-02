@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type ReactNode } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { applyOperacionesClienteFilter } from "@/lib/auth/operacionesClienteScope";
@@ -1381,25 +1382,7 @@ export function MisDocumentosContent() {
 
         <div className="relative z-10 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] backdrop-blur-md">
           <div className="flex flex-wrap items-center gap-1.5 px-3 py-2 sm:px-4">
-            <div className="relative min-w-0 flex-1">
-              <Icon icon="lucide:search" className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dash-muted" />
-              <input
-                type="text"
-                placeholder={tr.searchPlaceholder}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-dash-border bg-dash-control py-2 pl-8 pr-8 text-sm text-dash-fg transition-all placeholder:text-dash-muted focus:border-dash-neon/50 focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-dash-muted transition-colors hover:text-dash-fg"
-                >
-                  <Icon icon="lucide:x" width={14} height={14} />
-                </button>
-              )}
-            </div>
+            <BuscadorPagina valor={searchTerm} onCambio={setSearchTerm} placeholder={tr.searchPlaceholder} />
             {/* Teléfono: los indicadores no caben, el filtro va en chips. */}
             <div className="-mx-1 flex w-full items-center gap-1.5 overflow-x-auto px-1 py-1 md:hidden">
               {kpis.map((k) => {

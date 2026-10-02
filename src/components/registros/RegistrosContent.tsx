@@ -22,6 +22,7 @@ import { ESTADO_INICIAL, estadosEnOrden, etiquetaEstado } from "@/lib/operacione
 import { listarTemporadas, TEMPORADA_TODAS, type Temporada } from "@/lib/temporadas";
 import { useNeonTheme } from "@/lib/ui/neonTheme";
 import { normalizarContenedor } from "@/lib/contenedor";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -335,6 +336,22 @@ const DATETIME_FIELDS = new Set([
 ]);
 
 // ─── Campos que permiten agregar valores nuevos a la BD ───────────────────────
+/**
+ * Búsqueda de la barra: cada palabra tiene que aparecer en la fila, y también
+ * vale si aparece quitando los espacios. Así un BL anotado "EGLV 731600010843"
+ * se encuentra pegando "EGLV731600010843", y al revés.
+ */
+function coincideBusquedaRapida(partes: string[], textoFila: string): boolean {
+  /* AG Grid separa las columnas con "
+": se quitan solo los espacios, para
+     no pegar el final de una columna con el comienzo de la siguiente. */
+  const compacto = textoFila.replace(/[ 	]+/g, "");
+  return (
+    partes.every((p) => textoFila.includes(p) || compacto.includes(p)) ||
+    compacto.includes(partes.join(""))
+  );
+}
+
 const ADDABLE_FIELDS = {
   naviera:             { table: "navieras",       label: "Navieras",           catalogKey: "navieras"       },
   especie:             { table: "especies",        label: "Especies",           catalogKey: "especies"       },
@@ -1982,31 +1999,11 @@ export function RegistrosContent() {
       {/* Barra de búsqueda y acciones */}
       <div className="relative z-40 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] backdrop-blur-md">
         <div className="flex items-center gap-1.5 px-3 py-2 sm:px-4">
-          <div className="relative min-w-0 flex-1">
-            <Icon
-              icon="lucide:search"
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-dash-muted"
-            />
-            <input
-              type="search"
-              enterKeyHint="search"
-              autoComplete="off"
-              value={globalSearch}
-              onChange={(e) => setGlobalSearch(e.target.value)}
-              placeholder="Buscar: nave, booking, contenedor..."
-              className="w-full rounded-lg border border-dash-border bg-dash-control py-2 pl-8 pr-8 text-sm text-dash-fg placeholder:text-dash-muted focus:border-dash-neon/50 focus:outline-none focus:ring-2 focus:ring-dash-neon/40 transition-all"
-            />
-            {globalSearch && (
-              <button
-                type="button"
-                onClick={() => setGlobalSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-dash-muted transition-colors hover:text-dash-fg"
-                aria-label="Limpiar búsqueda"
-              >
-                <Icon icon="lucide:x" width={13} height={13} />
-              </button>
-            )}
-          </div>
+          <BuscadorPagina
+            valor={globalSearch}
+            onCambio={setGlobalSearch}
+            placeholder="Buscar: nave, booking, BL, contenedor..."
+          />
 
           <div className="relative shrink-0">
             <Icon
@@ -2156,6 +2153,8 @@ export function RegistrosContent() {
               animateRows
               domLayout="normal"
               getRowId={(params) => params.data.id}
+              includeHiddenColumnsInQuickFilter
+              quickFilterMatcher={coincideBusquedaRapida}
               onCellValueChanged={handleCellValueChanged}
               onCellContextMenu={handleCellContextMenu}
               suppressContextMenu

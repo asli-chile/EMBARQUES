@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BarraBusqueda, BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -1242,26 +1243,6 @@ export function TarifarioContent() {
               <p className="mt-0.5 line-clamp-1 text-xs text-dash-muted sm:text-sm">Gestiona tarifas de flete por cliente</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Icon icon="lucide:search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dash-muted" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar..."
-                className="dash-control w-44 rounded-lg border border-dash-border py-2 pl-9 pr-3 text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40"
-              />
-            </div>
-            <div className="min-w-[10rem]">
-              <FormSelect
-                variant="neon"
-                value={filterCliente === "todos" ? "" : filterCliente}
-                placeholder="Todos los clientes"
-                options={clientes.map((c) => ({ value: c, label: c }))}
-                onChange={(v) => setFilterCliente(v || "todos")}
-              />
-            </div>
-          </div>
           {canEdit && (
             <button
               type="button"
@@ -1274,6 +1255,21 @@ export function TarifarioContent() {
           )}
         </div>
       </div>
+
+      <BarraBusqueda
+        zIndex="z-20"
+        buscador={<BuscadorPagina valor={search} onCambio={setSearch} placeholder="Buscar tarifario, cliente o destino..." />}
+      >
+        <div className="w-40 shrink-0 sm:w-52">
+          <FormSelect
+            variant="neon"
+            value={filterCliente === "todos" ? "" : filterCliente}
+            placeholder="Todos los clientes"
+            options={clientes.map((c) => ({ value: c, label: c }))}
+            onChange={(v) => setFilterCliente(v || "todos")}
+          />
+        </div>
+      </BarraBusqueda>
 
       <div className="relative z-10 min-h-0 flex-1 space-y-3 overflow-auto p-3 sm:p-4">
         {loading ? (

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -279,16 +280,7 @@ export function FacturasTransporteContent() {
           <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 p-3 sm:p-4 lg:p-5">
             {/* Filtros */}
             <div className="dash-card overflow-hidden rounded-xl p-3 sm:p-4 flex flex-wrap gap-2 items-center">
-              <div className="relative flex-1 min-w-[180px]">
-                <Icon icon="lucide:search" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dash-muted pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder={tr.searchPlaceholder}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className={`${inputClass} w-full pl-9`}
-                />
-              </div>
+              <BuscadorPagina valor={search} onCambio={setSearch} placeholder={tr.searchPlaceholder} className="min-w-[180px]" />
               {!isCliente && (
                 <select
                   value={filterCliente}

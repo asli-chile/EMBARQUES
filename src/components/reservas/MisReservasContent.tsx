@@ -37,6 +37,7 @@ import {
   type ContenedorTransporteSaved,
 } from "@/components/reservas/ContenedorTransporteModal";
 import { ReservaDetalle, type Cambios, type ReservaDetalleLabels } from "@/components/reservas/ReservaDetalle";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { propsFilaDesplegable, useFilaDesplegable } from "@/components/ui/FilaDesplegable";
 
@@ -133,6 +134,10 @@ type Operacion = {
   citacion: string | null;
   inicio_stacking: string | null;
   fin_stacking: string | null;
+  /* Solo para la búsqueda: el n° de BL se anota en observaciones ("BL: …") y
+     el de SWB tiene su columna. */
+  observaciones: string | null;
+  swb: string | null;
 };
 
 /**
@@ -1520,7 +1525,8 @@ export function MisReservasContent() {
          booking_doc_url, transporte, chofer, rut_chofer, telefono_chofer, patente_camion, patente_remolque, contenedor, sello, tara,
          enviado_transporte, tipo_reserva_transporte, estado_operacion, arribo_confirmado, arribo_at, arribo_anunciado_at,
          solicitud_ventana, created_at, consignatario, tipo_unidad, pallets, peso_neto,
-         temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking`
+         temperatura, ventilacion, deposito, planta_presentacion, citacion, inicio_stacking, fin_stacking,
+         observaciones, swb`
       )
       .is("deleted_at", null);
 
@@ -1554,21 +1560,31 @@ export function MisReservasContent() {
     (excludeFilter?: "estado" | "cliente" | "naviera" | "especie" | "pod" | "nave") => {
       let result = operaciones;
       if (deferredSearch.trim()) {
-        const search = deferredSearch.toLowerCase();
+        const search = deferredSearch.trim().toLowerCase();
+        /* Sin espacios también: un BL se anota "EGLV 731600010843" y se pega
+           "EGLV731600010843", o al revés. */
+        const compacto = search.replace(/\s+/g, "");
+        const coincide = (v: string | null | undefined) => {
+          if (!v) return false;
+          const s = v.toLowerCase();
+          return s.includes(search) || s.replace(/\s+/g, "").includes(compacto);
+        };
         result = result.filter(
           (op) =>
-            op.cliente?.toLowerCase().includes(search) ||
-            op.booking?.toLowerCase().includes(search) ||
-            op.contenedor?.toLowerCase().includes(search) ||
-            op.naviera?.toLowerCase().includes(search) ||
-            op.nave?.toLowerCase().includes(search) ||
-            op.viaje?.toLowerCase().includes(search) ||
-            op.ref_asli?.toLowerCase().includes(search) ||
-            formatRefAsli(op.ref_asli, op.correlativo)?.toLowerCase().includes(search) ||
-            op.referencia_externa?.toLowerCase().includes(search) ||
-            op.especie?.toLowerCase().includes(search) ||
-            op.pod?.toLowerCase().includes(search) ||
-            op.pol?.toLowerCase().includes(search)
+            coincide(op.cliente) ||
+            coincide(op.booking) ||
+            coincide(op.contenedor) ||
+            coincide(op.naviera) ||
+            coincide(op.nave) ||
+            coincide(op.viaje) ||
+            coincide(op.ref_asli) ||
+            coincide(formatRefAsli(op.ref_asli, op.correlativo)) ||
+            coincide(op.referencia_externa) ||
+            coincide(op.especie) ||
+            coincide(op.pod) ||
+            coincide(op.pol) ||
+            coincide(op.observaciones) ||
+            coincide(op.swb)
         );
       }
       if (estadoFilter && excludeFilter !== "estado") result = result.filter((op) => op.estado_operacion === estadoFilter);
@@ -2332,21 +2348,7 @@ export function MisReservasContent() {
       {/* ── Barra de búsqueda y filtros ── */}
       <div className="relative z-10 shrink-0 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] backdrop-blur-md">
         <div className="px-3 sm:px-4 py-2 flex items-center gap-1.5">
-          <div className="flex-1 min-w-0 relative">
-            <Icon icon="lucide:search" className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dash-muted w-3.5 h-3.5 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={tr.searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 pr-8 py-2 border border-dash-border bg-dash-control rounded-lg text-sm text-dash-fg placeholder:text-dash-muted focus:outline-none focus:ring-2 focus:ring-dash-neon/40 focus:border-dash-neon/50 transition-all"
-            />
-            {searchTerm && (
-              <button type="button" onClick={() => setSearchTerm("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-dash-muted hover:text-dash-fg transition-colors">
-                <Icon icon="lucide:x" width={13} height={13} />
-              </button>
-            )}
-          </div>
+          <BuscadorPagina valor={searchTerm} onCambio={setSearchTerm} placeholder={tr.searchPlaceholder} />
           {/*
             * Cliente, naviera y estado, a la vista.
             *

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { withBase } from "@/lib/basePath";
 import { staggerStyle } from "@/lib/ui/motion";
 import { SkeletonRows } from "@/components/ui/Skeleton";
@@ -298,26 +299,8 @@ export function ClientesContent() {
           </div>
         </div>
 
-        <div className="relative z-10 flex shrink-0 items-center gap-2 border-b border-dash-border bg-dash-control/40 px-4 py-2.5" style={staggerStyle(1)}>
-          <div className="relative flex-1">
-            <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-muted" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar cliente…"
-              className={`${neonInput} pl-9`}
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-dash-muted hover:text-dash-fg"
-              >
-                <Icon icon="lucide:x" width={12} height={12} />
-              </button>
-            )}
-          </div>
+        <div className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-dash-border bg-[color-mix(in_srgb,var(--dash-header)_70%,transparent)] px-3 py-2 backdrop-blur-md sm:px-4" style={staggerStyle(1)}>
+          <BuscadorPagina valor={search} onCambio={setSearch} placeholder="Buscar cliente…" />
           <button
             type="button"
             onClick={() => void fetchClientes()}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { sileo } from "sileo";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -265,16 +266,7 @@ export function ConsignatariosContent() {
           )}
 
           <div className="dash-card flex flex-col gap-2 rounded-xl p-3 sm:flex-row">
-            <div className="relative flex-1">
-              <Icon icon="lucide:search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dash-muted" />
-              <input
-                type="text"
-                placeholder={tr.searchPlaceholder}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={`${neonInput} pl-9`}
-              />
-            </div>
+            <BuscadorPagina valor={search} onCambio={setSearch} placeholder={tr.searchPlaceholder} />
             <div className="flex gap-2">
               <div className="min-w-0 flex-1 sm:w-52 sm:flex-none">
                 <FormSelect

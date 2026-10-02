@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { BuscadorPagina } from "@/components/ui/BuscadorPagina";
 import { withBase } from "@/lib/basePath";
 import { useAuth, getRolLabel } from "@/lib/auth/AuthContext";
 import {
@@ -903,26 +904,7 @@ export function UsuariosContent() {
       <section className="relative z-10 flex min-h-0 flex-1 flex-col border-t border-dash-border">
         <div className={`flex-shrink-0 px-4 py-2.5 border-b border-dash-border bg-dash-control/40 space-y-2`}>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Icon icon="lucide:search" width={16} height={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dash-neon/40" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre o correo…"
-                className={`${neonInput} pl-10 pr-9`}
-              />
-              {searchQuery ? (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-dash-neon/40 hover:text-dash-neon rounded-lg"
-                  aria-label="Limpiar búsqueda"
-                >
-                  <Icon icon="lucide:x" width={14} height={14} />
-                </button>
-              ) : null}
-            </div>
+            <BuscadorPagina valor={searchQuery} onCambio={setSearchQuery} placeholder="Buscar por nombre o correo…" className="min-w-[200px]" />
             <div className="w-full sm:w-56">
               <FormSelect
                 variant="neon"
