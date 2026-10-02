@@ -4,6 +4,7 @@ import { landings } from '../src/data/landings'
 const STATIC_PAGES = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
   { path: '/servicios', changefreq: 'monthly', priority: '0.9' },
+  { path: '/contacto', changefreq: 'monthly', priority: '0.8' },
   { path: '/tracking', changefreq: 'monthly', priority: '0.75' },
   { path: '/stacking', changefreq: 'weekly', priority: '0.75' },
   { path: '/presentacion', changefreq: 'monthly', priority: '0.5' },

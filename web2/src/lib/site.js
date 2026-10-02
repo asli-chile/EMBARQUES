@@ -5,8 +5,27 @@ export const SITE_URL = 'https://www.asli.cl'
 
 export const SITE = {
   name: 'ASLI',
-  legalName: 'ASLI — Asesorías y Servicios Logísticos Integrales Ltda.',
+  legalName: 'Asesorías y Servicios Logísticos Integrales Ltda.',
+  /*
+   * "ASLI" a secas choca con otras organizaciones (Asian Law Institute, All
+   * Systems Logistics Inc.). Los nombres alternativos ayudan a buscadores e
+   * IAs a separar la entidad. Usar exactamente el primero en LinkedIn,
+   * Google Business y directorios.
+   */
+  alternateNames: ['ASLI Logística y Comercio Exterior', 'Asesorías y Servicios Logísticos Integrales'],
   tagline: 'Asesorías y Servicios Logísticos Integrales',
+  slogan: 'Nuestro límite es tu destino',
+  foundingDate: '2021',
+  founder: { name: 'Mario Basaez', jobTitle: 'Fundador y Gerente General' },
+  knowsAbout: [
+    'Exportación de fruta fresca y congelada',
+    'Contenedores reefer',
+    'Transporte marítimo',
+    'Carga aérea',
+    'Importaciones a Chile',
+    'Trámites aduaneros',
+    'Certificación OEA',
+  ],
   url: SITE_URL,
   locale: 'es_CL',
   language: 'es',
@@ -41,15 +60,31 @@ export const SITE = {
   /** Dimensiones recomendadas para Open Graph (evita recortes en WhatsApp / LinkedIn). */
   ogImageWidth: 1200,
   ogImageHeight: 630,
+  /*
+   * Perfiles oficiales de la empresa (LinkedIn, Instagram, ficha de Google
+   * Business, Wikidata). Es lo que más usan buscadores e IAs para confirmar
+   * que el sitio y las redes son la misma empresa. Vacío = no se publica.
+   */
   sameAs: [
-    // Añadir LinkedIn / Instagram cuando existan URLs públicas oficiales
+    // Pendiente: URLs oficiales de LinkedIn e Instagram
   ],
   /**
    * Fecha de contenido editorial (YYYY-MM-DD).
    * Actualizar al publicar o editar landings / textos SEO de páginas públicas.
    * La usa el sitemap como lastmod estable (no “hoy” en cada request).
    */
-  contentUpdatedAt: '2026-09-06',
+  contentUpdatedAt: '2026-10-02',
+}
+
+/** Enlace de WhatsApp al número principal, con mensaje prellenado. */
+export function whatsappUrl(text = '') {
+  const number = SITE.phone.replace(/\D/g, '')
+  return text ? `https://wa.me/${number}?text=${encodeURIComponent(text)}` : `https://wa.me/${number}`
+}
+
+/** Página de contacto; con `servicio` el formulario llega con el servicio indicado. */
+export function contactUrl(servicio = '') {
+  return servicio ? `/contacto?servicio=${encodeURIComponent(servicio)}` : '/contacto'
 }
 
 export function absoluteUrl(path = '/') {

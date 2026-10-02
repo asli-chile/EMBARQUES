@@ -28,14 +28,18 @@ function ServiceCard({ servicio, index }) {
           </span>
         </div>
         <div className="p-4 md:p-5 flex flex-col flex-grow">
+          {/* El título es el enlace: así el texto del enlace dice a qué página lleva. */}
           <h3 className="font-display text-base md:text-lg font-bold text-asli-dark tracking-tight mb-1.5">
-            {titulo}
+            <a href={servicio.href || '/servicios'} className="hover:text-asli-primary transition-colors">
+              {titulo}
+            </a>
           </h3>
           <p className="text-muted-strong text-sm leading-relaxed mb-3 flex-grow line-clamp-3 sm:line-clamp-4">
             {descripcion}
           </p>
           <a
             href={servicio.href || '/servicios'}
+            aria-label={`${t.servicios.learnMore}: ${titulo}`}
             className="inline-flex items-center gap-2 text-asli-primary font-bold text-sm hover:gap-3 transition-all duration-320 ease-asli min-h-10"
           >
             {t.servicios.learnMore}
@@ -85,14 +89,7 @@ const Servicios = ({ limit = null, showCta = true }) => {
               {t.servicios.viewAll}
             </a>
             <a
-              href={
-                SHOW_COTIZADOR
-                  ? '/#cotizar'
-                  : `https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(t.cotizar.mailSubject)}`
-              }
-              {...(SHOW_COTIZADOR
-                ? {}
-                : { target: '_blank', rel: 'noopener noreferrer' })}
+              href={SHOW_COTIZADOR ? '/#cotizar' : '/contacto'}
               className="btn-ghost-dark !py-3 sm:!py-2.5 !px-6 !text-sm w-full sm:w-auto justify-center"
             >
               {t.servicios.quoteNow}

@@ -1,10 +1,13 @@
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
-import Seo from '../src/components/Seo'
+import Seo, { buildPageJsonLd } from '../src/components/Seo'
 import { servicios, equipoContactos } from '../src/data/servicios'
+import { landings } from '../src/data/landings'
+import { absoluteUrl } from '../src/lib/site'
 import { useReveal } from '../src/hooks/useReveal'
 import { SHOW_COTIZADOR } from '../src/lib/features'
 import { useLocale } from '../src/hooks/useLocale'
+import { trackLead } from '../src/lib/analytics'
 
 function ContactCard({ persona, index, t }) {
   const { ref, style } = useReveal('up', Math.min(index, 4) * 160)
@@ -26,7 +29,8 @@ function ContactCard({ persona, index, t }) {
         )}
         <div className="flex flex-col gap-2.5 mt-auto">
           <a
-            href={`https://mail.google.com/mail/?view=cm&to=${persona.email}`}
+            href={`mailto:${persona.email}`}
+            onClick={() => trackLead('email', `servicios:${persona.id}`)}
             className="btn-primary !py-2.5 text-sm w-full"
           >
             {t.teamPage.sendEmail}
@@ -37,6 +41,7 @@ function ContactCard({ persona, index, t }) {
             )}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackLead('whatsapp', `servicios:${persona.id}`)}
             className="inline-flex items-center justify-center gap-2 px-7 py-2.5 bg-asli-accent text-white font-semibold text-sm hover:bg-opacity-90 transition-all duration-320 ease-asli w-full rounded-full"
           >
             {t.teamPage.whatsapp}
@@ -94,7 +99,24 @@ const ServiciosPage = () => {
 
   return (
     <>
-      <Seo title={tp.seoTitle} description={tp.seoDescription} path="/servicios" />
+      <Seo
+        title={tp.seoTitle}
+        description={tp.seoDescription}
+        path="/servicios"
+        jsonLd={buildPageJsonLd({
+          type: 'CollectionPage',
+          path: '/servicios',
+          name: tp.title,
+          description: tp.seoDescription,
+          breadcrumb: [
+            { name: t.serviceLanding.home, path: '/' },
+            { name: t.serviceLanding.services, path: '/servicios' },
+          ],
+          extra: {
+            hasPart: landings.map((l) => ({ '@id': `${absoluteUrl(`/${l.slug}`)}#webpage` })),
+          },
+        })}
+      />
 
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
@@ -148,12 +170,7 @@ const ServiciosPage = () => {
               </h2>
               <p className="text-muted-strong mb-8 text-xl">{tp.quoteBody}</p>
               <a
-                href={
-                  SHOW_COTIZADOR
-                    ? '/#cotizar'
-                    : `https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(tp.quoteMailSubject)}`
-                }
-                {...(SHOW_COTIZADOR ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+                href={SHOW_COTIZADOR ? '/#cotizar' : '/contacto'}
                 className="btn-primary"
               >
                 {tp.quoteCta}

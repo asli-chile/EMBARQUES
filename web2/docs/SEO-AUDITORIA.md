@@ -16,7 +16,7 @@ Documento de referencia tras la auditoría de títulos, H1, descriptions y keywo
 | Área | Estado |
 |------|--------|
 | Meta + Open Graph + Twitter | OK (`Seo.jsx`) |
-| Canonical apex | OK + redirect `www` → `asli.cl` |
+| Canonical | OK: `www.asli.cl`; Vercel redirige `asli.cl` → `www` (308) |
 | Schema.org (Organization, LocalBusiness, Service, FAQ) | OK |
 | Sitemap + robots | OK (incluye `/stacking`; bloquea `/stacking/pil`) |
 | Landings por keyword | 8 URLs sólidas |
@@ -111,9 +111,9 @@ Si en GSC las tres pelean la misma query, reforzar el contenido de la URL ganado
 ## Cambios técnicos aplicados (código)
 
 1. `og:image:width` / `og:image:height` (1200×630) en `Seo.jsx`
-2. Redirect 301 `www.asli.cl` → `https://asli.cl`
+2. ~~Redirect 301 `www.asli.cl` → `https://asli.cl`~~ (corregido 2026-10-02: es al revés, el primario es `www`; ver nota de arriba)
 3. Sitemap: `/stacking` + `lastmod` desde `SITE.contentUpdatedAt`
-4. `robots.txt`: `Disallow: /stacking/pil`
+4. ~~`robots.txt`: `Disallow: /stacking/pil`~~ (quitado 2026-10-02: impedía que Google leyera el `noindex`)
 5. `/stacking/pil` con `noindex`
 6. Titles/H1/descriptions de páginas utilitarias y hub `/servicios`
 7. Footer: enlaces a aduanas + stacking
@@ -137,3 +137,21 @@ Si en GSC las tres pelean la misma query, reforzar el contenido de la URL ganado
 1. Editar textos en `landings.js` o páginas.
 2. Cambiar `contentUpdatedAt` en `src/lib/site.js` a la fecha del día (`YYYY-MM-DD`).
 3. Desplegar; Search Console tomará el nuevo `lastmod` en el próximo crawl.
+
+---
+
+## Pasada 2026-10-02 (auditoría con 5 agentes SEO)
+
+Cambios en código:
+
+- **Idioma:** se quitó la detección por `navigator.language`. Googlebot renderiza en en-US y sin localStorage, así que indexaba la versión en inglés. Ahora es español salvo elección explícita (`?lang=` o el selector).
+- **Contacto:** nueva página `/contacto` con formulario (`/api/contact`), WhatsApp y correo. Todos los "Cotizar" llevan ahí; se eliminaron los enlaces a Gmail web. Las landings tienen WhatsApp con el servicio ya escrito.
+- **Medición:** Vercel Web Analytics + GA4 opcional (`NEXT_PUBLIC_GA_ID`). Evento `lead` / `generate_lead` por clic en WhatsApp, correo, teléfono y envío de formulario.
+- **Schema:** una sola entidad `ProfessionalService` (antes Organization + LocalBusiness = dos empresas), `legalName` corregido, fundador, fundación, `alternateName`, `areaServed` "cualquier parte del mundo". Nodos WebPage enlazados por `@id`; breadcrumb igual al visible; schema en `/servicios`, `/tracking`, `/stacking`, `/presentacion` y `/contacto`.
+- **Enlazado:** la tarjeta de exportación de fruta va primera en la grilla (antes solo se llegaba por el footer); se quitó la tarjeta duplicada "Asesoría documental"; el título de cada tarjeta es el enlace.
+- **Rendimiento:** Fira Sans / Fira Sans Condensed con `next/font`. Antes cada página traía 417 KB de CSS de Syne/Manrope/Noto Sans SC; la home pasó de 484 KB a 68 KB. El hero se anima por CSS y se ve sin esperar al JS.
+- **Bots de IA:** `robots.txt` los nombra en el grupo general; nuevo `public/llms.txt`.
+- **Otros:** 404 propia en español; description de la home de 150 caracteres o menos; títulos de los hero oscuros en blanco (salían azul oscuro sobre fondo azul).
+
+Pendiente fuera de código: `SITE.sameAs` (LinkedIn, Instagram, Google Business), activar Web Analytics en Vercel, crear GA4, Search Console + Bing Webmaster Tools, Google Business Profile.
+

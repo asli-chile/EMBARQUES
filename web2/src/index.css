@@ -28,8 +28,9 @@
     --color-border-strong: rgba(17, 34, 78, 0.15);
     --color-nav: rgba(17, 34, 78, 0.88);
 
-    --font-heading: 'Syne', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    --font-body: 'Manrope', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    /* --font-fira-* las define pages/_app.jsx con next/font */
+    --font-heading: var(--font-fira-condensed, 'Fira Sans Condensed'), 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-body: var(--font-fira-sans, 'Fira Sans'), 'PingFang SC', 'Microsoft YaHei', sans-serif;
     --radius-sm: 10px;
     --radius-md: 14px;
     --radius-lg: 22px;

@@ -32,8 +32,8 @@ const es = {
   },
   hero: {
     label: 'Asesoría logística · Curicó, Maule',
-    titleBefore: 'Asesoría logística para',
-    titleAccent: 'exportar e importar',
+    titleBefore: 'Te acompañamos a exportar e importar,',
+    titleAccent: 'desde Curicó al mundo',
     bodyMobile:
       'ASLI en Curicó: exportación de fruta fresca, importación de mercancías, contenedores, aéreo y marítimo — con documentación, navieras y aduanas.',
     bodyDesktop:
@@ -95,11 +95,11 @@ const es = {
           'Traemos tu producto con orden: trámites aduaneros, tiempos reales y coordinación logística para que sepas qué esperar en cada etapa del ingreso.',
         alt: 'Asesoría en importaciones ASLI — ingreso de mercancías a Chile',
       },
-      3: {
-        titulo: 'Asesoría Documental',
+      10: {
+        titulo: 'Exportación de Fruta Fresca',
         descripcion:
-          'Certificados, permisos y papelería aduanera sin laberinto. Revisamos requisitos y te guiamos para cumplir normativa sin perder días valiosos.',
-        alt: 'Asesoría documental y papelería aduanera ASLI',
+          'Cerezas, arándanos y más fruta fresca o congelada: coordinamos reefer, booking, documentación SAG y aduana para que tu carga llegue a cualquier parte del mundo.',
+        alt: 'Exportación de fruta fresca desde Chile — logística ASLI',
       },
       4: {
         titulo: 'Transporte Marítimo',
@@ -359,8 +359,8 @@ const en = {
   },
   hero: {
     label: 'Logistics advisory · Curicó, Maule',
-    titleBefore: 'Logistics advisory to',
-    titleAccent: 'export and import',
+    titleBefore: 'We walk with you as you export and import,',
+    titleAccent: 'from Curicó to the world',
     bodyMobile:
       'ASLI in Curicó: fresh fruit exports, merchandise imports, containers, air and ocean freight — with documentation, carriers and customs.',
     bodyDesktop:
@@ -422,11 +422,11 @@ const en = {
           'We bring your product in with order: customs procedures, realistic timelines and logistics coordination so you know what to expect at every step.',
         alt: 'ASLI import advisory — goods entering Chile',
       },
-      3: {
-        titulo: 'Documentation Advisory',
+      10: {
+        titulo: 'Fresh Fruit Exports',
         descripcion:
-          'Certificates, permits and customs paperwork without the maze. We review requirements and guide you to stay compliant without losing valuable days.',
-        alt: 'ASLI documentation and customs paperwork advisory',
+          'Cherries, blueberries and other fresh or frozen fruit: we coordinate reefers, bookings, SAG paperwork and customs so your cargo reaches anywhere in the world.',
+        alt: 'Fresh fruit exports from Chile — ASLI logistics',
       },
       4: {
         titulo: 'Ocean Freight',
@@ -662,6 +662,8 @@ function mergeLocale(base, extras, landingsMap) {
     homeSeo: extras.homeSeo,
     presentacion: extras.presentacion,
     serviceLanding: extras.serviceLanding,
+    contactPage: extras.contactPage,
+    notFound: extras.notFound,
     locale: { ...base.locale, ...extras.locale },
     landings: landingsMap ?? {},
   }

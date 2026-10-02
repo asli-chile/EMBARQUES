@@ -1,41 +1,19 @@
 /**
  * Hero — fachada ASLI como plano visual; tipografía compacta en mobile
  */
-import { useEffect, useState } from 'react'
 import { goToHomeSection } from '../lib/scrollToHash'
 import { SHOW_COTIZADOR } from '../lib/features'
 import { useLocale } from '../hooks/useLocale'
 import { DolarBadge } from './DolarBadge'
 
-const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const DURATION = '0.7s'
-
-function useEnter(delay = 0) {
-  const [on, setOn] = useState(false)
-
-  useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce) {
-      setOn(true)
-      return
-    }
-    const id = window.setTimeout(() => setOn(true), 40 + delay)
-    return () => window.clearTimeout(id)
-  }, [delay])
-
-  return {
-    opacity: on ? 1 : 0,
-    transform: on ? 'translate3d(0,0,0)' : 'translate3d(0, 36px, 0)',
-    transition: `opacity ${DURATION} ${EASE} ${delay}ms, transform ${DURATION} ${EASE} ${delay}ms`,
-  }
-}
-
+/*
+ * La entrada del hero es animación CSS (.hero-enter en index.css), no estado
+ * de React. Antes el H1 salía del servidor con opacity:0 y recién aparecía
+ * después de hidratar: el texto más importante de la página dependía del JS y
+ * atrasaba el LCP en móvil. Con CSS arranca en el primer pintado.
+ */
 const Hero = () => {
   const { t } = useLocale()
-  const title = useEnter(0)
-  const text = useEnter(160)
-  const cta = useEnter(300)
-  const image = useEnter(200)
 
   const handleServiciosClick = () => {
     goToHomeSection('servicios')
@@ -68,27 +46,25 @@ const Hero = () => {
       <div className="relative z-10 w-full pt-9 sm:pt-10 lg:pt-0">
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-10 lg:items-center lg:container-asli">
           <div className="container-asli lg:col-span-5 lg:px-0 order-1">
-            <p className="section-label !mb-1.5" style={title}>
+            <p className="section-label !mb-1.5 hero-enter">
               {t.hero.label}
             </p>
 
             <h1
-              className="font-display text-asli-dark text-[clamp(1.9rem,7.5vw,3.2rem)] font-bold leading-[1.08] tracking-tight text-balance mb-2.5 sm:mb-3"
-              style={title}
+              className="font-display text-asli-dark text-[clamp(1.9rem,7.5vw,3.2rem)] font-bold leading-[1.08] tracking-tight text-balance mb-2.5 sm:mb-3 hero-enter"
             >
               {t.hero.titleBefore}{' '}
               <span className="text-asli-primary">{t.hero.titleAccent}</span>
             </h1>
 
             <p
-              className="text-muted-strong text-[0.92rem] sm:text-base md:text-lg max-w-xl mb-3.5 sm:mb-5 leading-relaxed"
-              style={text}
+              className="text-muted-strong text-[0.92rem] sm:text-base md:text-lg max-w-xl mb-3.5 sm:mb-5 leading-relaxed hero-enter hero-enter-delay-1"
             >
               <span className="sm:hidden">{t.hero.bodyMobile}</span>
               <span className="hidden sm:inline">{t.hero.bodyDesktop}</span>
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-2.5 mb-4 lg:mb-0" style={cta}>
+            <div className="flex flex-col sm:flex-row gap-2.5 mb-4 lg:mb-0 hero-enter hero-enter-delay-3">
               <button
                 type="button"
                 onClick={handleServiciosClick}
@@ -105,11 +81,18 @@ const Hero = () => {
                 >
                   {t.hero.ctaQuote}
                 </button>
-              ) : null}
+              ) : (
+                <a
+                  href="/contacto"
+                  className="btn-ghost-dark !py-3 !px-4 sm:!px-7 !text-[0.9rem] w-full sm:w-auto justify-center"
+                >
+                  {t.hero.ctaQuote}
+                </a>
+              )}
             </div>
           </div>
 
-          <div className="lg:col-span-7 order-2" style={image}>
+          <div className="lg:col-span-7 order-2 hero-enter hero-enter-delay-2">
             <div
               className="relative overflow-hidden w-full
                 h-[min(46vh,320px)] sm:h-[min(48vh,400px)] lg:h-[min(62vh,520px)]

@@ -37,7 +37,7 @@ const Header = () => {
     { href: '/#servicios', label: t.nav.servicios, section: 'servicios' },
     { href: '/#proceso', label: t.nav.proceso, section: 'proceso', title: t.nav.procesoTitle },
     ...(SHOW_COTIZADOR ? [{ href: '/#cotizar', label: t.nav.cotizar, section: 'cotizar' }] : []),
-    { href: '/#contacto', label: t.nav.contacto, section: 'contacto' },
+    { href: '/contacto', label: t.nav.contacto },
     { href: '/servicios', label: t.nav.equipo },
     { href: '/tracking', label: t.nav.tracking },
     { href: '/stacking', label: t.nav.stacking },

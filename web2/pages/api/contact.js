@@ -14,7 +14,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'Method not allowed' })
   }
 
-  const { nombre, empresa, email, telefono, tipo, mensaje } = req.body
+  const { nombre, empresa, email, telefono, tipo, mensaje, origen, website } = req.body || {}
+
+  // Campo trampa del formulario de /contacto: solo un bot lo llena. Se responde
+  // ok para que no reintente con otra estrategia.
+  if (website) {
+    return res.status(200).json({ ok: true })
+  }
 
   if (!nombre || !email || !mensaje) {
     return res.status(400).json({ ok: false, error: 'Faltan campos requeridos' })
@@ -24,13 +30,15 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: 'Servidor de correo no configurado' })
   }
 
-  const tipoRaw = { exportacion: 'Exportación', importacion: 'Importación', ambas: 'Ambas' }[tipo] || tipo || '-'
+  const tipoRaw =
+    { exportacion: 'Exportación', importacion: 'Importación', ambas: 'Ambas', otro: 'Otro' }[tipo] || tipo || '-'
   const safe = {
     nombre: escapeHtml(nombre),
     empresa: escapeHtml(empresa || '-'),
     email: escapeHtml(email),
     telefono: escapeHtml(telefono || '-'),
     tipo: escapeHtml(tipoRaw),
+    origen: escapeHtml(origen ? `asli.cl/${String(origen).slice(0, 80)}` : '-'),
     mensaje: escapeHtml(mensaje),
   }
 
@@ -45,6 +53,7 @@ export default async function handler(req, res) {
         <tr><td style="padding:8px 0;color:#666"><strong>Email</strong></td><td style="padding:8px 0"><a href="mailto:${safe.email}">${safe.email}</a></td></tr>
         <tr><td style="padding:8px 0;color:#666"><strong>Teléfono</strong></td><td style="padding:8px 0">${safe.telefono}</td></tr>
         <tr><td style="padding:8px 0;color:#666"><strong>Tipo</strong></td><td style="padding:8px 0">${safe.tipo}</td></tr>
+        <tr><td style="padding:8px 0;color:#666"><strong>Página</strong></td><td style="padding:8px 0">${safe.origen}</td></tr>
       </table>
       <div style="margin-top:20px">
         <p style="color:#666;margin-bottom:6px"><strong>Mensaje:</strong></p>

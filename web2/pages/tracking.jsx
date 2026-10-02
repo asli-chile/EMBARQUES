@@ -19,7 +19,6 @@ const TrackingPage = () => {
       helpTitle={tp.helpTitle}
       helpBody={tp.helpBody}
       contactCta={tp.contactCta}
-      mailSubject={tp.mailSubject}
     >
       <Tracking />
     </ToolDirectoryPage>

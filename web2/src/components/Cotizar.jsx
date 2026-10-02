@@ -12,7 +12,7 @@ export default function Cotizar() {
   if (!SHOW_COTIZADOR) return null
 
   const MAIL_URL =
-    'https://mail.google.com/mail/?view=cm&fs=1&to=informaciones@asli.cl&su=' +
+    'mailto:informaciones@asli.cl?subject=' +
     encodeURIComponent(t.cotizar.mailSubject) +
     '&body=' +
     encodeURIComponent(t.cotizar.mailBody)

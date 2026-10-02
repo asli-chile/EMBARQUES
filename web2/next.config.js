@@ -81,6 +81,7 @@ const nextConfig = {
       "/",
       "/presentacion",
       "/servicios",
+      "/contacto",
       "/tracking",
       "/stacking",
       "/stacking/pil",

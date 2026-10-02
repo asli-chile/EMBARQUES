@@ -17,13 +17,7 @@ const Footer = () => {
   }
 
   const handleContactanosClick = () => {
-    const email = 'informaciones@asli.cl'
-    const subject = encodeURIComponent(t.footer.mailSubject)
-    const body = encodeURIComponent(t.footer.mailBody)
-    window.open(
-      `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}&body=${body}`,
-      '_blank'
-    )
+    window.location.href = '/contacto'
   }
 
   return (
@@ -120,7 +114,7 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <a href="/#contacto" className="hover:text-asli-primary transition-colors duration-320">
+                <a href="/contacto" className="hover:text-asli-primary transition-colors duration-320">
                   {t.footer.contact}
                 </a>
               </li>

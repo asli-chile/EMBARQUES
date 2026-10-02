@@ -101,85 +101,150 @@ export default function Seo({
   )
 }
 
-/** Schema LocalBusiness + Organization para la home. */
+const ORG_ID = `${SITE.url}/#organization`
+const WEBSITE_ID = `${SITE.url}/#website`
+
+/*
+ * Una sola entidad para la empresa. Antes había un Organization y un
+ * LocalBusiness unidos por parentOrganization, que Google lee como matriz y
+ * sucursal: dos empresas. ProfessionalService es subtipo de LocalBusiness, así
+ * que conserva la ficha local (dirección, horario, mapa).
+ *
+ * areaServed: ASLI opera hacia y desde cualquier parte del mundo. Antes decía
+ * solo "Región del Maule, Chile", que restaba alcance.
+ */
+const AREA_SERVED = [
+  { '@type': 'Country', name: 'Chile' },
+  { '@type': 'Place', name: 'Cualquier parte del mundo' },
+]
+
+function postalAddress() {
+  const { address } = SITE
+  return {
+    '@type': 'PostalAddress',
+    streetAddress: address.street,
+    addressLocality: address.city,
+    addressRegion: address.region,
+    postalCode: address.postalCode,
+    addressCountry: address.country,
+  }
+}
+
+/** Referencia corta a la empresa para usar dentro de otros nodos. */
+function orgRef() {
+  return { '@type': 'ProfessionalService', '@id': ORG_ID, name: SITE.name, url: SITE.url }
+}
+
+function breadcrumbNode(url, items) {
+  return {
+    '@type': 'BreadcrumbList',
+    '@id': `${url}#breadcrumb`,
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  }
+}
+
+function webPageNode({ type = 'WebPage', url, name, description, inLanguage, extra = {} }) {
+  return {
+    '@type': type,
+    '@id': `${url}#webpage`,
+    url,
+    name,
+    description,
+    isPartOf: { '@id': WEBSITE_ID },
+    about: { '@id': ORG_ID },
+    breadcrumb: { '@id': `${url}#breadcrumb` },
+    inLanguage,
+    dateModified: SITE.contentUpdatedAt,
+    ...extra,
+  }
+}
+
+/** Schema de la empresa + WebSite para la home. */
 export function buildHomeJsonLd({ inLanguage = SITE.language, description, websiteDescription } = {}) {
-  const { address, geo } = SITE
+  const { geo } = SITE
+  const organization = {
+    '@type': 'ProfessionalService',
+    '@id': ORG_ID,
+    name: SITE.name,
+    alternateName: SITE.alternateNames,
+    legalName: SITE.legalName,
+    slogan: SITE.slogan,
+    description:
+      description ||
+      'Empresa chilena de logística y comercio exterior fundada en 2021 en Curicó, Región del Maule. Coordina exportaciones e importaciones marítimas, aéreas y terrestres, con especialidad en fruta fresca y congelada, hacia y desde cualquier parte del mundo.',
+    url: SITE.url,
+    logo: `${SITE.url}/img/logoasli.webp`,
+    image: SITE.ogImage,
+    telephone: SITE.phone,
+    email: SITE.email,
+    foundingDate: SITE.foundingDate,
+    founder: { '@type': 'Person', name: SITE.founder.name, jobTitle: SITE.founder.jobTitle },
+    address: postalAddress(),
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: geo.latitude,
+      longitude: geo.longitude,
+    },
+    hasMap: SITE.mapsUrl,
+    openingHoursSpecification: [
+      {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        opens: '09:00',
+        closes: '18:00',
+      },
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer service',
+      telephone: SITE.phone,
+      email: SITE.email,
+    },
+    knowsAbout: SITE.knowsAbout,
+    areaServed: AREA_SERVED,
+    ...(SITE.sameAs.length ? { sameAs: SITE.sameAs } : {}),
+  }
+
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': `${SITE.url}/#organization`,
-        name: SITE.name,
-        legalName: SITE.legalName,
-        url: SITE.url,
-        logo: `${SITE.url}/img/logoasli.webp`,
-        image: SITE.ogImage,
-        telephone: SITE.phone,
-        email: SITE.email,
-        sameAs: SITE.sameAs,
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: address.street,
-          addressLocality: address.city,
-          addressRegion: address.region,
-          postalCode: address.postalCode,
-          addressCountry: address.country,
-        },
-      },
-      {
-        '@type': 'LocalBusiness',
-        '@id': `${SITE.url}/#localbusiness`,
-        name: SITE.legalName,
-        image: SITE.ogImage,
-        url: SITE.url,
-        telephone: SITE.phone,
-        email: SITE.email,
-        priceRange: '$$',
-        address: {
-          '@type': 'PostalAddress',
-          streetAddress: address.street,
-          addressLocality: address.city,
-          addressRegion: address.region,
-          postalCode: address.postalCode,
-          addressCountry: address.country,
-        },
-        geo: {
-          '@type': 'GeoCoordinates',
-          latitude: geo.latitude,
-          longitude: geo.longitude,
-        },
-        openingHoursSpecification: [
-          {
-            '@type': 'OpeningHoursSpecification',
-            dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-            opens: '09:00',
-            closes: '18:00',
-          },
-        ],
-        areaServed: [
-          { '@type': 'AdministrativeArea', name: 'Región del Maule' },
-          { '@type': 'Country', name: 'Chile' },
-        ],
-        description:
-          description ||
-          'Asesoría logística, exportación e importación, coordinación naviera y transporte especializado en fruta fresca y congelada. Curicó, Maule.',
-        parentOrganization: { '@id': `${SITE.url}/#organization` },
-      },
+      organization,
       {
         '@type': 'WebSite',
-        '@id': `${SITE.url}/#website`,
+        '@id': WEBSITE_ID,
         url: SITE.url,
         name: SITE.name,
+        alternateName: SITE.alternateNames[0],
         description: websiteDescription || SITE.tagline,
-        publisher: { '@id': `${SITE.url}/#organization` },
+        publisher: { '@id': ORG_ID },
         inLanguage,
       },
     ],
   }
 }
 
-/** Schema Service + FAQ + Breadcrumb para landings de servicio. */
+/**
+ * Schema genérico de página: WebPage (o subtipo) + BreadcrumbList.
+ * @param {{ type?: string, path: string, name: string, description: string,
+ *   breadcrumb: { name: string, path: string }[], inLanguage?: string, extra?: object }} opts
+ */
+export function buildPageJsonLd({ type, path, name, description, breadcrumb, inLanguage = SITE.language, extra }) {
+  const url = absoluteUrl(path)
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      webPageNode({ type, url, name, description, inLanguage, extra }),
+      breadcrumbNode(url, breadcrumb),
+    ],
+  }
+}
+
+/** Schema Service + FAQ + Breadcrumb + WebPage para landings de servicio. */
 export function buildServicePageJsonLd({
   path,
   name,
@@ -188,32 +253,27 @@ export function buildServicePageJsonLd({
   serviceType,
   breadcrumbHome = 'Inicio',
   breadcrumbServices = 'Servicios',
+  breadcrumbLabel,
+  inLanguage = SITE.language,
 }) {
   const url = absoluteUrl(path)
   const graph = [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        {
-          '@type': 'ListItem',
-          position: 1,
-          name: breadcrumbHome,
-          item: SITE.url,
-        },
-        {
-          '@type': 'ListItem',
-          position: 2,
-          name: breadcrumbServices,
-          item: absoluteUrl('/servicios'),
-        },
-        {
-          '@type': 'ListItem',
-          position: 3,
-          name,
-          item: url,
-        },
-      ],
-    },
+    webPageNode({
+      url,
+      name,
+      description,
+      inLanguage,
+      extra: {
+        mainEntity: { '@id': `${url}#service` },
+        ...(faqs.length > 0 ? { hasPart: { '@id': `${url}#faq` } } : {}),
+      },
+    }),
+    // El último paso usa el mismo texto que la miga de pan visible (landing.label).
+    breadcrumbNode(url, [
+      { name: breadcrumbHome, path: '/' },
+      { name: breadcrumbServices, path: '/servicios' },
+      { name: breadcrumbLabel || name, path },
+    ]),
     {
       '@type': 'Service',
       '@id': `${url}#service`,
@@ -221,24 +281,19 @@ export function buildServicePageJsonLd({
       description,
       serviceType: serviceType || name,
       url,
-      provider: {
-        '@type': 'Organization',
-        '@id': `${SITE.url}/#organization`,
-        name: SITE.name,
-        url: SITE.url,
-        telephone: SITE.phone,
-        email: SITE.email,
-      },
-      areaServed: [
-        { '@type': 'AdministrativeArea', name: 'Región del Maule' },
-        { '@type': 'Country', name: 'Chile' },
-      ],
+      mainEntityOfPage: { '@id': `${url}#webpage` },
+      provider: orgRef(),
+      areaServed: AREA_SERVED,
+      inLanguage,
     },
   ]
 
+  // FAQPage ya no da resultado enriquecido en Google para sitios comerciales
+  // (desde 2023), pero se mantiene: las IAs y Bing sí lo leen.
   if (faqs.length > 0) {
     graph.push({
       '@type': 'FAQPage',
+      '@id': `${url}#faq`,
       mainEntity: faqs.map((faq) => ({
         '@type': 'Question',
         name: faq.question,

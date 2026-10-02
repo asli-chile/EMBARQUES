@@ -41,11 +41,9 @@ export function readLocale() {
   } catch {
     /* ignore */
   }
-  if (typeof navigator !== 'undefined') {
-    const lang = navigator.language?.toLowerCase() ?? ''
-    if (lang.startsWith('zh')) return 'zh'
-    if (lang.startsWith('en')) return 'en'
-  }
+  // Sin elección explícita, español. No se adivina por navigator.language:
+  // Googlebot renderiza con un Chrome en en-US y sin localStorage, así que
+  // terminaba indexando la versión en inglés de un sitio que se busca en español.
   return 'es'
 }
 
@@ -74,4 +72,4 @@ export function toggleLocale(current) {
   return next
 }
 
-export const LOCALE_BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(LOCALE_KEY)};var q=new URLSearchParams(location.search).get('lang');var t=null;if(q==='es'||q==='en'||q==='zh'){t=q;try{localStorage.setItem(k,t)}catch(e){}}else{t=localStorage.getItem(k);if(t!=='es'&&t!=='en'&&t!=='zh'){var nav=(navigator.language||'').toLowerCase();t=nav.indexOf('zh')===0?'zh':nav.indexOf('en')===0?'en':'es'}}document.documentElement.lang=t==='zh'?'zh-CN':t;document.documentElement.setAttribute('data-locale',t)}catch(e){}})();`
+export const LOCALE_BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(LOCALE_KEY)};var q=new URLSearchParams(location.search).get('lang');var t=null;if(q==='es'||q==='en'||q==='zh'){t=q;try{localStorage.setItem(k,t)}catch(e){}}else{t=localStorage.getItem(k);if(t!=='es'&&t!=='en'&&t!=='zh'){t='es'}}document.documentElement.lang=t==='zh'?'zh-CN':t;document.documentElement.setAttribute('data-locale',t)}catch(e){}})();`

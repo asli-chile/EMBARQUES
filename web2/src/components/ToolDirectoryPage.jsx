@@ -1,6 +1,7 @@
 import Header from './Header'
 import Footer from './Footer'
-import Seo from './Seo'
+import Seo, { buildPageJsonLd } from './Seo'
+import { useLocale } from '../hooks/useLocale'
 
 /**
  * Cáscara compartida para herramientas de directorio (Tracking / Stacking).
@@ -18,12 +19,22 @@ export default function ToolDirectoryPage({
   helpTitle,
   helpBody,
   contactCta,
-  mailSubject,
   children,
 }) {
+  const { t } = useLocale()
+  const jsonLd = buildPageJsonLd({
+    path: seoPath,
+    name: seoTitle,
+    description: seoDescription,
+    breadcrumb: [
+      { name: t.serviceLanding.home, path: '/' },
+      { name: label || seoTitle, path: seoPath },
+    ],
+  })
+
   return (
     <>
-      <Seo title={seoTitle} description={seoDescription} path={seoPath} />
+      <Seo title={seoTitle} description={seoDescription} path={seoPath} jsonLd={jsonLd} />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
@@ -56,12 +67,7 @@ export default function ToolDirectoryPage({
                 {helpTitle}
               </h2>
               <p className="text-white/70 mb-8 text-lg leading-relaxed">{helpBody}</p>
-              <a
-                href={`https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(mailSubject)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary hover-lift"
-              >
+              <a href="/contacto" className="btn-primary hover-lift">
                 {contactCta}
               </a>
             </div>

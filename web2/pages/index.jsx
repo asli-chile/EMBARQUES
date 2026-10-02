@@ -27,7 +27,6 @@ const Home = () => {
         path="/"
         jsonLd={buildHomeJsonLd({
           inLanguage: htmlLang(locale),
-          description: seo.description,
           websiteDescription: t.footer?.tagline,
         })}
       />

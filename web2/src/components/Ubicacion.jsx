@@ -1,5 +1,7 @@
 import { useReveal } from '../hooks/useReveal'
 import { useLocale } from '../hooks/useLocale'
+import { whatsappUrl } from '../lib/site'
+import { trackLead } from '../lib/analytics'
 
 const MAPS_URL = 'https://maps.app.goo.gl/cGrni677vZDk5pp26'
 
@@ -90,9 +92,10 @@ const Ubicacion = () => {
               </div>
 
               <a
-                href="https://api.whatsapp.com/send/?phone=56968394225&text&type=phone_number&app_absent=0"
+                href={whatsappUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackLead('whatsapp', 'home')}
                 className="inline-flex items-center gap-2 text-asli-accent font-semibold hover:gap-3 transition-all duration-320 ease-asli min-h-11"
               >
                 {t.contacto.whatsapp}

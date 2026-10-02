@@ -1,6 +1,7 @@
 import Header from '../src/components/Header'
 import Footer from '../src/components/Footer'
-import Seo from '../src/components/Seo'
+import Seo, { buildPageJsonLd } from '../src/components/Seo'
+import { absoluteUrl } from '../src/lib/site'
 import { useLocale } from '../src/hooks/useLocale'
 
 const PresentacionPage = () => {
@@ -9,7 +10,28 @@ const PresentacionPage = () => {
 
   return (
     <>
-      <Seo title={p.seoTitle} description={p.seoDescription} path="/presentacion" />
+      <Seo
+        title={p.seoTitle}
+        description={p.seoDescription}
+        path="/presentacion"
+        jsonLd={buildPageJsonLd({
+          path: '/presentacion',
+          name: p.seoTitle,
+          description: p.seoDescription,
+          breadcrumb: [
+            { name: t.serviceLanding.home, path: '/' },
+            { name: p.panelTitle, path: '/presentacion' },
+          ],
+          extra: {
+            associatedMedia: {
+              '@type': 'DigitalDocument',
+              name: p.panelTitle,
+              encodingFormat: 'application/pdf',
+              url: absoluteUrl('/presentacion-asli.pdf'),
+            },
+          },
+        })}
+      />
       <div className="min-h-screen flex flex-col bg-asli-light">
         <Header />
         <main className="flex-grow">
@@ -24,7 +46,7 @@ const PresentacionPage = () => {
             <div className="letterbox-bar top" />
             <div className="letterbox-bar bottom" />
             <div className="relative z-10 container-asli max-w-3xl">
-              <h1 className="font-display text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1] tracking-tight mb-5 text-balance">
+              <h1 className="font-display text-white text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1] tracking-tight mb-5 text-balance">
                 {p.h1Before} <span className="text-asli-accent">{p.h1Accent}</span>
               </h1>
               <p className="text-white/75 text-lg md:text-xl leading-relaxed">{p.lead}</p>
@@ -76,12 +98,7 @@ const PresentacionPage = () => {
                 {p.ctaTitle}
               </h2>
               <p className="text-white/70 mb-8 text-lg">{p.ctaBody}</p>
-              <a
-                href={`https://mail.google.com/mail/?view=cm&to=informaciones@asli.cl&su=${encodeURIComponent(p.mailSubject)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary hover-lift"
-              >
+              <a href="/contacto" className="btn-primary hover-lift">
                 {p.ctaMail}
               </a>
             </div>

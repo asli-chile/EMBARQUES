@@ -2,13 +2,11 @@ import Header from './Header'
 import Footer from './Footer'
 import Seo, { buildServicePageJsonLd } from './Seo'
 import { getRelatedLandings } from '../data/landings'
-import { SITE } from '../lib/site'
+import { SITE, contactUrl, whatsappUrl } from '../lib/site'
 import { useLocale } from '../hooks/useLocale'
 import { localizeLanding, localizeLandings } from '../lib/i18n/localizeLanding'
 import { htmlLang } from '../lib/i18n/locale'
-
-const MAIL_COTIZAR =
-  'https://mail.google.com/mail/?view=cm&fs=1&to=informaciones@asli.cl&su='
+import { trackLead } from '../lib/analytics'
 
 /**
  * Plantilla SEO para landings de servicio (H1, secciones, FAQ, Schema, enlaces internos).
@@ -26,8 +24,11 @@ export default function ServiceLanding({ landing: landingProp }) {
     serviceType: landing.serviceType,
     breadcrumbHome: sl.home,
     breadcrumbServices: sl.services,
+    breadcrumbLabel: landing.label,
+    inLanguage: htmlLang(locale),
   })
-  const mailHref = `${MAIL_COTIZAR}${encodeURIComponent(`${sl.mailSubjectPrefix} ${landing.h1}`)}`
+  const quoteHref = contactUrl(landing.slug)
+  const waHref = whatsappUrl(sl.whatsappText(landing.h1))
   const hours =
     typeof sl.officeHours === 'function' ? sl.officeHours(SITE.address.street) : sl.officeHours
 
@@ -37,12 +38,7 @@ export default function ServiceLanding({ landing: landingProp }) {
         title={landing.title}
         description={landing.description}
         path={`/${landing.slug}`}
-        jsonLd={{
-          ...jsonLd,
-          '@graph': jsonLd['@graph']?.map((node) =>
-            node['@type'] === 'Service' ? { ...node, inLanguage: htmlLang(locale) } : node
-          ),
-        }}
+        jsonLd={jsonLd}
       />
 
       <div className="min-h-screen flex flex-col bg-asli-light">
@@ -72,26 +68,24 @@ export default function ServiceLanding({ landing: landingProp }) {
                 <span className="text-white/90">{landing.label}</span>
               </nav>
               <p className="section-label !text-asli-accent !mb-3">{landing.label}</p>
-              <h1 className="font-display text-[clamp(1.85rem,5vw,3.25rem)] font-bold leading-[1.08] tracking-tight mb-5 text-balance">
+              <h1 className="font-display text-white text-[clamp(1.85rem,5vw,3.25rem)] font-bold leading-[1.08] tracking-tight mb-5 text-balance">
                 {landing.h1}
               </h1>
               <p className="text-white/80 text-lg md:text-xl leading-relaxed max-w-2xl">
                 {landing.lead}
               </p>
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <a
-                  href={mailHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary !py-3 !px-6 justify-center"
-                >
+                <a href={quoteHref} className="btn-primary !py-3 !px-6 justify-center">
                   {sl.quoteService}
                 </a>
                 <a
-                  href="/#contacto"
+                  href={waHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackLead('whatsapp', landing.slug)}
                   className="btn-ghost-dark !py-3 !px-6 !text-white !border-white/30 hover:!bg-white hover:!text-asli-ink justify-center"
                 >
-                  {sl.talkTeam}
+                  {sl.whatsappCta}
                 </a>
               </div>
             </div>
@@ -135,12 +129,14 @@ export default function ServiceLanding({ landing: landingProp }) {
                     <p className="text-muted-strong text-sm leading-relaxed mb-4">{hours}</p>
                     <a
                       href={`tel:${SITE.phone}`}
+                      onClick={() => trackLead('phone', landing.slug)}
                       className="block text-asli-primary font-semibold text-sm mb-1"
                     >
                       {SITE.phoneDisplay}
                     </a>
                     <a
                       href={`mailto:${SITE.email}`}
+                      onClick={() => trackLead('email', landing.slug)}
                       className="block text-asli-primary font-semibold text-sm"
                     >
                       {SITE.email}
@@ -230,14 +226,20 @@ export default function ServiceLanding({ landing: landingProp }) {
                 {sl.finalCtaTitle}
               </h2>
               <p className="text-muted-strong mb-8 text-lg">{sl.finalCtaBody}</p>
-              <a
-                href={mailHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary"
-              >
-                {sl.finalCtaButton}
-              </a>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <a href={quoteHref} className="btn-primary justify-center">
+                  {sl.finalCtaButton}
+                </a>
+                <a
+                  href={waHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackLead('whatsapp', landing.slug)}
+                  className="btn-ghost-dark justify-center"
+                >
+                  {sl.whatsappCta}
+                </a>
+              </div>
             </div>
           </section>
         </main>

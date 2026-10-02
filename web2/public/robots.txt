@@ -1,4 +1,20 @@
+# Buscadores y asistentes de IA: acceso explícito al sitio público.
+# Van en el MISMO grupo que "*": un grupo propio para un bot reemplaza al
+# general, y ese bot dejaría de respetar los Disallow del ERP de más abajo.
 User-agent: *
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot
+User-agent: Applebot-Extended
 Allow: /
 
 # ERP / rutas internas (proxy) — no útiles para SEO público.
@@ -23,7 +39,8 @@ Disallow: /vessel-diagnose
 Disallow: /api/
 Disallow: /seo-preview
 
-# Visor de PDF operativo (contenido dinámico, bajo valor indexable)
-Disallow: /stacking/pil
+# /stacking/pil (visor de PDF operativo) NO va aquí: lleva noindex en la
+# página, y si robots bloquea el rastreo Google nunca lee ese noindex y puede
+# indexar la URL igual, sin contenido.
 
 Sitemap: https://www.asli.cl/sitemap.xml

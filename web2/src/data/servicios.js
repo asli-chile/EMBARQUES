@@ -1,10 +1,31 @@
+/*
+ * Tarjetas de servicio (home muestra las 6 primeras, /servicios todas).
+ * El orden importa: la home enlaza solo a las primeras seis.
+ *
+ * - "Exportación de fruta fresca" va primero: es la landing principal y antes
+ *   no tenía tarjeta, así que desde la home solo se llegaba por el footer.
+ * - Se quitó "Asesoría documental" (id 3): llevaba a /servicios-aduaneros,
+ *   igual que "Servicios aduaneros", y dos tarjetas a la misma página se
+ *   reparten la relevancia. Su contenido ya está en esa landing.
+ * - "Transporte terrestre" sigue apuntando a logística integral hasta que
+ *   exista una landing propia.
+ */
 export const servicios = [
+  {
+    id: 10,
+    titulo: 'Exportación de Fruta Fresca',
+    descripcion:
+      'Cerezas, arándanos y más fruta fresca o congelada: coordinamos reefer, booking, documentación SAG y aduana para que tu carga llegue a cualquier parte del mundo.',
+    imagen: '/img/expo.webp',
+    alt: 'Exportación de fruta fresca desde Chile — logística ASLI',
+    href: '/exportacion-fruta-fresca',
+  },
   {
     id: 1,
     titulo: 'Asesoría En Exportaciones',
     descripcion:
       'Te acompañamos de punta a punta: armamos la documentación, coordinamos con navieras y aduanas, y dejamos la operación lista para que tu carga salga sin sorpresas.',
-    imagen: '/img/expo.webp',
+    imagen: '/img/docs.webp',
     alt: 'Asesoría en exportaciones ASLI — documentación, navieras y aduanas',
     href: '/asesoria-exportadores-pymes',
   },
@@ -16,15 +37,6 @@ export const servicios = [
     imagen: '/img/impo.webp',
     alt: 'Asesoría en importaciones ASLI — ingreso de mercancías a Chile',
     href: '/importacion-mercancias-chile',
-  },
-  {
-    id: 3,
-    titulo: 'Asesoría Documental',
-    descripcion:
-      'Certificados, permisos y papelería aduanera sin laberinto. Revisamos requisitos y te guiamos para cumplir normativa sin perder días valiosos.',
-    imagen: '/img/docs.webp',
-    alt: 'Asesoría documental y papelería aduanera ASLI',
-    href: '/servicios-aduaneros',
   },
   {
     id: 4,
@@ -45,15 +57,6 @@ export const servicios = [
     href: '/transporte-aereo-carga',
   },
   {
-    id: 6,
-    titulo: 'Transporte Terrestre',
-    descripcion:
-      'Movemos tu carga desde y hacia puertos y aeropuertos con una red terrestre confiable, coordinada con el resto de la operación.',
-    imagen: '/img/camion.webp',
-    alt: 'Transporte terrestre hacia puertos y aeropuertos — ASLI',
-    href: '/asesoria-logistica-integral',
-  },
-  {
     id: 7,
     titulo: 'Gestión de Contenedores',
     descripcion:
@@ -61,6 +64,15 @@ export const servicios = [
     imagen: '/img/container.webp',
     alt: 'Gestión e importación de contenedores ASLI',
     href: '/gestion-contenedores',
+  },
+  {
+    id: 6,
+    titulo: 'Transporte Terrestre',
+    descripcion:
+      'Movemos tu carga desde y hacia puertos y aeropuertos con una red terrestre confiable, coordinada con el resto de la operación.',
+    imagen: '/img/camion.webp',
+    alt: 'Transporte terrestre hacia puertos y aeropuertos — ASLI',
+    href: '/asesoria-logistica-integral',
   },
   {
     id: 8,
