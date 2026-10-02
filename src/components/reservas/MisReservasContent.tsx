@@ -19,6 +19,15 @@ import { goBackOr } from "@/lib/navigation";
 import { displayRefAsli, formatRefAsli } from "@/lib/refAsli";
 import { getEstadoOperacionStyle } from "@/lib/ui/estadoOperacion";
 import { ArriboChip, arriboLabelsDe, type ArriboLabels } from "@/components/ui/ArriboChip";
+import {
+  ArriboCelda,
+  fechaArriboReal,
+  siguienteModoArribo,
+  valorOrdenArribo,
+  MODOS_ARRIBO,
+  type ArriboCeldaLabels,
+  type ModoArribo,
+} from "@/components/ui/ArriboCelda";
 // Banderas y logos ya resueltos en Seguimiento: el mismo puerto y la misma
 // naviera deben verse igual en las dos pantallas.
 import { isoDePuerto } from "@/components/navitrack/navitrack-banderas";
@@ -152,7 +161,7 @@ function naveYViaje(op: Pick<Operacion, "nave" | "viaje">): string {
   return [nave, viaje].filter(Boolean).join(" · ");
 }
 
-type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "tt" | "booking" | "contenedor" | "estado_operacion" | "solicitud_ventana";
+type SortField = "ref_asli" | "referencia_externa" | "cliente" | "especie" | "naviera" | "nave" | "pol" | "pod" | "etd" | "eta" | "arribo" | "tt" | "booking" | "contenedor" | "estado_operacion" | "solicitud_ventana";
 type SortDirection = "asc" | "desc";
 type ViewMode = "table" | "cards";
 /** Celdas de la tabla que se completan en línea cuando están vacías. */
@@ -819,7 +828,10 @@ type TableRowProps = {
   onEstadoSave: (op: Operacion, next: EstadoOperacion) => Promise<boolean>;
   /* Un solo objeto y no cuatro strings sueltos: la fila está memoizada y las
      etiquetas viajan juntas, así no se olvida ninguna al agregar una pantalla. */
-  arriboLabels: ArriboLabels;
+  /* La columna Arribo cambia de forma toda junta (fecha / días / ambos). */
+  arriboModo: ModoArribo;
+  onCambiarArriboModo: () => void;
+  arriboCeldaLabels: ArriboCeldaLabels;
 };
 
 function bookingChipClass(booking: string | null | undefined, hasDoc: boolean, emptyExtra = ""): string {
@@ -882,7 +894,9 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
   onContextMenu,
   onInlineSave,
   onEstadoSave,
-  arriboLabels,
+  arriboModo,
+  onCambiarArriboModo,
+  arriboCeldaLabels,
 }: TableRowProps) {
   const cfg = getEstadoOperacionStyle(op.estado_operacion);
   return (
@@ -1035,6 +1049,18 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
       </td>
       <td className="px-3 py-2.5 text-center text-[13.5px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.etd)}</td>
       <td className="px-3 py-2.5 text-center text-[13.5px] text-dash-fg font-semibold whitespace-nowrap tabular-nums">{fmtDate(op.eta)}</td>
+      {/* El arribo real, al lado de la ETA con la que se compara. Ver ArriboCelda. */}
+      <td className="px-3 py-2 text-center">
+        <ArriboCelda
+          arribo_confirmado={op.arribo_confirmado}
+          arribo_at={op.arribo_at}
+          arribo_anunciado_at={op.arribo_anunciado_at}
+          eta={op.eta}
+          modo={arriboModo}
+          onCambiarModo={onCambiarArriboModo}
+          labels={arriboCeldaLabels}
+        />
+      </td>
       <td className="px-3 py-2 text-center">
         {op.tt !== null ? (
           <span className="text-[11px] font-bold text-dash-fg tabular-nums">{op.tt}d</span>
@@ -1044,21 +1070,12 @@ const MisReservasTableRow = memo(function MisReservasTableRow({
         <VentanaBadge value={op.solicitud_ventana} />
       </td>
       <td className="px-3 py-2 text-center">
-        <div className="inline-flex flex-col items-center gap-1">
-          <InlineEstadoSelect
-            value={op.estado_operacion}
-            canEdit={canEditEstado}
-            allowAny={allowAnyEstado}
-            onSave={(next) => onEstadoSave(op, next)}
-          />
-          <ArriboChip
-            arribo_confirmado={op.arribo_confirmado}
-            arribo_at={op.arribo_at}
-            arribo_anunciado_at={op.arribo_anunciado_at}
-            labels={arriboLabels}
-            dense
-          />
-        </div>
+        <InlineEstadoSelect
+          value={op.estado_operacion}
+          canEdit={canEditEstado}
+          allowAny={allowAnyEstado}
+          onSave={(next) => onEstadoSave(op, next)}
+        />
       </td>
       {!isCliente && (
         <td className="px-3 py-2 text-center">
@@ -1468,6 +1485,35 @@ export function MisReservasContent() {
     () => arriboLabelsDe(t.navitrack as unknown as Record<string, string>),
     [t],
   );
+  const arriboCeldaLabels = useMemo<ArriboCeldaLabels>(
+    () => ({
+      anunciado: tr.arriboAnunciadoTitulo,
+      real: tr.arriboRealTitulo,
+      antes: tr.arriboAntes,
+      despues: tr.arriboDespues,
+      aTiempo: tr.arriboATiempo,
+      sinEta: tr.arriboSinEta,
+      cambiarVista: tr.arriboCambiarVista,
+    }),
+    [tr],
+  );
+  /* Cómo se ve la columna Arribo. Se recuerda en este navegador: quien mira
+     siempre los días no tiene que volver a elegirlo cada vez. */
+  const [arriboModo, setArriboModo] = useState<ModoArribo>(() => {
+    try {
+      const guardado = localStorage.getItem("misReservas.arriboModo") as ModoArribo | null;
+      return guardado && MODOS_ARRIBO.includes(guardado) ? guardado : "fecha";
+    } catch {
+      return "fecha";
+    }
+  });
+  const cambiarArriboModo = useCallback(() => {
+    setArriboModo((actual) => {
+      const siguiente = siguienteModoArribo(actual);
+      try { localStorage.setItem("misReservas.arriboModo", siguiente); } catch { /* sin almacenamiento: solo esta sesión */ }
+      return siguiente;
+    });
+  }, []);
   const { temporadaActiva, temporadaLoading } = useTemporadaActiva();
 
   const [operaciones, setOperaciones] = useState<Operacion[]>([]);
@@ -1662,6 +1708,13 @@ export function MisReservasContent() {
     let result = getFilteredData();
     if (sortField) {
       result = [...result].sort((a, b) => {
+        if (sortField === "arribo") {
+          // Sin arribo ni anuncio van al final en los dos sentidos.
+          const aDia = valorOrdenArribo(a);
+          const bDia = valorOrdenArribo(b);
+          if (aDia === null || bDia === null) return aDia === bDia ? 0 : aDia === null ? 1 : -1;
+          return sortDirection === "asc" ? aDia - bDia : bDia - aDia;
+        }
         let aVal = a[sortField];
         let bVal = b[sortField];
         if (aVal === null || aVal === undefined) aVal = "";
@@ -1714,7 +1767,7 @@ export function MisReservasContent() {
   }, []);
 
   /* Casilla + columna de transporte (solo personal interno) + resto de columnas de datos. */
-  const tableColCount = isCliente ? 12 : 14;
+  const tableColCount = isCliente ? 13 : 15;
 
   /*
    * Una reserva desplegada a la vez, con la mecánica compartida con
@@ -2088,6 +2141,7 @@ export function MisReservasContent() {
     { key: "pod",             label: "POD" },
     { key: "etd",             label: "ETD" },
     { key: "eta",             label: "ETA" },
+    { key: "arribo_at",       label: "Arribo" },
     { key: "tt",              label: "TT (días)" },
     { key: "solicitud_ventana", label: "Tipo de operación" },
     { key: "estado_operacion",label: "Estado" },
@@ -2099,6 +2153,7 @@ export function MisReservasContent() {
       if (key === "solicitud_ventana") return ventanaLabel(op.solicitud_ventana);
       const v = op[key];
       if (key === "etd" || key === "eta") return fmtDate(v as string | null);
+      if (key === "arribo_at") return fechaArriboReal(op);
       return v ?? "";
     })
   );
@@ -2617,6 +2672,7 @@ export function MisReservasContent() {
                     <SortableHeader field="pol" label={tr.colRuta} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[14rem]" />
                     <SortableHeader field="etd" label={tr.colETD} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
                     <SortableHeader field="eta" label={tr.colETA} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
+                    <SortableHeader field="arribo" label={tr.colArribo} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} className="min-w-[6.5rem]" />
                     <SortableHeader field="tt" label={tr.colTT} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="solicitud_ventana" label={tr.colTipoOperacion} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
                     <SortableHeader field="estado_operacion" label={tr.colStatus} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
@@ -2674,7 +2730,9 @@ export function MisReservasContent() {
                         onContextMenu={handleOpenContextMenu}
                         onInlineSave={handleInlineSave}
                         onEstadoSave={handleEstadoSave}
-                        arriboLabels={arriboLabels}
+                        arriboModo={arriboModo}
+                        onCambiarArriboModo={cambiarArriboModo}
+                        arriboCeldaLabels={arriboCeldaLabels}
                       />
                       {expandedId === op.id && (
                         <tr className="bg-[color-mix(in_srgb,var(--estado-curso)_6%,transparent)]">
