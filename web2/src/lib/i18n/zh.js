@@ -427,7 +427,7 @@ export const zh = {
     optional: '选填',
     submit: '发送询价',
     sending: '发送中…',
-    success: '我们已收到您的询价，将在一个工作日内回复。',
+    success: '谢谢！我们已收到您的询价，团队正在审核，将尽快与您联系并提供报价。',
     error: '表单发送失败。请通过 WhatsApp 或邮件联系我们，我们同样会回复。',
     directTitle: '直接联系',
     directBody: '通过 WhatsApp 联系时，消息模板已为您准备好：只需填写产品、目的地、数量与装运周。',
