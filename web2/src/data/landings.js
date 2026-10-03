@@ -20,6 +20,7 @@ export const landings = [
     guias: [
       { href: '/exportar/cerezas', titulo: 'Cómo exportar cerezas desde Chile', texto: 'Temporada, seteo del reefer, documentos y stacking, paso a paso.' },
       { href: '/exportar/arandanos-atmosfera-controlada', titulo: 'Cómo exportar arándanos en atmósfera controlada', texto: 'Temperatura, CO₂ y O₂, vida útil y semanas de peak.' },
+      { href: '/exportar/fruta-congelada', titulo: 'Cómo exportar fruta congelada IQF', texto: '-18 °C, planta inscrita en el SAG, carga del reefer y documentos.' },
     ],
     related: [
       'asesoria-exportadores-pymes',

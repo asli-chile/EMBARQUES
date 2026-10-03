@@ -60,6 +60,11 @@ export default function GuiaPage({ guia }) {
       { name: guia.producto, path },
     ],
   })
+  // Textos del cierre que cambian según el producto (los congelados no tienen temporada).
+  const cta = guia.cta || 'Cotizar mi temporada'
+  const cierreCeja = guia.cierreCeja || 'Tu próxima temporada'
+  const cierreObjeto = guia.cierreObjeto || `tus ${guia.producto.toLowerCase()}`
+  const muchosMeses = guia.temporada.meses.length > 6
   const estiloAcento = { '--acento': guia.acento, '--acento-claro': guia.acentoClaro || guia.acento }
 
   return (
@@ -126,7 +131,7 @@ export default function GuiaPage({ guia }) {
                   <p className={`${s.resumen} mb-8 hero-enter hero-enter-delay-1`}>{guia.resumen}</p>
                   <div className="flex flex-col sm:flex-row gap-3 hero-enter hero-enter-delay-2">
                     <a href={contacto} className={s.botonLleno}>
-                      Cotizar mi temporada
+                      {cta}
                     </a>
                     <a href="#travesia" className={s.botonBorde}>
                       Ver el paso a paso <span aria-hidden="true">↓</span>
@@ -175,9 +180,14 @@ export default function GuiaPage({ guia }) {
                   <p className={`${s.etiqueta} ${s.mono} mb-5`}>Temporada</p>
                   <p className={`${s.dato} mb-1`}>{guia.temporada.dato}</p>
                   <p className="text-muted-strong font-semibold mb-auto pb-8">{guia.temporada.peak}</p>
-                  <div className={s.temporadaBarra} role="img" aria-label="Embarques de octubre a enero, con el peak en diciembre">
-                    {guia.temporada.meses.map((m) => (
-                      <div key={m.mes} className={s.mes}>
+                  <div
+                    className={s.temporadaBarra}
+                    style={{ gridTemplateColumns: `repeat(${guia.temporada.meses.length}, minmax(0, 1fr))`, gap: muchosMeses ? '3px' : undefined }}
+                    role="img"
+                    aria-label={`${guia.temporada.dato}. ${guia.temporada.peak}`}
+                  >
+                    {guia.temporada.meses.map((m, i) => (
+                      <div key={`${m.mes}-${i}`} className={s.mes}>
                         <div
                           className={s.mesBarra}
                           style={{
@@ -185,7 +195,7 @@ export default function GuiaPage({ guia }) {
                             opacity: m.nivel === 0 ? 0.18 : 0.35 + m.nivel * 0.22,
                           }}
                         />
-                        <span className={`${s.mesNombre} ${s.mono}`}>{m.mes}</span>
+                        <span className={`${s.mesNombre} ${s.mono}`}>{muchosMeses ? m.mes.charAt(0) : m.mes}</span>
                       </div>
                     ))}
                   </div>
@@ -373,9 +383,9 @@ export default function GuiaPage({ guia }) {
               <img src={guia.imagenCierre} alt="" width={1600} height={700} loading="lazy" decoding="async" />
             </div>
             <div className="container-asli max-w-3xl">
-              <p className={`${s.ceja} ${s.mono} mb-4`}>Tu próxima temporada</p>
+              <p className={`${s.ceja} ${s.mono} mb-4`}>{cierreCeja}</p>
               <h2 id="cierre-titulo" className="font-display text-white text-[clamp(2rem,4.6vw,3.4rem)] font-bold leading-[1.02] tracking-tight mb-5">
-                Cotiza la exportación de tus {guia.producto.toLowerCase()}
+                Cotiza la exportación de {cierreObjeto}
               </h2>
               <p className="text-white/75 text-lg leading-relaxed mb-8 max-w-xl">
                 Cuéntanos la semana de embarque, el volumen y el destino. Te respondemos con una propuesta concreta, a
@@ -383,7 +393,7 @@ export default function GuiaPage({ guia }) {
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <a href={contacto} className={s.botonLleno}>
-                  Cotizar mi temporada
+                  {cta}
                 </a>
                 <a
                   href={wa}

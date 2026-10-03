@@ -69,6 +69,15 @@ const nextConfig = {
         destination: "/embarques/inicio",
         permanent: false,
       },
+      // Formas cortas de las guías: quien escribe la URL a mano no cae en 404.
+      ...[
+        ["/exportar/cereza", "/exportar/cerezas"],
+        ["/exportar/arandano", "/exportar/arandanos-atmosfera-controlada"],
+        ["/exportar/arandanos", "/exportar/arandanos-atmosfera-controlada"],
+        ["/exportar/congelados", "/exportar/fruta-congelada"],
+        ["/exportar/congelado", "/exportar/fruta-congelada"],
+        ["/exportar/iqf", "/exportar/fruta-congelada"],
+      ].map(([source, destination]) => ({ source, destination, permanent: true })),
     ];
   },
   /** Evita HTML viejo en CDN al publicar traducciones o textos nuevos */
@@ -96,6 +105,7 @@ const nextConfig = {
       "/exportar",
       "/exportar/cerezas",
       "/exportar/arandanos-atmosfera-controlada",
+      "/exportar/fruta-congelada",
       "/asesoria-logistica-integral",
     ];
     return paths.map((source) => ({

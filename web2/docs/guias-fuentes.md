@@ -33,7 +33,7 @@ Fuentes consultadas el 2 de octubre de 2026.
 | Vida útil: 2 semanas en aire, 3 con bolsa, 4–6 en atmósfera controlada | 3 |
 | La bolsa de atmósfera modificada suma al menos una semana; abrirla al sacar de frío en destino | 3 |
 | Errores: enfriado tardío, manejo brusco (pitting), humedad baja (pedicelo) | 3 |
-| Setear temperatura, humedad y ventilación antes de encender la unidad; espacios libres ≤ 5 % del piso | 4 |
+| Cargar con la unidad apagada y la fruta a la temperatura de viaje; al cerrar puertas, ingresar seteo de temperatura, humedad y ventilación y luego encender; espacios libres ≤ 5 % del piso (corregido 2026-10-03: antes decía "antes de encender la unidad y cargar") | 4 |
 | Certificado fitosanitario: lo emite el SAG, acredita requisitos del país de destino, se pide en el Sistema Multipuerto | 5 |
 | DUS: lo presenta el despachador (agente de aduana), en aceptación a trámite y legalización | 6 |
 | Sin VGM informado a tiempo, la naviera no embarca el contenedor | 7 |
@@ -65,3 +65,32 @@ Fuentes consultadas el 3 de octubre de 2026. Las fuentes 5 a 8 son las mismas de
 | Documentos que no coinciden generan observaciones | experiencia ASLI |
 
 **Revisión contra el ERP (2026-10-03, no publicada):** el arándano fresco viaja a -0,5 °C (dentro del rango), con ventilación cerrada en los embarques con atmósfera controlada y en reefer de 40 pies. Son pocos embarques, así que se usaron solo como referencia.
+
+## Fruta congelada IQF · `/exportar/fruta-congelada`
+
+Fuentes consultadas el 3 de octubre de 2026.
+
+| # | Fuente | URL |
+|---|---|---|
+| 1 | SAG, *Lineamientos para la certificación de productos congelados* (versión 2, 13-07-2026) | https://www.sag.gob.cl/sites/default/files/Lineamientos%20productos%20congelados%20%282026%29%20julio%20final.pdf |
+| 2 | WFLO / GCCA, *Commodity Storage Manual: Blueberries and Huckleberries* (rev. 2018) | https://www.gcca.org/system/files/WFLO-Commodity-Storage-Manual-2018Blueberries%5B1%5D.pdf |
+| 3 | WFLO / GCCA, *Commodity Storage Manual: Cherries, Sweet and Tart* (rev. 2018) | https://www.gcca.org/system/files/WFLO-Commodity-Storage-Manual-2018Cherries_~_Sweet_%26_Tart%5B1%5D.pdf |
+| 4 | Hapag-Lloyd, *Special Handling for Reefer Containers* | https://www.hapag-lloyd.com/content/dam/website/downloads/pdf/ReeferCargoHandling.pdf |
+| 5 | Portalfrutícola, *Frambuesas congeladas impulsan crecimiento de las exportaciones agroindustriales chilenas en el primer semestre* (jul-2026), con datos de Chilealimentos | https://www.portalfruticola.com/?p=619193 |
+| 6–8 | Aduanas (DUS), MundoMarítimo (VGM), Maersk Chile (stacking): las mismas de la guía de cerezas | — |
+
+| Dato publicado | Fuente |
+|---|---|
+| Congelado = -18 °C en el centro térmico (Decreto 23 Minsal, citado por el SAG); mantener -18 °C o menos en la cadena | 1 |
+| Planta inscrita como "Planta procesadora de productos congelados" (SRA), código CSP en etiquetas y documentos, visita SAG cada temporada, respaldo de procesos y trazabilidad (proveedor o productor y especie) | 1 |
+| No todos los mercados piden certificado fitosanitario para congelados; si lo piden, certificado de proceso de congelado por lote (temperatura y días), hasta 2 días hábiles antes del despacho | 1 |
+| Congelado rápido de berries a -32/-40 °C; almacenaje a -18/-23 °C; 12 meses sin sellar a -18 °C, 18 meses sellado a -18 °C, 24 meses sellado a -23 °C; cosecha a máquina creciente en berries para proceso | 2 |
+| Túneles IQF; fluctuaciones de temperatura oscurecen la fruta y la apelmazan ("block freezing"); recongelada queda oscura y blanda | 3 |
+| Fruta a la temperatura de transporte antes de cargar; unidad apagada al cargar; espacios ≤ 5 % del piso; seteo y encendido al cerrar puertas; peso mínimo 3.000 kg (20′) y 5.000 kg (40′) por la masa térmica en cortes de energía | 4 |
+| Frambuesa congelada +62 % en valor en el primer semestre de 2026 | 5 |
+| "Se embarca todo el año" se deduce del período de almacenaje (2) y coincide con la práctica de ASLI | 2 + revisión ERP |
+| Documentos que no coinciden generan observaciones | experiencia ASLI |
+
+**No publicado por falta de fuente verificable:** ventilación cerrada para carga congelada. Aparecía en un resumen de búsqueda, pero no en el documento de Hapag-Lloyd.
+
+**Revisión contra el ERP (2026-10-03, no publicada):** los congelados viajan a -18, -20 y -22 °C, sin atmósfera, en reefer de 40 pies, con zarpes repartidos entre febrero y octubre.

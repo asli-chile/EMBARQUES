@@ -176,3 +176,11 @@ Pendiente fuera de código: `SITE.sameAs` (LinkedIn, Instagram, Google Business)
 
 - Nueva guía `/exportar/arandanos-atmosfera-controlada`, con el mismo modelo que la de cerezas y acento azul violeta: panel reefer (-0,5 a 0,5 °C, 15–20 % CO₂, 5–10 % O₂), temporada con peak en las semanas 51 a 3, vida útil en aire frente a atmósfera controlada, 8 recaladas, errores, preguntas frecuentes y fuentes.
 - La landing de fruta enlaza las dos guías; en `/exportar` solo queda "Próximamente: fruta congelada".
+
+## Fase 2 · Bloque B: guía de fruta congelada y cierre del bloque (2026-10-03)
+
+- Nueva guía `/exportar/fruta-congelada` (IQF, acento azul hielo): -18 °C o menos, congelado rápido, planta inscrita en el SAG, certificado de proceso de congelado (solo para mercados que piden fitosanitario), carga del reefer a temperatura de viaje y peso mínimo, vida útil de 12 a 24 meses. Fuente principal: lineamientos del SAG para congelados (jul-2026).
+- Textos de cierre y botón por guía ("Cotizar mi embarque" en congelados) y barra de temporada para cualquier cantidad de meses.
+- Corrección en la guía de cerezas: el seteo del reefer se ingresa después de cargar, con puertas cerradas, y luego se enciende la unidad (Hapag-Lloyd).
+- Redirecciones 308 de formas cortas: `/exportar/cereza`, `/exportar/arandano(s)`, `/exportar/congelado(s)` y `/exportar/iqf`.
+- Bloque B completo: tres guías publicadas en `/exportar`.

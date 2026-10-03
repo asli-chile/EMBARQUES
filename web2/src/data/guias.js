@@ -80,7 +80,7 @@ export const guias = [
         icono: 'contenedor',
         etiqueta: 'Contenedor',
         valor: 'Reefer 40′',
-        texto: 'con temperatura, humedad y ventilación ingresadas antes de encender la unidad y cargar.',
+        texto: 'con la fruta ya a la temperatura de viaje al cargar, y el seteo de temperatura, humedad y ventilación ingresado antes de encender la unidad.',
         fuente: 4,
       },
       {
@@ -137,7 +137,7 @@ export const guias = [
         fotoAlt: 'Carga de pallets dentro de un contenedor refrigerado',
         titulo: 'Retiro del reefer y seteo',
         texto: [
-          'El contenedor refrigerado se retira vacío en el depósito. Antes de encender la unidad y cargar se ingresan los valores de temperatura, humedad y ventilación y, si corresponde, la atmósfera controlada. Un seteo mal ingresado viaja así todo el tránsito.',
+          'El contenedor refrigerado se retira vacío en el depósito y se carga con la unidad apagada y la fruta ya a la temperatura de viaje. Al cerrar las puertas se ingresan los valores de temperatura, humedad y ventilación y, si corresponde, la atmósfera controlada, y recién entonces se enciende la unidad. Un seteo mal ingresado viaja así todo el tránsito.',
           'La carga debe dejar circular el aire: los espacios libres no deberían superar el 5 % del piso.',
         ],
         fuentes: [4],
@@ -203,7 +203,7 @@ export const guias = [
       },
       {
         error: 'Seteo del contenedor mal ingresado',
-        solucion: 'Revisar temperatura, humedad y ventilación antes de encender la unidad y cargar, contra las instrucciones de la exportadora.',
+        solucion: 'Al terminar la carga, revisar temperatura, humedad y ventilación contra las instrucciones de la exportadora antes de encender la unidad.',
         fuente: 4,
       },
       {
@@ -623,11 +623,310 @@ export const guias = [
     contacto: { producto: 'Arándanos', carga: 'reefer' },
     related: ['exportacion-fruta-fresca', 'gestion-contenedores', 'transporte-maritimo'],
   },
+  {
+    slug: 'fruta-congelada',
+    cta: 'Cotizar mi embarque',
+    cierreCeja: 'Tu próximo embarque',
+    cierreObjeto: 'tu fruta congelada',
+    producto: 'Fruta congelada',
+    singular: 'fruta congelada',
+    acento: '#1665B8',
+    acentoClaro: '#7CC4FF',
+    title: 'Cómo exportar fruta congelada IQF desde Chile: guía paso a paso | ASLI',
+    description:
+      'Guía práctica para exportar fruta congelada IQF desde Chile: -18 °C, congelado rápido, planta inscrita en el SAG, certificado de proceso de congelado, carga del reefer, DUS, VGM y stacking. ASLI, Curicó.',
+    h1Antes: 'Cómo exportar',
+    h1Acento: 'fruta congelada',
+    h1Despues: 'desde Chile',
+    ceja: 'Guía de exportación · Fruta congelada IQF',
+    resumen:
+      'Para exportar fruta congelada desde Chile, la fruta se congela rápido, pieza por pieza (IQF), en una planta inscrita en el SAG; se mantiene a -18 °C o menos en toda la cadena y se carga en un contenedor reefer ya a la temperatura de viaje. Se puede embarcar todo el año, porque congelada se conserva entre 12 y 24 meses.',
+    imagen: '/img/guias/congelada/portada.webp',
+    imagenMovil: '/img/guias/congelada/portada-800.webp',
+    imagenAlt: 'Frambuesas, moras y arándanos para congelar',
+    imagenOg: '/img/guias/congelada/og.jpg',
+    imagenAsli: '/img/guias/cerezas/asli.webp',
+    imagenCierre: '/img/guias/congelada/cierre.webp',
+    publicada: '2026-10-03',
+    actualizada: '2026-10-03',
+
+    seteo: [
+      { etiqueta: 'Temperatura de viaje', valor: '-18 o menos', unidad: '°C', fuente: 1 },
+      { etiqueta: 'Congelado rápido (IQF)', valor: '-32 a -40', unidad: '°C', fuente: 2 },
+      { etiqueta: 'Almacenaje congelado', valor: '-18 a -23', unidad: '°C', fuente: 2 },
+      { etiqueta: 'Carga mínima en 40′', valor: '5.000', unidad: 'kg', fuente: 4 },
+    ],
+
+    temporada: {
+      dato: 'Todo el año',
+      peak: 'Se cosecha en temporada y se embarca según la demanda',
+      meses: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'].map((mes) => ({
+        mes,
+        nivel: 2,
+      })),
+      texto: 'La fruta se congela en su temporada y se conserva de 12 a 24 meses según el envase y la temperatura, así que puede embarcarse en cualquier mes.',
+      fuente: 2,
+    },
+
+    ficha: [
+      {
+        icono: 'reloj',
+        etiqueta: 'Mercado',
+        valor: '+62 %',
+        texto: 'creció en valor la exportación chilena de frambuesa congelada en el primer semestre de 2026.',
+        fuente: 5,
+      },
+      {
+        icono: 'origen',
+        etiqueta: 'Planta',
+        valor: 'Inscrita en el SAG',
+        texto: 'como planta procesadora de productos congelados, con su código en etiquetas y documentos.',
+        fuente: 1,
+      },
+      {
+        icono: 'contenedor',
+        etiqueta: 'Contenedor',
+        valor: 'Reefer -18 °C',
+        texto: 'cargado con la fruta ya a la temperatura de viaje y con al menos 5.000 kg en un 40′.',
+        fuente: 4,
+      },
+      {
+        icono: 'atmosfera',
+        etiqueta: 'Vida útil',
+        valor: 'Hasta 24 meses',
+        texto: 'congelada, según el envase y la temperatura de almacenaje.',
+        fuente: 2,
+        escala: 24,
+        comparacion: [
+          { etiqueta: 'Envase sin sellar, a -18 °C', desde: 12, hasta: 12, texto: '12 meses' },
+          { etiqueta: 'Envase sellado, a -18 °C', desde: 18, hasta: 18, texto: '18 meses' },
+          { etiqueta: 'Envase sellado, a -23 °C', desde: 24, hasta: 24, texto: '24 meses' },
+        ],
+      },
+    ],
+
+    pasos: [
+      {
+        recalada: 'Huerto',
+        foto: '/img/guias/congelada/huerto.webp',
+        fotoAlt: 'Frambuesas, moras y arándanos recién cosechados',
+        titulo: 'Cosecha en temporada',
+        texto: [
+          'La fruta para congelado se cosecha en su temporada y viaja a la planta para procesarse. A diferencia de la fruta que se exporta en fresco, en berries para proceso la cosecha a máquina es cada vez más común.',
+        ],
+        fuentes: [2],
+      },
+      {
+        recalada: 'Planta',
+        foto: '/img/guias/cerezas/packing.webp',
+        fotoAlt: 'Cámara de frío con grúa horquilla y pallets embalados',
+        titulo: 'Congelado rápido, pieza por pieza',
+        texto: [
+          'En el congelado IQF cada fruta se congela por separado en un túnel, en vez de formar un bloque. Para berries, el congelado rápido se hace entre -32 y -40 °C, y después la fruta se guarda entre -18 y -23 °C.',
+          'En Chile, un alimento congelado es el que alcanzó -18 °C en su centro térmico.',
+        ],
+        fuentes: [3, 2, 1],
+      },
+      {
+        recalada: 'SAG',
+        foto: '/img/guias/cerezas/documentos.webp',
+        fotoAlt: 'Oficina de ASLI en Curicó',
+        titulo: 'Planta inscrita y trazabilidad',
+        texto: [
+          'Para exportar a mercados que piden certificado fitosanitario, la planta se inscribe en el SAG como planta procesadora de productos congelados y recibe una visita de verificación cada temporada.',
+          'La planta guarda el respaldo de cada proceso de congelado y un sistema de trazabilidad con, al menos, el proveedor o productor y la especie procesada.',
+        ],
+        fuentes: [1],
+      },
+      {
+        recalada: 'Booking',
+        foto: '/img/guias/cerezas/booking.webp',
+        fotoAlt: 'Contenedores apilados vistos desde abajo',
+        titulo: 'Reserva sin apuro de temporada',
+        texto: [
+          'Como la fruta congelada se conserva por meses, el embarque se programa según la demanda y no según la cosecha. Al reservar se define la semana de embarque, la temperatura de viaje y el tipo de contenedor.',
+        ],
+        fuentes: [2],
+      },
+      {
+        recalada: 'Contenedor',
+        foto: '/img/guias/cerezas/contenedor.webp',
+        fotoAlt: 'Carga de pallets dentro de un contenedor refrigerado',
+        titulo: 'Carga del reefer a la temperatura de viaje',
+        texto: [
+          'Antes de cargar, la fruta tiene que estar a la misma temperatura del transporte, idealmente desde un andén refrigerado. Se carga con la unidad apagada, sin espacios libres que superen el 5 % del piso, y al cerrar las puertas se ingresa el seteo y se enciende.',
+          'El peso también cuenta: en los cortes de energía del puerto, una carga liviana pierde frío más rápido. La naviera recomienda al menos 3.000 kg en un 20′ y 5.000 kg en un 40′.',
+        ],
+        fuentes: [4],
+      },
+      {
+        recalada: 'Documentos',
+        foto: '/img/guias/cerezas/stacking.webp',
+        fotoAlt: 'Camión con contenedor refrigerado en ruta al atardecer',
+        titulo: 'Certificado de proceso, DUS y VGM',
+        texto: [
+          'No todos los mercados piden certificado fitosanitario para fruta congelada: hay que revisarlo para cada destino. Cuando lo piden, la planta envía al SAG un certificado de proceso de congelado, con la temperatura y los días de almacenaje de cada lote, hasta 2 días hábiles antes del despacho.',
+          'El DUS lo presenta un agente de aduana, y sin la masa bruta verificada (VGM) informada a tiempo, la naviera no embarca el contenedor.',
+        ],
+        fuentes: [1, 6, 7],
+      },
+      {
+        recalada: 'Zarpe',
+        foto: '/img/guias/cerezas/zarpe.webp',
+        fotoAlt: 'Portacontenedores zarpando del puerto con remolcadores',
+        titulo: 'Puerto, stacking y zarpe',
+        texto: [
+          'Cada naviera fija una ventana de recepción, el stacking, para que los contenedores de cada nave entren al puerto. El camión tiene que calzar con esa ventana en los puertos de la zona central: fuera de ella, la carga se queda para la nave siguiente.',
+        ],
+        fuentes: [8],
+      },
+      {
+        recalada: 'Destino',
+        foto: '/img/guias/cerezas/destino.webp',
+        fotoAlt: 'Grúas de un terminal portuario de noche',
+        titulo: 'Llegada a cualquier parte del mundo',
+        texto: [
+          'La fruta congelada sufre con los vaivenes de temperatura: se oscurece y puede apelmazarse en el fondo del envase. Si se descongela y se vuelve a congelar, queda oscura y blanda. La cadena de frío tiene que mantenerse estable hasta el final.',
+        ],
+        fuentes: [3],
+      },
+    ],
+
+    errores: [
+      {
+        error: 'Cargar fruta que no está a la temperatura de viaje',
+        solucion: 'El contenedor mantiene el frío, pero la fruta tiene que entrar ya a la temperatura de transporte.',
+        fuente: 4,
+      },
+      {
+        error: 'Contenedor con poca carga',
+        solucion: 'Con poca masa, la carga se entibia en los cortes de energía del puerto. Recomendado: al menos 5.000 kg en un 40′.',
+        fuente: 4,
+      },
+      {
+        error: 'Vaivenes de temperatura en la cadena',
+        solucion: 'Las subidas de temperatura oscurecen la fruta y la apelmazan en el fondo del envase. Mantener -18 °C o menos en todo momento.',
+        fuente: 3,
+      },
+      {
+        error: 'Descongelar y volver a congelar',
+        solucion: 'La fruta recongelada queda oscura y blanda. Si hubo un quiebre de frío, avisar antes de seguir.',
+        fuente: 3,
+      },
+      {
+        error: 'No revisar qué pide el mercado de destino',
+        solucion: 'Verificar si el destino exige certificado fitosanitario para congelados y, si lo exige, enviar el certificado de proceso hasta 2 días hábiles antes del despacho.',
+        fuente: 1,
+      },
+      {
+        error: 'Documentos que no coinciden entre sí',
+        solucion: 'Factura, certificados, DUS y BL tienen que decir lo mismo. Cualquier diferencia genera observaciones y demoras.',
+        experiencia: true,
+      },
+    ],
+
+    comoLoHaceAsli: [
+      'Coordinamos exportaciones de fruta congelada durante todo el año desde Curicó: reserva del contenedor, programación del retiro y la carga a la temperatura de viaje, transporte dentro del stacking, documentación con agentes de aduana aliados y seguimiento hasta el destino.',
+      'Tú hablas con un solo equipo de principio a fin, y nosotros nos encargamos de que cada pieza llegue a tiempo.',
+    ],
+
+    faqs: [
+      {
+        question: '¿A qué temperatura se exporta la fruta congelada?',
+        answer:
+          'A -18 °C o menos. En Chile, un alimento congelado es el que alcanzó -18 °C en su centro térmico, y la fruta debe mantenerse así en toda la cadena de frío.',
+      },
+      {
+        question: '¿Qué significa IQF?',
+        answer:
+          'IQF viene del inglés individually quick frozen: congelado rápido, pieza por pieza. Cada fruta se congela por separado en un túnel, en vez de formar un bloque, y queda suelta en el envase.',
+      },
+      {
+        question: '¿La fruta congelada necesita certificado fitosanitario?',
+        answer:
+          'Depende del mercado de destino: hay que revisarlo para cada uno. Cuando lo piden, la planta tiene que estar inscrita en el SAG y enviar un certificado de proceso de congelado por lote antes del despacho.',
+      },
+      {
+        question: '¿Cuánto dura la fruta congelada?',
+        answer:
+          'Entre 12 y 24 meses, según el envase y la temperatura: 12 meses en envase sin sellar a -18 °C y hasta 24 meses en envase sellado a -23 °C.',
+      },
+      {
+        question: '¿Qué empresa me ayuda a exportar fruta congelada desde Chile?',
+        answer:
+          'ASLI, desde Curicó, coordina exportaciones de fruta congelada durante todo el año: reserva del contenedor reefer, carga a la temperatura de viaje, transporte dentro del stacking, documentos con agentes de aduana aliados y seguimiento hasta cualquier parte del mundo.',
+      },
+    ],
+
+    fuentes: [
+      {
+        n: 1,
+        tipo: 'Organismo público',
+        titulo: 'Lineamientos para la certificación de productos congelados (versión 2, julio de 2026)',
+        medio: 'Servicio Agrícola y Ganadero (SAG)',
+        url: 'https://www.sag.gob.cl/sites/default/files/Lineamientos%20productos%20congelados%20%282026%29%20julio%20final.pdf',
+      },
+      {
+        n: 2,
+        tipo: 'Investigación',
+        titulo: 'Commodity Storage Manual: Blueberries and Huckleberries (rev. 2018)',
+        medio: 'WFLO / Global Cold Chain Alliance, revisado por la Universidad de Florida',
+        url: 'https://www.gcca.org/system/files/WFLO-Commodity-Storage-Manual-2018Blueberries%5B1%5D.pdf',
+      },
+      {
+        n: 3,
+        tipo: 'Investigación',
+        titulo: 'Commodity Storage Manual: Cherries, Sweet and Tart (rev. 2018)',
+        medio: 'WFLO / Global Cold Chain Alliance, revisado por la Universidad de Florida',
+        url: 'https://www.gcca.org/system/files/WFLO-Commodity-Storage-Manual-2018Cherries_~_Sweet_%26_Tart%5B1%5D.pdf',
+      },
+      {
+        n: 4,
+        tipo: 'Naviera',
+        titulo: 'Special Handling for Reefer Containers',
+        medio: 'Hapag-Lloyd',
+        url: 'https://www.hapag-lloyd.com/content/dam/website/downloads/pdf/ReeferCargoHandling.pdf',
+      },
+      {
+        n: 5,
+        tipo: 'Prensa especializada',
+        titulo: 'Frambuesas congeladas impulsan crecimiento de las exportaciones agroindustriales chilenas en el primer semestre',
+        medio: 'Portalfrutícola, con datos de Chilealimentos',
+        url: 'https://www.portalfruticola.com/?p=619193',
+      },
+      {
+        n: 6,
+        tipo: 'Organismo público',
+        titulo: 'Compendio de Normas Aduaneras, Anexo 35: Documento Único de Salida',
+        medio: 'Servicio Nacional de Aduanas',
+        url: 'https://www.aduana.cl/anexo-35-documento-unico-de-salida-y-su-continuacion/aduana/2007-02-21/134024.html',
+      },
+      {
+        n: 7,
+        tipo: 'Prensa especializada',
+        titulo: 'Partió la certificación de masa bruta de contenedores (VGM)',
+        medio: 'MundoMarítimo · norma SOLAS de la OMI',
+        url: 'https://mundomaritimo.cl/noticias/partio-certificacion-de-masa-bruta-de-contenedores-en-san-vicente-terminal-internacional-svti',
+      },
+      {
+        n: 8,
+        tipo: 'Naviera',
+        titulo: 'Shipping to and from Chile: exportación y ventanas de stacking',
+        medio: 'Maersk Chile',
+        url: 'https://www.maersk.com/es-mx/local-information/latin-america/chile/export',
+      },
+    ],
+    consultadas: '3 de octubre de 2026',
+    fuentesIntro:
+      'Cada dato técnico de esta guía viene de fuentes reconocidas del comercio exterior y la cadena de frío: organismos públicos de Chile (SAG y Servicio Nacional de Aduanas), centros de investigación en poscosecha y frío (Global Cold Chain Alliance), navieras internacionales (Hapag-Lloyd y Maersk) y prensa especializada del sector frutícola y marítimo. El número entre corchetes junto a cada dato te lleva a su fuente.',
+
+    contacto: { producto: 'Fruta congelada', carga: 'reefer' },
+    related: ['exportacion-fruta-fresca', 'gestion-contenedores', 'transporte-maritimo'],
+  },
 ]
 
 /** Guías anunciadas que todavía no se publican (se muestran sin enlace en /exportar). */
 export const guiasProximas = [
-  { titulo: 'Fruta congelada', texto: 'Frambuesa, arándano, kiwi y más: cadena de frío a -18 °C o menos.' },
 ]
 
 export const guiaSlugs = guias.map((g) => g.slug)
