@@ -5,7 +5,7 @@ import { useLocale } from '../hooks/useLocale'
 /** Segundos por logo: misma velocidad lineal aunque cada franja tenga distinto largo. */
 const SECONDS_PER_LOGO = 4.5
 
-function LogoStrip({ items, label }) {
+function LogoStrip({ items, label, caption }) {
   const track = [...items, ...items]
   const durationSec = Math.max(items.length, 1) * SECONDS_PER_LOGO
 
@@ -33,13 +33,20 @@ function LogoStrip({ items, label }) {
           ))}
         </div>
       </div>
+      {caption ? <p className="text-muted-strong text-sm mt-3 text-center">{caption}</p> : null}
     </div>
   )
 }
 
 const Confianza = () => {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { ref, style } = useReveal('up')
+  // Los logos no se leen como texto: esta frase deja los gremios en el
+  // contenido que indexan buscadores e IAs.
+  const partnerList = new Intl.ListFormat(locale === 'zh' ? 'zh-CN' : locale, {
+    style: 'long',
+    type: 'conjunction',
+  }).format(partners.map((p) => p.nombre))
 
   return (
     <section id="confianza" className="section-fit bg-asli-surface">
@@ -56,7 +63,11 @@ const Confianza = () => {
         </div>
 
         <LogoStrip items={clientes} label={t.confianza.clients} />
-        <LogoStrip items={partners} label={t.confianza.partners} />
+        <LogoStrip
+          items={partners}
+          label={t.confianza.partners}
+          caption={t.confianza.partnersSentence(partnerList)}
+        />
         <LogoStrip items={navieras} label={t.confianza.carriers} />
       </div>
     </section>

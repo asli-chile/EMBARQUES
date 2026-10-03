@@ -81,6 +81,11 @@ const Footer = () => {
                 </a>
               </li>
               <li>
+                <a href="/transporte-terrestre" className="hover:text-asli-primary transition-colors duration-320">
+                  {t.footer.landTransport}
+                </a>
+              </li>
+              <li>
                 <a href="/stacking" className="hover:text-asli-primary transition-colors duration-320">
                   {t.footer.stacking}
                 </a>

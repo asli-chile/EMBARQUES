@@ -7,8 +7,6 @@
  * - Se quitó "Asesoría documental" (id 3): llevaba a /servicios-aduaneros,
  *   igual que "Servicios aduaneros", y dos tarjetas a la misma página se
  *   reparten la relevancia. Su contenido ya está en esa landing.
- * - "Transporte terrestre" sigue apuntando a logística integral hasta que
- *   exista una landing propia.
  */
 export const servicios = [
   {
@@ -72,13 +70,13 @@ export const servicios = [
       'Movemos tu carga desde y hacia puertos y aeropuertos con una red terrestre confiable, coordinada con el resto de la operación.',
     imagen: '/img/camion.webp',
     alt: 'Transporte terrestre hacia puertos y aeropuertos — ASLI',
-    href: '/asesoria-logistica-integral',
+    href: '/transporte-terrestre',
   },
   {
     id: 8,
     titulo: 'Servicios Aduaneros',
     descripcion:
-      'Tramitación aduanera completa y cumplimiento normativo, con el objetivo de agilizar importaciones y exportaciones sin improvisar.',
+      'Documentación aduanera en orden y coordinación con agentes de aduana aliados, para agilizar importaciones y exportaciones sin improvisar.',
     imagen: '/img/aduana.webp',
     alt: 'Servicios aduaneros ASLI para importaciones y exportaciones',
     href: '/servicios-aduaneros',

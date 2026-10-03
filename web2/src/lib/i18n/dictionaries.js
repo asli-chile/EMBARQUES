@@ -59,13 +59,13 @@ const es = {
     titleAccent: 'acercar la logística grande',
     titleAfter: 'a quien exporta e importa de verdad',
     lead:
-      'ASLI — Asesorías y Servicios Logísticos Integrales — se fundó en Curicó en 2021 con una convicción simple: la PyME agroexportadora merece el mismo estándar operativo que las grandes compañías, sin perder cercanía ni claridad.',
+      'ASLI (Asesorías y Servicios Logísticos Integrales Ltda.) es una empresa chilena de logística y comercio exterior fundada en 2021 en Curicó, Región del Maule. Coordina exportaciones e importaciones por vía marítima, aérea y terrestre —documentación, navieras, contenedores reefer y dry, aduanas y seguimiento—, con especialidad en fruta fresca y congelada, hacia y desde cualquier parte del mundo.',
     imageAlt: 'Oficinas ASLI en Curicó',
     imageCaption: 'Curicó · Región del Maule · Chile',
     quote:
       '“Asesorar, acompañar y respaldar a los exportadores, ayudándolos a operar con el mismo estándar de las grandes compañías.”',
     quoteAuthor: '— Mario Basaez, Fundador y Gerente General',
-    p1: 'En el camino vimos un problema recurrente: para muchos productores y exportadores medianos, la logística no es solo un costo — es la barrera que frena el crecimiento. Documentación confusa, tiempos poco claros y poca persona a quien llamar cuando algo se complica.',
+    p1: 'Nacimos con una convicción simple: la PyME agroexportadora merece el mismo estándar operativo que las grandes compañías, sin perder cercanía ni claridad. En el camino vimos un problema recurrente: para muchos productores y exportadores medianos, la logística no es solo un costo — es la barrera que frena el crecimiento. Documentación confusa, tiempos poco claros y poca persona a quien llamar cuando algo se complica.',
     p2: 'Por eso ASLI existe como equipo cercano y experto: explicamos en lenguaje claro, armamos la ruta multimodal (marítimo, aéreo o terrestre), cuidamos aduanas y certificados, y hacemos seguimiento hasta el destino. Especialmente en fruta fresca y congelada, donde cada hora cuenta.',
     p3: 'Hoy seguimos en Curicó, conectados con navieras, aerolíneas y aliados del agro-exportador, con la misma promesa de siempre: operación seria, trato humano y respuestas cuando las necesitas.',
     chipFounded: 'Fundación',
@@ -128,7 +128,7 @@ const es = {
       8: {
         titulo: 'Servicios Aduaneros',
         descripcion:
-          'Tramitación aduanera completa y cumplimiento normativo, con el objetivo de agilizar importaciones y exportaciones sin improvisar.',
+          'Documentación aduanera en orden y coordinación con agentes de aduana aliados, para agilizar importaciones y exportaciones sin improvisar.',
         alt: 'Servicios aduaneros ASLI para importaciones y exportaciones',
       },
       9: {
@@ -171,6 +171,7 @@ const es = {
       'Trabajamos con clientes del agro-exportador, alianzas institucionales y las principales navieras y aerolíneas del sector. Esa red no es decoración: es la base para que tu carga avance con respaldo real.',
     clients: 'Clientes',
     partners: 'Somos parte de',
+    partnersSentence: (list) => `ASLI es parte de ${list}.`,
     carriers: 'Navieras y aerolíneas',
   },
   cotizar: {
@@ -207,6 +208,7 @@ const es = {
     airCargo: 'Carga aérea',
     seaCargo: 'Transporte marítimo',
     customs: 'Servicios aduaneros',
+    landTransport: 'Transporte terrestre',
     stacking: 'Stacking navieras',
     team: 'Equipo especializado',
     quoteTool: 'Cotizador',
@@ -386,13 +388,13 @@ const en = {
     titleAccent: 'bring big-league logistics',
     titleAfter: 'to those who truly export and import',
     lead:
-      'ASLI — Asesorías y Servicios Logísticos Integrales — was founded in Curicó in 2021 with a simple belief: agribusiness SMEs deserve the same operating standard as large companies, without losing closeness or clarity.',
+      'ASLI (Asesorías y Servicios Logísticos Integrales Ltda.) is a Chilean logistics and foreign trade company founded in 2021 in Curicó, Maule Region. It coordinates exports and imports by sea, air and land —documents, carriers, reefer and dry containers, customs and tracking—, specializing in fresh and frozen fruit, to and from anywhere in the world.',
     imageAlt: 'ASLI offices in Curicó',
     imageCaption: 'Curicó · Maule Region · Chile',
     quote:
       '“Advise, accompany and back exporters, helping them operate with the same standard as large companies.”',
     quoteAuthor: '— Mario Basaez, Founder and General Manager',
-    p1: 'Along the way we saw a recurring problem: for many mid-sized growers and exporters, logistics is not just a cost — it is the barrier that stalls growth. Confusing paperwork, unclear timelines and few people to call when something goes wrong.',
+    p1: 'We started with a simple belief: agribusiness SMEs deserve the same operating standard as large companies, without losing closeness or clarity. Along the way we saw a recurring problem: for many mid-sized growers and exporters, logistics is not just a cost — it is the barrier that stalls growth. Confusing paperwork, unclear timelines and few people to call when something goes wrong.',
     p2: 'That is why ASLI exists as a close, expert team: we explain in plain language, build the multimodal route (ocean, air or road), handle customs and certificates, and track cargo to destination — especially fresh and frozen fruit, where every hour counts.',
     p3: 'Today we remain in Curicó, connected with carriers, airlines and agribusiness partners, with the same promise as always: serious operations, human treatment and answers when you need them.',
     chipFounded: 'Founded',
@@ -455,7 +457,7 @@ const en = {
       8: {
         titulo: 'Customs Services',
         descripcion:
-          'Full customs processing and regulatory compliance, aiming to speed up imports and exports without improvising.',
+          'Customs documents in order and coordination with partner customs brokers, to speed up imports and exports without improvising.',
         alt: 'ASLI customs services for imports and exports',
       },
       9: {
@@ -498,6 +500,7 @@ const en = {
       'We work with agribusiness clients, institutional partners and leading carriers and airlines. That network is not decoration: it is the base so your cargo moves with real backing.',
     clients: 'Clients',
     partners: 'We are part of',
+    partnersSentence: (list) => `ASLI is part of ${list}.`,
     carriers: 'Carriers & airlines',
   },
   cotizar: {
@@ -534,6 +537,7 @@ const en = {
     airCargo: 'Air cargo',
     seaCargo: 'Ocean freight',
     customs: 'Customs services',
+    landTransport: 'Land transport',
     stacking: 'Carrier stacking',
     team: 'Specialized team',
     quoteTool: 'Quote tool',

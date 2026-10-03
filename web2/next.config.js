@@ -92,6 +92,7 @@ const nextConfig = {
       "/transporte-aereo-carga",
       "/transporte-maritimo",
       "/servicios-aduaneros",
+      "/transporte-terrestre",
       "/asesoria-logistica-integral",
     ];
     return paths.map((source) => ({

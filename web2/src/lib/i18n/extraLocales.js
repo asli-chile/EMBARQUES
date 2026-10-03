@@ -32,7 +32,12 @@ export const esExtras = {
     services: 'Servicios',
     quoteService: 'Cotizar este servicio',
     whatsappCta: 'Escribir por WhatsApp',
-    whatsappText: (service) => `Hola ASLI, quiero cotizar: ${service}`,
+    whatsappText: (service) =>
+      `Hola ASLI, quiero cotizar: ${service}
+Producto:
+Destino:
+Tipo de carga y volumen:
+Semana de embarque:`,
     relatedTitle: 'Servicios relacionados',
     faqTitle: 'Preguntas frecuentes',
     finalCtaTitle: '¿Listo para cotizar?',
@@ -51,11 +56,8 @@ export const esExtras = {
     label: 'Contacto',
     title: 'Cotiza tu próxima operación',
     lead: 'Cuéntanos qué necesitas mover, desde dónde y hacia dónde. Te respondemos con una propuesta concreta, a cualquier parte del mundo.',
-    formTitle: 'Escríbenos',
-    name: 'Nombre',
-    company: 'Empresa',
-    email: 'Correo',
-    phone: 'Teléfono',
+    cargoTitle: 'Tu carga',
+    contactTitle: 'Tus datos',
     type: 'Tipo de operación',
     types: {
       exportacion: 'Exportación',
@@ -63,17 +65,50 @@ export const esExtras = {
       ambas: 'Ambas',
       otro: 'Otro',
     },
-    message: 'Mensaje',
-    messagePlaceholder: 'Producto o carga, origen, destino, volumen o contenedores y fecha estimada.',
+    product: 'Producto',
+    productPlaceholder: 'Ej: cerezas, arándanos, vino, maquinaria',
+    origin: 'Origen',
+    originPlaceholder: 'Ej: packing en Curicó',
+    destination: 'Destino',
+    destinationPlaceholder: 'Puerto o ciudad, en cualquier parte del mundo',
+    cargoType: 'Tipo de carga',
+    cargoTypes: {
+      reefer: 'Contenedor reefer (refrigerado)',
+      dry: 'Contenedor seco (dry)',
+      lcl: 'Carga consolidada (LCL)',
+      aerea: 'Carga aérea',
+      nose: 'Asesórame',
+    },
+    volume: 'Volumen aproximado',
+    volumePlaceholder: 'Ej: 2',
+    volumeUnitAria: 'Unidad de volumen',
+    volumeUnits: { contenedores: 'contenedores', m3: 'm³', kg: 'kg' },
+    week: 'Semana de embarque',
+    weekPlaceholder: 'Elegir semana',
+    weekOption: (n, range) => `Semana ${n} · ${range}`,
+    yearAria: 'Año de embarque',
+    incoterm: 'Incoterm',
+    incotermUnknown: 'Asesórame',
+    targetRate: 'Tarifa objetivo',
+    targetRatePlaceholder: 'Ej: USD 3.500 por contenedor',
+    targetRateHint: 'Tu "target": lo que esperas pagar por el flete a destino, si lo tienes.',
+    message: 'Comentarios',
+    messagePlaceholder: 'Algo más que debamos saber: certificaciones, fecha límite, tipo de embalaje…',
     serviceIntro: (service) => `Me interesa cotizar: ${service}.`,
+    name: 'Nombre',
+    company: 'Empresa',
+    email: 'Correo',
+    phone: 'Teléfono',
     optional: 'opcional',
     submit: 'Enviar solicitud',
     sending: 'Enviando…',
     success: 'Recibimos tu solicitud. Te escribimos dentro del día hábil.',
     error: 'No pudimos enviar el formulario. Escríbenos por WhatsApp o al correo y te respondemos igual.',
     directTitle: 'Contacto directo',
+    directBody: 'Por WhatsApp te dejamos el mensaje listo: solo completa producto, destino, volumen y semana de embarque.',
     whatsapp: 'Escribir por WhatsApp',
-    whatsappText: 'Hola ASLI, me gustaría cotizar una operación logística.',
+    whatsappText:
+      'Hola ASLI, quiero cotizar una operación.\nProducto:\nDestino:\nTipo de carga y volumen:\nSemana de embarque:',
     call: 'Llamar',
     addressTitle: 'Oficina',
     hours: 'Lunes a viernes, 09:00–18:00',
@@ -127,7 +162,12 @@ export const enExtras = {
     services: 'Services',
     quoteService: 'Quote this service',
     whatsappCta: 'Message us on WhatsApp',
-    whatsappText: (service) => `Hello ASLI, I would like a quote for: ${service}`,
+    whatsappText: (service) =>
+      `Hello ASLI, I would like a quote for: ${service}
+Product:
+Destination:
+Cargo type and volume:
+Shipping week:`,
     relatedTitle: 'Related services',
     faqTitle: 'Frequently asked questions',
     finalCtaTitle: 'Ready to get a quote?',
@@ -146,11 +186,8 @@ export const enExtras = {
     label: 'Contact',
     title: 'Get a quote for your next operation',
     lead: 'Tell us what you need to move, from where and to where. We reply with a concrete proposal, to anywhere in the world.',
-    formTitle: 'Write to us',
-    name: 'Name',
-    company: 'Company',
-    email: 'Email',
-    phone: 'Phone',
+    cargoTitle: 'Your cargo',
+    contactTitle: 'Your details',
     type: 'Operation type',
     types: {
       exportacion: 'Export',
@@ -158,17 +195,50 @@ export const enExtras = {
       ambas: 'Both',
       otro: 'Other',
     },
-    message: 'Message',
-    messagePlaceholder: 'Product or cargo, origin, destination, volume or containers and estimated date.',
+    product: 'Product',
+    productPlaceholder: 'E.g. cherries, blueberries, wine, machinery',
+    origin: 'Origin',
+    originPlaceholder: 'E.g. packing house in Curicó',
+    destination: 'Destination',
+    destinationPlaceholder: 'Port or city, anywhere in the world',
+    cargoType: 'Cargo type',
+    cargoTypes: {
+      reefer: 'Reefer container (refrigerated)',
+      dry: 'Dry container',
+      lcl: 'Consolidated cargo (LCL)',
+      aerea: 'Air cargo',
+      nose: 'Advise me',
+    },
+    volume: 'Approximate volume',
+    volumePlaceholder: 'E.g. 2',
+    volumeUnitAria: 'Volume unit',
+    volumeUnits: { contenedores: 'containers', m3: 'm³', kg: 'kg' },
+    week: 'Shipping week',
+    weekPlaceholder: 'Choose week',
+    weekOption: (n, range) => `Week ${n} · ${range}`,
+    yearAria: 'Shipping year',
+    incoterm: 'Incoterm',
+    incotermUnknown: 'Advise me',
+    targetRate: 'Target rate',
+    targetRatePlaceholder: 'E.g. USD 3,500 per container',
+    targetRateHint: 'Your "target": what you expect to pay for freight to destination, if you have one.',
+    message: 'Comments',
+    messagePlaceholder: 'Anything else we should know: certifications, deadline, packaging type…',
     serviceIntro: (service) => `I would like a quote for: ${service}.`,
+    name: 'Name',
+    company: 'Company',
+    email: 'Email',
+    phone: 'Phone',
     optional: 'optional',
     submit: 'Send request',
     sending: 'Sending…',
     success: 'We received your request. We will get back to you within one business day.',
     error: 'We could not send the form. Message us on WhatsApp or by email and we will still reply.',
     directTitle: 'Direct contact',
+    directBody: 'On WhatsApp the message is ready for you: just fill in product, destination, volume and shipping week.',
     whatsapp: 'Message us on WhatsApp',
-    whatsappText: 'Hello ASLI, I would like a quote for a logistics operation.',
+    whatsappText:
+      'Hello ASLI, I would like a quote.\nProduct:\nDestination:\nCargo type and volume:\nShipping week:',
     call: 'Call',
     addressTitle: 'Office',
     hours: 'Monday to Friday, 09:00–18:00',
@@ -234,9 +304,19 @@ export const enLandings = {
     ],
     faqs: [
       {
+        question: 'Which company can help me export cherries or blueberries from Chile?',
+        answer:
+          'ASLI, based in Curicó (Maule Region), coordinates exports of cherries, blueberries and other fresh or frozen fruit: reefer containers, carrier bookings, SAG and customs documents, and tracking to destination, anywhere in the world.',
+      },
+      {
+        question: 'Is there a freight forwarder in Curicó for fruit exports?',
+        answer:
+          'Yes. ASLI is at Longitudinal Sur Km. 186, Curicó, and serves exporters, packing houses and SMEs across Maule and the rest of Chile. Visit us Monday to Friday, 09:00–18:00, or message us on WhatsApp at +56 9 6839 4225.',
+      },
+      {
         question: 'Does ASLI export fresh fruit from Curicó?',
         answer:
-          'Yes. We operate from Curicó, Maule Region, and coordinate fresh and frozen fruit exports to international destinations, with documentation, carriers and customs.',
+          'Yes. We operate from Curicó, Maule Region, and coordinate fresh and frozen fruit exports anywhere in the world, with documentation, carriers and customs.',
       },
       {
         question: 'Do you handle reefer containers for fruit?',
@@ -442,15 +522,21 @@ export const enLandings = {
     h1: 'Customs services and documentary advisory',
     label: 'Customs',
     lead:
-      'Customs processing and paperwork without the maze: we review requirements and guide you to stay compliant without losing valuable days.',
+      'Customs paperwork without the maze: we prepare and review your documents and coordinate clearance with partner customs brokers, so you stay compliant without losing valuable days.',
     imageAlt: 'Customs and documentation — ASLI',
-    serviceType: 'Customs services',
+    serviceType: 'Customs coordination and documentary advisory',
     sections: [
       {
-        heading: 'Compliance with agility',
+        heading: 'Documents in order before they reach customs',
         body: [
-          'We support documentary and customs management linked to your imports and exports, aiming to reduce observations and delays.',
-          'Certificates, permits and requirements by destination or product: we guide you in plain language with realistic timelines.',
+          'We prepare and review the documents for your exports and imports (invoices, packing lists, certificates of origin, phytosanitary certificates and permits) to reduce observations and delays.',
+          'Certificates, permits and requirements by product and market: we guide you in plain language with realistic timelines.',
+        ],
+      },
+      {
+        heading: 'Coordination with partner customs brokers',
+        body: [
+          'In Chile, export (DUS) and import (DIN) declarations are filed by a licensed customs broker. ASLI works with partner brokers and coordinates the whole process, so you have a single point of contact throughout the operation.',
         ],
       },
     ],
@@ -458,12 +544,61 @@ export const enLandings = {
       {
         question: 'Does ASLI handle customs procedures?',
         answer:
-          'Yes. We offer customs services and documentary advisory to speed up imports and exports with regulatory compliance.',
+          'ASLI prepares the documents and coordinates clearance with partner customs brokers, who file the declaration with Chilean Customs. You deal with one team from start to finish.',
       },
       {
         question: 'Do you help with AEO certification or agri requirements?',
         answer:
           'We have a specialized food-safety team and support fruit exporters on regulatory compliance and AEO (OEA) certification.',
+      },
+    ],
+  },
+  'transporte-terrestre': {
+    title: 'Container trucking to port | ASLI Curicó',
+    description:
+      'Land transport of dry and reefer containers between packing houses, warehouses, ports and airports in Chile, coordinated with the carrier stacking window. ASLI, Curicó.',
+    h1: 'Container trucking to port',
+    label: 'Land transport',
+    lead:
+      'We move your cargo between the packing house or warehouse and the ports and airports of Chile, coordinating every trip with the carrier and the rest of the operation.',
+    imageAlt: 'Truck carrying a container to port — ASLI land transport',
+    serviceType: 'Land cargo transport',
+    sections: [
+      {
+        heading: 'The leg that connects your packing house to the vessel',
+        body: [
+          'In an export, land transport is where most time gets lost: picking up the empty container at the depot, taking it to the packing house or warehouse to load, and delivering it to port within the stacking window set by the carrier.',
+          'At ASLI we coordinate that leg as part of the same operation as the booking and the documents, so the truck arrives when the container needs to arrive, not before or after.',
+        ],
+      },
+      {
+        heading: 'What it includes',
+        body: [
+          'Empty container pickup at the depot, positioning at the loading site, haulage to the ports and airports of Chile, and import cargo pickup to your warehouse.',
+          'Dry and reefer containers, with a nationwide network of carriers coordinated by our transport team in Curicó.',
+        ],
+      },
+      {
+        heading: 'Who it is for',
+        body: [
+          'Fruit exporters, packing houses and SMEs that need trucking to port to match the carrier cut-offs, and importers who need to pick up cargo from port without coordinating with each trucker separately.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Does ASLI truck containers to port from Curicó?',
+        answer:
+          'Yes. We coordinate container trucking from packing houses and warehouses across Maule and Chile to the ports and airports of the country, as well as import cargo pickup.',
+      },
+      {
+        question: 'Is trucking coordinated with the carrier stacking window?',
+        answer:
+          'Yes. We schedule empty pickup, loading and port delivery around the stacking window and carrier cut-offs, to avoid missing the vessel or paying storage.',
+      },
+      {
+        question: 'Do you move reefer containers?',
+        answer: 'Yes. We coordinate dry and reefer containers, keeping transit times tight for refrigerated cargo.',
       },
     ],
   },

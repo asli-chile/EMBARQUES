@@ -12,29 +12,126 @@ import { trackLead } from '../src/lib/analytics'
 const FIELD =
   'w-full rounded-asli border border-asli-dark/15 bg-asli-light px-4 py-3 text-base text-asli-dark placeholder:text-asli-dark/40 focus:outline-none focus:border-asli-primary focus:ring-2 focus:ring-asli-primary/25 transition-colors'
 const LABEL = 'block text-sm font-semibold text-asli-dark mb-1.5'
+const HINT = 'font-normal text-asli-dark/50'
+
+const CARGO_TYPES = ['reefer', 'dry', 'lcl', 'aerea', 'nose']
+const VOLUME_UNITS = ['contenedores', 'm3', 'kg']
+/** Unidad de volumen que corresponde a cada tipo de carga. */
+const UNIT_FOR_CARGO = { reefer: 'contenedores', dry: 'contenedores', lcl: 'm3', aerea: 'kg' }
+const INCOTERMS = ['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'CPT', 'CIP', 'DAP', 'DPU', 'DDP']
+
+/*
+ * Semanas ISO (lunes a domingo), como las que usan navieras y packings.
+ * Las semanas se cuentan en UTC para que el huso horario no corra el lunes.
+ */
+function isoWeekOf(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const day = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - day)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return { year: d.getUTCFullYear(), week: Math.ceil(((d - yearStart) / 86400000 + 1) / 7) }
+}
+
+function weeksInIsoYear(year) {
+  // El 28 de diciembre siempre cae en la última semana ISO del año.
+  return isoWeekOf(new Date(year, 11, 28)).week
+}
+
+function isoWeekMonday(year, week) {
+  const jan4 = new Date(Date.UTC(year, 0, 4))
+  const monday = new Date(jan4)
+  monday.setUTCDate(jan4.getUTCDate() - (jan4.getUTCDay() || 7) + 1 + (week - 1) * 7)
+  return monday
+}
 
 /**
- * Contacto y cotizaciones. Es el destino de todos los "Cotizar" del sitio:
- * antes abrían Gmail web, que en el celular de quien no usa Gmail termina en
- * la pantalla de login de Google. El formulario envía por /api/contact.
+ * Semanas que se pueden pedir: desde la siguiente a la actual. La semana en
+ * curso nunca se ofrece, porque con los tiempos de coordinación (booking,
+ * stacking, transporte) ya no se alcanza a embarcar en ella.
+ */
+function availableWeeks(year, now) {
+  if (!now || year < now.year) return []
+  const first = year === now.year ? now.week + 1 : 1
+  const last = weeksInIsoYear(year)
+  return Array.from({ length: Math.max(last - first + 1, 0) }, (_, i) => first + i)
+}
+
+/*
+ * Lo que trae cada landing al llegar con ?servicio=<slug>. El resto del
+ * formulario queda en blanco.
+ */
+const SERVICE_DEFAULTS = {
+  'exportacion-fruta-fresca': { tipo: 'exportacion', carga: 'reefer' },
+  'importacion-mercancias-chile': { tipo: 'importacion' },
+  'transporte-aereo-carga': { carga: 'aerea' },
+}
+
+/**
+ * Contacto y cotizaciones. Es el destino de todos los "Cotizar" del sitio y
+ * envía por /api/contact.
  *
- * `?servicio=<slug de landing>` deja el mensaje empezado con ese servicio.
+ * Pide lo mismo que el equipo comercial pide para cotizar: producto, destino,
+ * tipo de carga, volumen, semana de embarque y tarifa objetivo. Así la
+ * solicitud llega lista para cotizar y no como un "hola, quiero cotizar".
  */
 export default function ContactoPage() {
-  const { t } = useLocale()
+  const { t, dateLocale } = useLocale()
   const c = t.contactPage
   const router = useRouter()
   const [form, setForm] = useState({
+    tipo: 'exportacion',
+    producto: '',
+    origen: '',
+    destino: '',
+    carga: '',
+    volumen: '',
+    unidad: 'contenedores',
+    semana: '',
+    anio: '',
+    incoterm: '',
+    tarifa: '',
+    mensaje: '',
     nombre: '',
     empresa: '',
     email: '',
     telefono: '',
-    tipo: 'exportacion',
-    mensaje: '',
     website: '',
   })
   const [status, setStatus] = useState('idle')
   const [source, setSource] = useState('contacto')
+  const [now, setNow] = useState(null)
+
+  // La semana actual se calcula en el navegador: la página es estática y en el
+  // servidor quedaría congelada en la fecha del build.
+  useEffect(() => {
+    const current = isoWeekOf(new Date())
+    setNow(current)
+    // Si ya no quedan semanas este año (última semana ISO), parte en el siguiente.
+    const firstYear = availableWeeks(current.year, current).length ? current.year : current.year + 1
+    setForm((prev) => (prev.anio ? prev : { ...prev, anio: String(firstYear) }))
+  }, [])
+
+  const years = now
+    ? [now.year, now.year + 1].filter((year) => availableWeeks(year, now).length > 0)
+    : []
+  const weeks = availableWeeks(Number(form.anio), now)
+  const dayMonth = new Intl.DateTimeFormat(dateLocale, { day: 'numeric', month: 'short', timeZone: 'UTC' })
+  const weekRange = (week) => {
+    const monday = isoWeekMonday(Number(form.anio), week)
+    const sunday = new Date(monday)
+    sunday.setUTCDate(monday.getUTCDate() + 6)
+    return `${dayMonth.format(monday)} – ${dayMonth.format(sunday)}`
+  }
+
+  const updateYear = (event) => {
+    const anio = event.target.value
+    // Al cambiar de año, la semana elegida puede no existir o ya haber pasado.
+    setForm((prev) => ({
+      ...prev,
+      anio,
+      semana: availableWeeks(Number(anio), now).includes(Number(prev.semana)) ? prev.semana : '',
+    }))
+  }
 
   useEffect(() => {
     if (!router.isReady) return
@@ -42,10 +139,21 @@ export default function ContactoPage() {
     const landing = slug ? localizeLanding(getLanding(slug), t) : null
     if (!landing) return
     setSource(landing.slug)
-    setForm((prev) => (prev.mensaje ? prev : { ...prev, mensaje: `${c.serviceIntro(landing.h1)}\n\n` }))
+    const defaults = SERVICE_DEFAULTS[landing.slug] || {}
+    setForm((prev) => ({
+      ...prev,
+      ...defaults,
+      unidad: UNIT_FOR_CARGO[defaults.carga] || prev.unidad,
+      mensaje: prev.mensaje || c.serviceIntro(landing.h1),
+    }))
   }, [router.isReady, router.query.servicio, t, c])
 
   const update = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }))
+
+  const updateCargo = (event) => {
+    const carga = event.target.value
+    setForm((prev) => ({ ...prev, carga, unidad: UNIT_FOR_CARGO[carga] || prev.unidad }))
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -54,7 +162,7 @@ export default function ContactoPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, origen: source }),
+        body: JSON.stringify({ ...form, pagina: source }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.ok) throw new Error(data.error || 'send failed')
@@ -99,103 +207,282 @@ export default function ContactoPage() {
           <section className="py-12 md:py-16">
             <div className="container-asli grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
               <div className="lg:col-span-7 card-soft p-6 md:p-8">
-                <h2 className="font-display text-asli-dark text-2xl font-bold tracking-tight mb-6">
-                  {c.formTitle}
-                </h2>
-
                 {status === 'sent' ? (
                   <p role="status" className="text-asli-dark text-lg leading-relaxed">
                     {c.success}
                   </p>
                 ) : (
-                  <form onSubmit={handleSubmit} className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                      <div>
-                        <label htmlFor="nombre" className={LABEL}>
-                          {c.name}
-                        </label>
-                        <input
-                          id="nombre"
-                          name="nombre"
-                          required
-                          autoComplete="name"
-                          value={form.nombre}
-                          onChange={update('nombre')}
-                          className={FIELD}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="empresa" className={LABEL}>
-                          {c.company} <span className="font-normal text-asli-dark/50">({c.optional})</span>
-                        </label>
-                        <input
-                          id="empresa"
-                          name="empresa"
-                          autoComplete="organization"
-                          value={form.empresa}
-                          onChange={update('empresa')}
-                          className={FIELD}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="email" className={LABEL}>
-                          {c.email}
-                        </label>
-                        <input
-                          id="email"
-                          name="email"
-                          type="email"
-                          required
-                          autoComplete="email"
-                          value={form.email}
-                          onChange={update('email')}
-                          className={FIELD}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="telefono" className={LABEL}>
-                          {c.phone} <span className="font-normal text-asli-dark/50">({c.optional})</span>
-                        </label>
-                        <input
-                          id="telefono"
-                          name="telefono"
-                          type="tel"
-                          autoComplete="tel"
-                          value={form.telefono}
-                          onChange={update('telefono')}
-                          className={FIELD}
-                        />
-                      </div>
-                    </div>
+                  <form onSubmit={handleSubmit} className="space-y-8">
+                    <fieldset className="space-y-5">
+                      <legend className="font-display text-asli-dark text-2xl font-bold tracking-tight mb-5">
+                        {c.cargoTitle}
+                      </legend>
 
-                    <div>
-                      <label htmlFor="tipo" className={LABEL}>
-                        {c.type}
-                      </label>
-                      <select id="tipo" name="tipo" value={form.tipo} onChange={update('tipo')} className={FIELD}>
-                        {Object.entries(c.types).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label htmlFor="tipo" className={LABEL}>
+                            {c.type}
+                          </label>
+                          <select id="tipo" name="tipo" value={form.tipo} onChange={update('tipo')} className={FIELD}>
+                            {Object.entries(c.types).map(([value, label]) => (
+                              <option key={value} value={value}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="producto" className={LABEL}>
+                            {c.product}
+                          </label>
+                          <input
+                            id="producto"
+                            name="producto"
+                            required
+                            placeholder={c.productPlaceholder}
+                            value={form.producto}
+                            onChange={update('producto')}
+                            className={FIELD}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="origen" className={LABEL}>
+                            {c.origin} <span className={HINT}>({c.optional})</span>
+                          </label>
+                          <input
+                            id="origen"
+                            name="origen"
+                            placeholder={c.originPlaceholder}
+                            value={form.origen}
+                            onChange={update('origen')}
+                            className={FIELD}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="destino" className={LABEL}>
+                            {c.destination}
+                          </label>
+                          <input
+                            id="destino"
+                            name="destino"
+                            required
+                            placeholder={c.destinationPlaceholder}
+                            value={form.destino}
+                            onChange={update('destino')}
+                            className={FIELD}
+                          />
+                        </div>
+                      </div>
 
-                    <div>
-                      <label htmlFor="mensaje" className={LABEL}>
-                        {c.message}
-                      </label>
-                      <textarea
-                        id="mensaje"
-                        name="mensaje"
-                        required
-                        rows={6}
-                        placeholder={c.messagePlaceholder}
-                        value={form.mensaje}
-                        onChange={update('mensaje')}
-                        className={FIELD}
-                      />
-                    </div>
+                      <div role="radiogroup" aria-labelledby="carga-label">
+                        <p id="carga-label" className={LABEL}>
+                          {c.cargoType}
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {CARGO_TYPES.map((value) => (
+                            <label
+                              key={value}
+                              className={`flex items-center gap-3 rounded-asli border px-4 py-3 cursor-pointer transition-colors ${
+                                form.carga === value
+                                  ? 'border-asli-primary bg-asli-primary/5'
+                                  : 'border-asli-dark/15 hover:border-asli-primary/50'
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name="carga"
+                                value={value}
+                                checked={form.carga === value}
+                                onChange={updateCargo}
+                                className="accent-[rgb(var(--asli-primary-rgb))]"
+                              />
+                              <span className="text-sm text-asli-dark">{c.cargoTypes[value]}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label htmlFor="volumen" className={LABEL}>
+                            {c.volume}
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              id="volumen"
+                              name="volumen"
+                              inputMode="decimal"
+                              placeholder={c.volumePlaceholder}
+                              value={form.volumen}
+                              onChange={update('volumen')}
+                              className={`${FIELD} min-w-0`}
+                            />
+                            <select
+                              aria-label={c.volumeUnitAria}
+                              name="unidad"
+                              value={form.unidad}
+                              onChange={update('unidad')}
+                              className={`${FIELD} !w-auto shrink-0`}
+                            >
+                              {VOLUME_UNITS.map((unit) => (
+                                <option key={unit} value={unit}>
+                                  {c.volumeUnits[unit]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor="semana" className={LABEL}>
+                            {c.week}
+                          </label>
+                          <div className="flex gap-2">
+                            <select
+                              id="semana"
+                              name="semana"
+                              value={form.semana}
+                              onChange={update('semana')}
+                              className={`${FIELD} min-w-0`}
+                            >
+                              <option value="">{c.weekPlaceholder}</option>
+                              {weeks.map((week) => (
+                                <option key={week} value={week}>
+                                  {c.weekOption(week, weekRange(week))}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              aria-label={c.yearAria}
+                              name="anio"
+                              value={form.anio}
+                              onChange={updateYear}
+                              className={`${FIELD} !w-auto shrink-0`}
+                            >
+                              {years.map((year) => (
+                                <option key={year} value={year}>
+                                  {year}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label htmlFor="incoterm" className={LABEL}>
+                            {c.incoterm} <span className={HINT}>({c.optional})</span>
+                          </label>
+                          <select
+                            id="incoterm"
+                            name="incoterm"
+                            value={form.incoterm}
+                            onChange={update('incoterm')}
+                            className={FIELD}
+                          >
+                            <option value="">{c.incotermUnknown}</option>
+                            {INCOTERMS.map((term) => (
+                              <option key={term} value={term}>
+                                {term}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="tarifa" className={LABEL}>
+                            {c.targetRate} <span className={HINT}>({c.optional})</span>
+                          </label>
+                          <input
+                            id="tarifa"
+                            name="tarifa"
+                            placeholder={c.targetRatePlaceholder}
+                            aria-describedby="tarifa-hint"
+                            value={form.tarifa}
+                            onChange={update('tarifa')}
+                            className={FIELD}
+                          />
+                          <p id="tarifa-hint" className="text-xs text-asli-dark/60 mt-1.5">
+                            {c.targetRateHint}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="mensaje" className={LABEL}>
+                          {c.message} <span className={HINT}>({c.optional})</span>
+                        </label>
+                        <textarea
+                          id="mensaje"
+                          name="mensaje"
+                          rows={4}
+                          placeholder={c.messagePlaceholder}
+                          value={form.mensaje}
+                          onChange={update('mensaje')}
+                          className={FIELD}
+                        />
+                      </div>
+                    </fieldset>
+
+                    <fieldset className="space-y-5">
+                      <legend className="font-display text-asli-dark text-2xl font-bold tracking-tight mb-5">
+                        {c.contactTitle}
+                      </legend>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <label htmlFor="nombre" className={LABEL}>
+                            {c.name}
+                          </label>
+                          <input
+                            id="nombre"
+                            name="nombre"
+                            required
+                            autoComplete="name"
+                            value={form.nombre}
+                            onChange={update('nombre')}
+                            className={FIELD}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="empresa" className={LABEL}>
+                            {c.company} <span className={HINT}>({c.optional})</span>
+                          </label>
+                          <input
+                            id="empresa"
+                            name="empresa"
+                            autoComplete="organization"
+                            value={form.empresa}
+                            onChange={update('empresa')}
+                            className={FIELD}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="email" className={LABEL}>
+                            {c.email}
+                          </label>
+                          <input
+                            id="email"
+                            name="email"
+                            type="email"
+                            required
+                            autoComplete="email"
+                            value={form.email}
+                            onChange={update('email')}
+                            className={FIELD}
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="telefono" className={LABEL}>
+                            {c.phone} <span className={HINT}>({c.optional})</span>
+                          </label>
+                          <input
+                            id="telefono"
+                            name="telefono"
+                            type="tel"
+                            autoComplete="tel"
+                            value={form.telefono}
+                            onChange={update('telefono')}
+                            className={FIELD}
+                          />
+                        </div>
+                      </div>
+                    </fieldset>
 
                     {/* Trampa para bots: invisible para personas, /api/contact descarta lo que la llene. */}
                     <div className="hidden" aria-hidden="true">
@@ -229,7 +516,8 @@ export default function ContactoPage() {
 
               <aside className="lg:col-span-5 space-y-6">
                 <div className="card-soft p-6">
-                  <h2 className="font-display text-lg font-bold text-asli-dark mb-4">{c.directTitle}</h2>
+                  <h2 className="font-display text-lg font-bold text-asli-dark mb-2">{c.directTitle}</h2>
+                  <p className="text-muted-strong text-sm leading-relaxed mb-4">{c.directBody}</p>
                   <a
                     href={waHref}
                     target="_blank"

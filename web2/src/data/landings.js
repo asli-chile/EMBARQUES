@@ -45,9 +45,19 @@ export const landings = [
     ],
     faqs: [
       {
+        question: '¿Qué empresa me ayuda a exportar cerezas o arándanos desde Chile?',
+        answer:
+          'ASLI, desde Curicó (Región del Maule), coordina exportaciones de cerezas, arándanos y otra fruta fresca o congelada: contenedor reefer, booking con la naviera, documentación SAG y aduanera, y seguimiento hasta el destino, en cualquier parte del mundo.',
+      },
+      {
+        question: '¿Hay un agente de carga en Curicó para exportar fruta?',
+        answer:
+          'Sí. ASLI está en Longitudinal Sur Km. 186, Curicó, y atiende a exportadoras, packings y PYMEs del Maule y de todo Chile. Puedes visitarnos de lunes a viernes de 09:00 a 18:00 o escribirnos por WhatsApp al +56 9 6839 4225.',
+      },
+      {
         question: '¿ASLI exporta fruta fresca desde Curicó?',
         answer:
-          'Sí. Operamos desde Curicó, Región del Maule, y coordinamos exportaciones de fruta fresca y congelada hacia destinos internacionales, con documentación, navieras y aduanas.',
+          'Sí. Operamos desde Curicó, Región del Maule, y coordinamos exportaciones de fruta fresca y congelada a cualquier parte del mundo, con documentación, navieras y aduanas.',
       },
       {
         question: '¿Manejan contenedores reefer para fruta?',
@@ -295,21 +305,32 @@ export const landings = [
     h1: 'Servicios aduaneros y asesoría documental',
     label: 'Aduanas',
     lead:
-      'Tramitación aduanera y papelería sin laberinto: revisamos requisitos y te guiamos para cumplir normativa sin perder días valiosos.',
+      'Papelería aduanera sin laberinto: preparamos y revisamos tu documentación y coordinamos el trámite con agentes de aduana aliados, para cumplir la normativa sin perder días valiosos.',
     image: '/img/aduana.webp',
     imageAlt: 'Servicios aduaneros y documentación — ASLI',
-    serviceType: 'Servicios aduaneros',
+    serviceType: 'Coordinación aduanera y asesoría documental',
     related: [
       'importacion-mercancias-chile',
       'exportacion-fruta-fresca',
       'asesoria-logistica-integral',
     ],
+    /*
+     * En Chile la destinación aduanera (DUS, DIN) la presenta un agente de
+     * aduana habilitado. ASLI prepara la documentación y coordina con agentes
+     * aliados: el texto no debe decir que ASLI "tramita" la aduana por sí misma.
+     */
     sections: [
       {
-        heading: 'Cumplimiento con agilidad',
+        heading: 'Documentación en orden antes de que llegue a aduana',
         body: [
-          'Apoyamos la gestión documental y aduanera asociada a tus importaciones y exportaciones, con el objetivo de reducir observaciones y demoras.',
-          'Certificados, permisos y requisitos según destino o producto: te orientamos con lenguaje claro y plazos realistas.',
+          'Preparamos y revisamos la documentación de tus exportaciones e importaciones (facturas, listas de empaque, certificados de origen, certificados fitosanitarios y permisos) para reducir observaciones y demoras.',
+          'Certificados, permisos y requisitos según producto y mercado: te orientamos con lenguaje claro y plazos realistas.',
+        ],
+      },
+      {
+        heading: 'Coordinación con agentes de aduana aliados',
+        body: [
+          'En Chile, la declaración aduanera de exportación (DUS) o de importación (DIN) la presenta un agente de aduana habilitado. ASLI trabaja con agentes aliados y coordina el trámite completo, para que tengas un solo interlocutor durante toda la operación.',
         ],
       },
     ],
@@ -317,12 +338,66 @@ export const landings = [
       {
         question: '¿ASLI hace trámites aduaneros?',
         answer:
-          'Sí. Ofrecemos servicios aduaneros y asesoría documental para agilizar importaciones y exportaciones con cumplimiento normativo.',
+          'ASLI prepara la documentación y coordina el trámite con agentes de aduana aliados, que son quienes presentan la declaración ante el Servicio Nacional de Aduanas. Tú hablas con un solo equipo de principio a fin.',
       },
       {
         question: '¿Ayudan con certificación OEA o requisitos agro?',
         answer:
           'Contamos con equipo especializado en seguridad alimentaria y acompañamiento a exportadoras de frutas en cumplimiento normativo y certificación OEA.',
+      },
+    ],
+  },
+  {
+    slug: 'transporte-terrestre',
+    priority: '0.8',
+    title: 'Transporte terrestre de contenedores a puerto | ASLI Curicó',
+    description:
+      'Transporte terrestre de contenedores dry y reefer entre packings, bodegas, puertos y aeropuertos de Chile, coordinado con el stacking de la naviera. ASLI, Curicó.',
+    h1: 'Transporte terrestre de contenedores a puerto',
+    label: 'Transporte terrestre',
+    lead:
+      'Movemos tu carga entre el packing o la bodega y los puertos y aeropuertos de Chile, coordinando cada viaje con la naviera y con el resto de la operación.',
+    image: '/img/camion.webp',
+    imageAlt: 'Camión con contenedor en ruta a puerto — transporte terrestre ASLI',
+    serviceType: 'Transporte terrestre de carga',
+    related: ['gestion-contenedores', 'exportacion-fruta-fresca', 'transporte-maritimo'],
+    sections: [
+      {
+        heading: 'El tramo que conecta tu packing con la nave',
+        body: [
+          'En una exportación, el transporte terrestre es el tramo donde más se pierde tiempo: retirar el contenedor vacío en el depósito, llevarlo a cargar al packing o la bodega y entregarlo en el puerto dentro de la ventana de stacking que fija la naviera.',
+          'En ASLI coordinamos ese tramo como parte de la misma operación que el booking y la documentación, para que el camión llegue cuando el contenedor tiene que llegar y no antes ni después.',
+        ],
+      },
+      {
+        heading: 'Qué incluye',
+        body: [
+          'Retiro de contenedores vacíos en depósito, posicionamiento en el lugar de carga, traslado a los puertos y aeropuertos de Chile, y retiro de carga de importación hacia tu bodega.',
+          'Contenedores dry y reefer, con una red de transportistas a nivel nacional coordinada por nuestro equipo de transportes desde Curicó.',
+        ],
+      },
+      {
+        heading: 'Para quién es',
+        body: [
+          'Exportadoras de fruta, packings y PYMEs que necesitan que el transporte a puerto calce con los cortes de la naviera, e importadores que necesitan retirar su carga del puerto sin coordinar por separado con cada transportista.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: '¿ASLI hace transporte de contenedores a puerto desde Curicó?',
+        answer:
+          'Sí. Coordinamos el transporte terrestre de contenedores desde packings y bodegas del Maule y de todo Chile hacia los puertos y aeropuertos del país, y también el retiro de carga de importación.',
+      },
+      {
+        question: '¿El transporte se coordina con el stacking de la naviera?',
+        answer:
+          'Sí. Programamos el retiro del vacío, la carga y la entrega en puerto según la ventana de stacking y los cortes de la naviera, para evitar perder la nave o pagar almacenaje.',
+      },
+      {
+        question: '¿Transportan contenedores reefer?',
+        answer:
+          'Sí. Coordinamos contenedores dry y reefer, cuidando los tiempos de traslado para la carga refrigerada.',
       },
     ],
   },

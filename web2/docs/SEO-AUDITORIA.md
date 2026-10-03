@@ -155,3 +155,12 @@ Cambios en código:
 
 Pendiente fuera de código: `SITE.sameAs` (LinkedIn, Instagram, Google Business), activar Web Analytics en Vercel, crear GA4, Search Console + Bing Webmaster Tools, Google Business Profile.
 
+
+## Fase 2 · Bloque A (2026-10-02)
+
+- Párrafo de definición en "Nuestra historia" ("ASLI (…) es una empresa chilena de logística y comercio exterior fundada en 2021…"), pensado para que buscadores e IAs lo citen.
+- `/servicios-aduaneros` corregido: ASLI prepara la documentación y coordina con agentes de aduana aliados (en Chile el DUS/DIN lo presenta un agente habilitado). Mismo ajuste en la tarjeta de servicios.
+- Gremios en texto visible bajo sus logos.
+- FAQs con preguntas en lenguaje natural en la landing de fruta.
+- Landing nueva `/transporte-terrestre`; la tarjeta de transporte terrestre ya no lleva a logística integral.
+- Formulario de `/contacto` con los datos que pide el equipo comercial para cotizar: producto, origen, destino, tipo de carga, volumen, semana de embarque (solo semanas futuras, nunca la actual), Incoterm y tarifa objetivo. WhatsApp con plantilla de cotización.

@@ -62,13 +62,13 @@ export const zh = {
     titleAccent: '把大公司级物流能力',
     titleAfter: '带给真正做进出口的企业',
     lead:
-      'ASLI — Asesorías y Servicios Logísticos Integrales（综合物流咨询与服务）— 于 2021 年在 Curicó 成立，信念很简单：农业出口型中小企业也应获得与大型公司同等的运营标准，同时不失贴近与清晰。',
+      'ASLI（Asesorías y Servicios Logísticos Integrales Ltda.，综合物流咨询与服务有限公司）是一家智利物流与对外贸易公司，2021 年成立于 Maule 大区 Curicó。我们协调海运、空运与陆运的出口与进口——单证、船公司、冷藏与干箱集装箱、报关及货物追踪——专长于新鲜与冷冻水果，可往返世界任何地方。',
     imageAlt: 'ASLI 位于 Curicó 的办公地点',
     imageCaption: 'Curicó · Maule 大区 · Chile',
     quote:
       '“为出口商提供咨询、陪伴与支持，帮助他们以大型公司同等的标准运营。”',
     quoteAuthor: '— Mario Basaez，创始人兼总经理',
-    p1: '一路走来，我们发现一个反复出现的问题：对许多中型种植户与出口商而言，物流不只是成本——更是阻碍增长的门槛。单证难懂、时效不清，出了状况却找不到可对接的人。',
+    p1: '我们的初心很简单：农业出口型中小企业也应获得与大型公司同等的运营标准，同时不失贴近与清晰。一路走来，我们发现一个反复出现的问题：对许多中型种植户与出口商而言，物流不只是成本——更是阻碍增长的门槛。单证难懂、时效不清，出了状况却找不到可对接的人。',
     p2: '因此 ASLI 以贴近、专业的团队存在：用清晰语言说明，搭建多式联运路径（海运、空运或陆运），把控报关与证书，并跟踪至目的地。尤其在新鲜与冷冻水果领域，每一小时都至关重要。',
     p3: '今天我们仍立足 Curicó，连接船公司、航空公司与农业出口伙伴，兑现一贯承诺：认真运营、人性化沟通，在您需要时及时回应。',
     chipFounded: '成立',
@@ -130,7 +130,7 @@ export const zh = {
       8: {
         titulo: '报关服务',
         descripcion:
-          '完整报关办理与合规落实，目标是在不临场发挥的前提下加快进出口。',
+          '单证井然有序，并与合作报关行协调办理，加快进出口而不临场发挥。',
         alt: 'ASLI 进出口报关服务',
       },
       9: {
@@ -173,6 +173,7 @@ export const zh = {
       '我们与农业出口客户、机构合作伙伴以及行业主要船公司与航空公司协作。这张网络不是装饰：它是货物有真实支撑、稳步推进的基础。',
     clients: '客户',
     partners: '我们是以下组织的一员',
+    partnersSentence: (list) => `ASLI 是 ${list} 的一员。`,
     carriers: '船公司与航空公司',
   },
   cotizar: {
@@ -209,6 +210,7 @@ export const zh = {
     airCargo: '空运货物',
     seaCargo: '海运',
     customs: '报关服务',
+    landTransport: '陆运',
     stacking: '船公司堆存（Stacking）',
     team: '专业团队',
     quoteTool: '询价工具',
@@ -355,7 +357,12 @@ export const zh = {
     services: '服务',
     quoteService: '询价此服务',
     whatsappCta: '通过 WhatsApp 联系',
-    whatsappText: (service) => `您好 ASLI，我想询价：${service}`,
+    whatsappText: (service) =>
+      `您好 ASLI，我想询价：${service}
+产品：
+目的地：
+货物类型与数量：
+装运周：`,
     relatedTitle: '相关服务',
     faqTitle: '常见问题',
     finalCtaTitle: '准备好询价了吗？',
@@ -374,11 +381,8 @@ export const zh = {
     label: '联系',
     title: '为您的下一单业务询价',
     lead: '告诉我们需要运输什么、从哪里到哪里。我们会给出具体方案，可通往世界任何地方。',
-    formTitle: '给我们留言',
-    name: '姓名',
-    company: '公司',
-    email: '邮箱',
-    phone: '电话',
+    cargoTitle: '您的货物',
+    contactTitle: '您的联系方式',
     type: '业务类型',
     types: {
       exportacion: '出口',
@@ -386,17 +390,49 @@ export const zh = {
       ambas: '两者皆有',
       otro: '其他',
     },
-    message: '留言',
-    messagePlaceholder: '产品或货物、起运地、目的地、数量或集装箱及预计日期。',
+    product: '产品',
+    productPlaceholder: '例如：樱桃、蓝莓、葡萄酒、机械',
+    origin: '起运地',
+    originPlaceholder: '例如：Curicó 的包装厂',
+    destination: '目的地',
+    destinationPlaceholder: '港口或城市，世界任何地方',
+    cargoType: '货物类型',
+    cargoTypes: {
+      reefer: '冷藏集装箱',
+      dry: '干货集装箱',
+      lcl: '拼箱（LCL）',
+      aerea: '空运',
+      nose: '请为我提供建议',
+    },
+    volume: '大约数量',
+    volumePlaceholder: '例如：2',
+    volumeUnitAria: '数量单位',
+    volumeUnits: { contenedores: '个集装箱', m3: '立方米', kg: '公斤' },
+    week: '装运周',
+    weekPlaceholder: '选择周次',
+    weekOption: (n, range) => `第 ${n} 周 · ${range}`,
+    yearAria: '装运年份',
+    incoterm: '贸易术语（Incoterm）',
+    incotermUnknown: '请为我提供建议',
+    targetRate: '目标运价',
+    targetRatePlaceholder: '例如：每个集装箱 3,500 美元',
+    targetRateHint: '您的"目标价"：您期望支付的到目的地运费（如有）。',
+    message: '备注',
+    messagePlaceholder: '其他需要我们了解的信息：认证、截止日期、包装类型……',
     serviceIntro: (service) => `我想询价：${service}。`,
+    name: '姓名',
+    company: '公司',
+    email: '邮箱',
+    phone: '电话',
     optional: '选填',
     submit: '发送询价',
     sending: '发送中…',
     success: '我们已收到您的询价，将在一个工作日内回复。',
     error: '表单发送失败。请通过 WhatsApp 或邮件联系我们，我们同样会回复。',
     directTitle: '直接联系',
+    directBody: '通过 WhatsApp 联系时，消息模板已为您准备好：只需填写产品、目的地、数量与装运周。',
     whatsapp: '通过 WhatsApp 联系',
-    whatsappText: '您好 ASLI，我想询价一项物流业务。',
+    whatsappText: '您好 ASLI，我想询价。\n产品：\n目的地：\n货物类型与数量：\n装运周：',
     call: '致电',
     addressTitle: '办公室',
     hours: '周一至周五 09:00–18:00',
@@ -445,9 +481,19 @@ export const zh = {
       ],
       faqs: [
         {
+          question: '哪家公司可以帮我从智利出口樱桃或蓝莓？',
+          answer:
+            'ASLI 位于 Curicó（Maule 大区），协调樱桃、蓝莓及其他新鲜或冷冻水果的出口：冷藏集装箱、船公司订舱、SAG 与报关单证，并跟踪至目的地，可通往世界任何地方。',
+        },
+        {
+          question: 'Curicó 有做水果出口的货运代理吗？',
+          answer:
+            '有。ASLI 位于 Curicó, Longitudinal Sur Km. 186，服务 Maule 大区及智利各地的出口商、包装厂与中小企业。周一至周五 09:00–18:00 欢迎来访，或通过 WhatsApp +56 9 6839 4225 联系我们。',
+        },
+        {
           question: 'ASLI 是否从 Curicó 出口新鲜水果？',
           answer:
-            '是的。我们从 Curicó（Maule 大区）运营，协调新鲜与冷冻水果的国际出口，覆盖单证、船公司与报关。',
+            '是的。我们从 Curicó（Maule 大区）运营，协调新鲜与冷冻水果出口至世界任何地方，覆盖单证、船公司与报关。',
         },
         {
           question: '是否操作水果用的冷藏集装箱？',
@@ -650,15 +696,21 @@ export const zh = {
       h1: '报关服务与单证咨询',
       label: '报关',
       lead:
-        '报关办理与文件不再绕迷宫：我们核对要求并指导您合规完成，避免浪费宝贵天数。',
+        '报关文件不再绕迷宫：我们准备并核对您的单证，并与合作报关行协调办理，助您合规完成，避免浪费宝贵天数。',
       imageAlt: '报关与单证 — ASLI',
-      serviceType: '报关服务',
+      serviceType: '报关协调与单证咨询',
       sections: [
         {
-          heading: '合规且高效',
+          heading: '单证先理顺，再交给海关',
           body: [
-            '我们支持与您进出口相关的单证与报关管理，目标是减少质疑与延误。',
-            '按目的地或货品所需的证书、许可与要求：我们用清晰语言与现实交期为您指引。',
+            '我们准备并核对您进出口所需的单证（发票、装箱单、原产地证书、植物检疫证书与各类许可），以减少质疑与延误。',
+            '按货品与市场所需的证书、许可与要求：我们用清晰语言与现实交期为您指引。',
+          ],
+        },
+        {
+          heading: '与合作报关行协调',
+          body: [
+            '在智利，出口报关单（DUS）与进口报关单（DIN）须由持证报关行提交。ASLI 与合作报关行配合，协调整个流程，让您在整票业务中只需对接一个团队。',
           ],
         },
       ],
@@ -666,12 +718,58 @@ export const zh = {
         {
           question: 'ASLI 是否办理报关手续？',
           answer:
-            '是的。我们提供报关服务与单证咨询，以合规方式加快进出口。',
+            'ASLI 负责准备单证，并与合作报关行协调办理，由报关行向智利海关提交申报。您从头到尾只需对接一个团队。',
         },
         {
           question: '是否协助 OEA 认证或农业相关要求？',
           answer:
             '我们有食品安全专业团队，陪伴水果出口企业落实合规与 OEA 认证。',
+        },
+      ],
+    },
+    'transporte-terrestre': {
+      title: '集装箱陆运至港口 | ASLI Curicó',
+      description:
+        '在智利包装厂、仓库、港口与机场之间陆运干箱与冷藏集装箱，并与船公司堆存时间窗协调。ASLI，Curicó。',
+      h1: '集装箱陆运至港口',
+      label: '陆运',
+      lead: '我们在包装厂或仓库与智利各港口、机场之间运输您的货物，每一趟都与船公司及整票业务协调。',
+      imageAlt: '运送集装箱前往港口的卡车 — ASLI 陆运',
+      serviceType: '陆路货运',
+      sections: [
+        {
+          heading: '连接包装厂与船舶的那一段',
+          body: [
+            '在出口中，陆运是最容易耽误时间的一段：在堆场提取空箱、送到包装厂或仓库装货，再在船公司规定的堆存时间窗内交到港口。',
+            'ASLI 将这一段与订舱、单证作为同一票业务来协调，让卡车在集装箱该到的时候到达，不早也不晚。',
+          ],
+        },
+        {
+          heading: '服务内容',
+          body: [
+            '在堆场提取空箱、送至装货地点、运往智利各港口与机场，以及将进口货物从港口提至您的仓库。',
+            '干箱与冷藏集装箱，由我们在 Curicó 的运输团队协调全国承运商网络。',
+          ],
+        },
+        {
+          heading: '适合谁',
+          body: [
+            '需要陆运与船公司截止时间对齐的水果出口商、包装厂与中小企业，以及希望从港口提货而无需逐一联系承运商的进口商。',
+          ],
+        },
+      ],
+      faqs: [
+        {
+          question: 'ASLI 是否从 Curicó 将集装箱陆运至港口？',
+          answer: '是的。我们协调从 Maule 大区及智利各地的包装厂与仓库，到全国港口与机场的集装箱陆运，也负责进口货物提货。',
+        },
+        {
+          question: '陆运是否与船公司的堆存时间窗协调？',
+          answer: '是的。我们根据堆存时间窗与船公司截止时间安排提空箱、装货与进港，避免错过船期或产生堆存费。',
+        },
+        {
+          question: '是否运输冷藏集装箱？',
+          answer: '是的。我们协调干箱与冷藏集装箱，并严格控制冷藏货物的运输时间。',
         },
       ],
     },
