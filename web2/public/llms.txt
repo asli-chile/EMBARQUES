@@ -25,6 +25,10 @@ No confundir con otras organizaciones llamadas "ASLI" (por ejemplo, All Systems 
 - [Asesoría logística integral](https://www.asli.cl/asesoria-logistica-integral)
 - [Todos los servicios y equipo](https://www.asli.cl/servicios)
 
+## Guías de exportación
+
+- [Cómo exportar cerezas desde Chile](https://www.asli.cl/exportar/cerezas): temporada, enfriado, seteo del contenedor reefer, atmósfera, certificado fitosanitario SAG, DUS, VGM y stacking, con fuentes
+
 ## Herramientas gratuitas
 
 - [Stacking de navieras en Chile](https://www.asli.cl/stacking): acceso a los portales oficiales de fechas de ingreso de contenedores

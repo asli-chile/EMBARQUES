@@ -16,6 +16,8 @@ export const landings = [
     image: '/img/expo.webp',
     imageAlt: 'Exportación de fruta fresca — logística ASLI',
     serviceType: 'Exportación de fruta fresca',
+    // Guía práctica enlazada desde el costado de la landing (solo en español).
+    guia: { href: '/exportar/cerezas', titulo: 'Cómo exportar cerezas desde Chile', texto: 'Temporada, seteo del reefer, documentos y stacking, paso a paso.' },
     related: [
       'asesoria-exportadores-pymes',
       'transporte-maritimo',

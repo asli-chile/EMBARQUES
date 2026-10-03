@@ -39,6 +39,8 @@ Destino:
 Tipo de carga y volumen:
 Semana de embarque:`,
     relatedTitle: 'Servicios relacionados',
+    guideLabel: 'Guía práctica',
+    guideCta: 'Leer la guía',
     faqTitle: 'Preguntas frecuentes',
     finalCtaTitle: '¿Listo para cotizar?',
     finalCtaBody: 'Cuéntanos tu operación y armamos la mejor solución logística contigo.',
@@ -170,6 +172,8 @@ Destination:
 Cargo type and volume:
 Shipping week:`,
     relatedTitle: 'Related services',
+    guideLabel: 'Practical guide (Spanish)',
+    guideCta: 'Read the guide',
     faqTitle: 'Frequently asked questions',
     finalCtaTitle: 'Ready to get a quote?',
     finalCtaBody: 'Tell us about your operation and we will build the best logistics solution with you.',
@@ -245,6 +249,9 @@ Shipping week:`,
     addressTitle: 'Office',
     hours: 'Monday to Friday, 09:00–18:00',
     openMaps: 'Open in Google Maps',
+  },
+  guides: {
+    onlySpanish: 'This guide is available in Spanish only.',
   },
   notFound: {
     seoTitle: 'Page not found',

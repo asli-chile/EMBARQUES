@@ -209,6 +209,7 @@ const es = {
     seaCargo: 'Transporte marítimo',
     customs: 'Servicios aduaneros',
     landTransport: 'Transporte terrestre',
+    guides: 'Guías de exportación',
     stacking: 'Stacking navieras',
     team: 'Equipo especializado',
     quoteTool: 'Cotizador',
@@ -538,6 +539,7 @@ const en = {
     seaCargo: 'Ocean freight',
     customs: 'Customs services',
     landTransport: 'Land transport',
+    guides: 'Export guides (Spanish)',
     stacking: 'Carrier stacking',
     team: 'Specialized team',
     quoteTool: 'Quote tool',
@@ -668,6 +670,7 @@ function mergeLocale(base, extras, landingsMap) {
     serviceLanding: extras.serviceLanding,
     contactPage: extras.contactPage,
     notFound: extras.notFound,
+    guides: extras.guides,
     locale: { ...base.locale, ...extras.locale },
     landings: landingsMap ?? {},
   }

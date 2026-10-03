@@ -164,3 +164,10 @@ Pendiente fuera de código: `SITE.sameAs` (LinkedIn, Instagram, Google Business)
 - FAQs con preguntas en lenguaje natural en la landing de fruta.
 - Landing nueva `/transporte-terrestre`; la tarjeta de transporte terrestre ya no lleva a logística integral.
 - Formulario de `/contacto` con los datos que pide el equipo comercial para cotizar: producto, origen, destino, tipo de carga, volumen, semana de embarque (solo semanas futuras, nunca la actual), Incoterm y tarifa objetivo. WhatsApp con plantilla de cotización.
+
+## Fase 2 · Bloque B: guía de cerezas (2026-10-02)
+
+- Nueva sección `/exportar` y primera guía `/exportar/cerezas` ("La travesía de tu cereza"): portada con panel de seteo reefer, ficha técnica, 8 recaladas con el barco que avanza con el scroll, errores comunes, preguntas frecuentes y fuentes numeradas.
+- Schema Article + FAQPage + BreadcrumbList; solo en español (`contentLang="es"`), con aviso para visitantes en inglés o chino.
+- Fuentes y revisión contra el ERP en `docs/guias-fuentes.md`. Ningún dato del ERP se publica.
+- Enlazada desde la landing de fruta, el footer, `sitemap.xml` y `llms.txt`. El botón Cotizar de la guía abre `/contacto` con producto y tipo de carga ya llenos.

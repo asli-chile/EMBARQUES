@@ -1,5 +1,6 @@
 import { SITE, SITE_URL } from '../src/lib/site'
 import { landings } from '../src/data/landings'
+import { guiaSlugs } from '../src/data/guias'
 
 const STATIC_PAGES = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
@@ -16,7 +17,12 @@ const LANDING_PAGES = landings.map((l) => ({
   priority: l.priority || '0.8',
 }))
 
-const PAGES = [...STATIC_PAGES, ...LANDING_PAGES]
+const GUIA_PAGES = [
+  { path: '/exportar', changefreq: 'monthly', priority: '0.8' },
+  ...guiaSlugs.map((slug) => ({ path: `/exportar/${slug}`, changefreq: 'monthly', priority: '0.85' })),
+]
+
+const PAGES = [...STATIC_PAGES, ...LANDING_PAGES, ...GUIA_PAGES]
 
 function escapeXml(value) {
   return String(value)

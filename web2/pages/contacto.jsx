@@ -133,6 +133,21 @@ export default function ContactoPage() {
     }))
   }
 
+  // Desde una guía: ?producto=Cerezas&carga=reefer&desde=exportar/cerezas
+  useEffect(() => {
+    if (!router.isReady) return
+    const producto = typeof router.query.producto === 'string' ? router.query.producto.slice(0, 80) : ''
+    const carga = typeof router.query.carga === 'string' && CARGO_TYPES.includes(router.query.carga) ? router.query.carga : ''
+    if (!producto && !carga) return
+    const desde = typeof router.query.desde === 'string' ? router.query.desde : ''
+    if (/^[a-z0-9/-]{1,60}$/.test(desde)) setSource(desde)
+    setForm((prev) => ({
+      ...prev,
+      producto: prev.producto || producto,
+      ...(carga ? { carga, unidad: UNIT_FOR_CARGO[carga] || prev.unidad } : {}),
+    }))
+  }, [router.isReady, router.query.producto, router.query.carga, router.query.desde])
+
   useEffect(() => {
     if (!router.isReady) return
     const slug = typeof router.query.servicio === 'string' ? router.query.servicio : ''

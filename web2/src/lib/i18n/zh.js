@@ -211,6 +211,7 @@ export const zh = {
     seaCargo: '海运',
     customs: '报关服务',
     landTransport: '陆运',
+    guides: '出口指南（西班牙语）',
     stacking: '船公司堆存（Stacking）',
     team: '专业团队',
     quoteTool: '询价工具',
@@ -364,6 +365,8 @@ export const zh = {
 货物类型与数量：
 装运周：`,
     relatedTitle: '相关服务',
+    guideLabel: '实用指南（西班牙语）',
+    guideCta: '阅读指南',
     faqTitle: '常见问题',
     finalCtaTitle: '准备好询价了吗？',
     finalCtaBody: '告诉我们您的业务，我们与您一起搭建最佳物流方案。',
@@ -437,6 +440,9 @@ export const zh = {
     addressTitle: '办公室',
     hours: '周一至周五 09:00–18:00',
     openMaps: '在 Google 地图中打开',
+  },
+  guides: {
+    onlySpanish: '本指南仅提供西班牙语版本。',
   },
   notFound: {
     seoTitle: '页面未找到',

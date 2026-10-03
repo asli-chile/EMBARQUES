@@ -1,0 +1,479 @@
+/*
+ * Guías de exportación (/exportar/<slug>).
+ * Paleta ASLI + un acento por producto (--acento, --acento-claro), que llega
+ * por style desde src/data/guias.js. Curvas de "La travesía" v3.
+ * Movimiento: lo que se lee aparece una vez y se queda quieto; solo el barco y
+ * la ruta siguen el scroll. Sin vidrio sobre fondos que se mueven.
+ */
+.guia {
+  --abismo: #050b1e;
+  --navy: #11224e;
+  --hondo: #003f5a;
+  --teal: #007a7b;
+  --espuma: #2ef2c8;
+  --oliva: #669900;
+  --crema: #f6eee8;
+  --linea-osc: rgba(255, 255, 255, 0.12);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.mono {
+  font-family: var(--font-fira-mono), ui-monospace, monospace;
+}
+
+/* ---------- portada ---------- */
+.portada {
+  position: relative;
+  overflow: hidden;
+  background: var(--abismo);
+  color: #fff;
+  isolation: isolate;
+}
+.portadaFoto {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 62%;
+  z-index: -2;
+  -webkit-mask-image: linear-gradient(to left, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to left, #000 35%, transparent 100%);
+}
+.portadaFoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+}
+@media (max-width: 767px) {
+  .portadaFoto {
+    width: 100%;
+    -webkit-mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+    mask-image: linear-gradient(to top, #000 0%, rgba(0, 0, 0, 0.35) 55%, transparent 100%);
+  }
+  .portadaFoto img {
+    opacity: 0.55;
+  }
+}
+/* Formas: degradados radiales quietos (baratos; sin filter: blur). */
+.mancha {
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+.manchaTeal {
+  width: 760px;
+  height: 760px;
+  left: -260px;
+  top: -320px;
+  background: radial-gradient(circle, rgba(0, 122, 123, 0.55), rgba(0, 122, 123, 0) 68%);
+}
+.manchaAcento {
+  width: 620px;
+  height: 620px;
+  right: 18%;
+  bottom: -360px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--acento) 55%, transparent), transparent 68%);
+}
+.arco {
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 220px;
+  pointer-events: none;
+}
+
+.ceja {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--espuma);
+}
+.h1 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(2.6rem, 7.2vw, 5.4rem);
+  line-height: 0.95;
+  letter-spacing: -0.015em;
+  color: #fff;
+  text-wrap: balance;
+}
+.h1Acento {
+  color: var(--acento-claro);
+}
+.resumen {
+  font-size: clamp(1.02rem, 1.6vw, 1.2rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 58ch;
+}
+
+.botonLleno,
+.botonBorde {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 1.4rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.98rem;
+  transition: transform 160ms var(--ease-out), background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+.botonLleno {
+  background: var(--espuma);
+  color: var(--abismo);
+}
+.botonLleno:hover {
+  background: #fff;
+}
+.botonBorde {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+.botonBorde:hover {
+  border-color: var(--espuma);
+  color: var(--espuma);
+}
+.botonLleno:active,
+.botonBorde:active {
+  transform: scale(0.97);
+}
+
+/* Panel con forma de pantalla de controlador reefer. Va sobre una foto quieta. */
+.panel {
+  position: relative;
+  border-radius: 22px;
+  background: linear-gradient(160deg, rgba(17, 34, 78, 0.62), rgba(5, 11, 30, 0.55));
+  border: 1px solid var(--linea-osc);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.panelCabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--linea-osc);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+.led {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--espuma);
+  box-shadow: 0 0 10px var(--espuma);
+}
+.lectura {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.95rem 1.2rem;
+}
+.lectura + .lectura {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.lecturaEtiqueta {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+.lecturaValor {
+  font-size: clamp(1.5rem, 2.6vw, 1.95rem);
+  font-weight: 500;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.lecturaUnidad {
+  font-size: 0.9rem;
+  color: var(--espuma);
+  margin-left: 0.3rem;
+}
+
+/* Marca de fuente ¹ */
+.sup {
+  font-size: 0.7em;
+  vertical-align: super;
+  line-height: 0;
+  margin-left: 0.15em;
+  color: inherit;
+  opacity: 0.7;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sup:hover,
+.sup:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* ---------- ficha (clara) ---------- */
+.temporadaBarra {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  align-items: end;
+  height: 92px;
+}
+.mes {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+}
+.mesBarra {
+  border-radius: 8px 8px 3px 3px;
+  background: var(--acento);
+}
+.mesNombre {
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgb(var(--asli-fg-rgb) / 0.6);
+}
+.dato {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--acento);
+}
+:global(html.dark) .dato {
+  color: var(--acento-claro);
+}
+.etiqueta {
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+:global(html.dark) .etiqueta {
+  color: var(--espuma);
+}
+.icono {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--teal) 12%, transparent);
+  color: var(--teal);
+}
+:global(html.dark) .icono {
+  color: var(--espuma);
+}
+
+/* Vida útil: barras en escala de 0 a 6 semanas */
+.vidaPista {
+  position: relative;
+  height: 10px;
+  border-radius: 9999px;
+  background: rgb(var(--asli-fg-rgb) / 0.08);
+  overflow: hidden;
+}
+.vidaBarra,
+.vidaRango {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 9999px;
+  background: var(--acento);
+}
+/* el tramo variable (4 a 6 semanas) va más suave */
+.vidaRango {
+  border-radius: 0 9999px 9999px 0;
+  opacity: 0.4;
+}
+:global(html.dark) .vidaBarra,
+:global(html.dark) .vidaRango {
+  background: var(--acento-claro);
+}
+
+/* ---------- la travesía (oscura) ---------- */
+.travesia {
+  position: relative;
+  background:
+    radial-gradient(1200px 600px at 85% 0%, rgba(0, 63, 90, 0.55), transparent 70%),
+    linear-gradient(180deg, var(--abismo), #071530 50%, var(--abismo));
+  color: #fff;
+  overflow: hidden;
+}
+.recorrido {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+}
+@media (max-width: 767px) {
+  .recorrido {
+    grid-template-columns: 34px 1fr;
+  }
+}
+.rutaCol {
+  position: relative;
+}
+.rutaSvg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.recalada {
+  fill: var(--abismo);
+  stroke: rgba(159, 182, 204, 0.6);
+  stroke-width: 2;
+  transition: fill 300ms ease, stroke 300ms ease;
+}
+.recaladaHecha {
+  fill: var(--espuma);
+  stroke: var(--espuma);
+}
+.ola {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.enVista .ola {
+  animation: ola 1.6s ease-in-out infinite;
+}
+@keyframes ola {
+  50% {
+    transform: translateY(1.5px) rotate(1.5deg);
+  }
+}
+
+.pasos {
+  position: relative;
+}
+.paso {
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  padding: clamp(3rem, 9vh, 6rem) 0;
+}
+@media (min-width: 1024px) {
+  .paso {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    align-items: center;
+  }
+}
+.pasoNumero {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--espuma);
+}
+.pasoTitulo {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 3.2vw, 2.35rem);
+  line-height: 1.05;
+  color: #fff;
+  margin: 0.5rem 0 1rem;
+  text-wrap: balance;
+}
+.pasoTexto {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.04rem;
+  line-height: 1.7;
+}
+.pasoTexto + .pasoTexto {
+  margin-top: 0.9rem;
+}
+.pasoFoto {
+  position: relative;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid var(--linea-osc);
+  aspect-ratio: 3 / 2;
+  background: var(--navy);
+}
+.pasoFoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pasoFoto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(5, 11, 30, 0.55));
+}
+
+/* Aparece una vez al entrar en pantalla y queda quieto. Solo con JS: sin JS
+   (o para un rastreador) todo se ve desde el inicio. */
+.conJs .paso {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
+}
+.conJs .paso.visto {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- errores (claros) ---------- */
+.error {
+  color: var(--acento);
+}
+:global(html.dark) .error {
+  color: var(--acento-claro);
+}
+.solucion {
+  color: var(--teal);
+}
+:global(html.dark) .solucion {
+  color: var(--espuma);
+}
+
+/* ---------- cierre ---------- */
+.cierre {
+  position: relative;
+  overflow: hidden;
+  background: var(--abismo);
+  color: #fff;
+  isolation: isolate;
+}
+.cierreFoto {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.cierreFoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.5;
+}
+.cierreFoto::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--abismo) 10%, rgba(5, 11, 30, 0.55) 70%, rgba(5, 11, 30, 0.3));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conJs .paso {
+    transform: none;
+    transition: opacity 400ms ease;
+  }
+  .enVista .ola {
+    animation: none;
+  }
+  .botonLleno,
+  .botonBorde {
+    transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+  }
+}

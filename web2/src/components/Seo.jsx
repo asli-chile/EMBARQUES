@@ -36,8 +36,12 @@ export default function Seo({
   type = 'website',
   noindex = false,
   jsonLd = null,
+  // Para páginas que existen en un solo idioma (las guías, solo en español):
+  // fija el idioma declarado aunque el visitante tenga elegido otro.
+  contentLang = null,
 }) {
-  const { locale } = useLocale()
+  const { locale: uiLocale } = useLocale()
+  const locale = contentLang || uiLocale
   const fullTitle = title.includes('ASLI') ? title : `${title} — ASLI`
   const canonical = absoluteUrl(path)
   const ogImage = image || SITE.ogImage
@@ -301,6 +305,64 @@ export function buildServicePageJsonLd({
           '@type': 'Answer',
           text: faq.answer,
         },
+      })),
+    })
+  }
+
+  return { '@context': 'https://schema.org', '@graph': graph }
+}
+
+/**
+ * Schema de una guía: Article + WebPage + BreadcrumbList + FAQPage.
+ * Autor y editor son la empresa (#organization), igual que en el resto del sitio.
+ */
+export function buildGuideJsonLd({
+  path,
+  headline,
+  description,
+  image,
+  datePublished,
+  dateModified,
+  faqs = [],
+  breadcrumb,
+  inLanguage = SITE.language,
+}) {
+  const url = absoluteUrl(path)
+  const graph = [
+    webPageNode({
+      url,
+      name: headline,
+      description,
+      inLanguage,
+      extra: {
+        mainEntity: { '@id': `${url}#article` },
+        ...(faqs.length > 0 ? { hasPart: { '@id': `${url}#faq` } } : {}),
+      },
+    }),
+    breadcrumbNode(url, breadcrumb),
+    {
+      '@type': 'Article',
+      '@id': `${url}#article`,
+      headline,
+      description,
+      image,
+      inLanguage,
+      datePublished,
+      dateModified: dateModified || datePublished,
+      author: orgRef(),
+      publisher: orgRef(),
+      mainEntityOfPage: { '@id': `${url}#webpage` },
+    },
+  ]
+
+  if (faqs.length > 0) {
+    graph.push({
+      '@type': 'FAQPage',
+      '@id': `${url}#faq`,
+      mainEntity: faqs.map((faq) => ({
+        '@type': 'Question',
+        name: faq.question,
+        acceptedAnswer: { '@type': 'Answer', text: faq.answer },
       })),
     })
   }
