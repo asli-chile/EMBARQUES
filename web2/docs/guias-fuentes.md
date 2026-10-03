@@ -43,3 +43,25 @@ Fuentes consultadas el 2 de octubre de 2026.
 **Ojo con la fuente 3:** su tabla dice "30 to 31°F (-1.1 to 0.6°C)", pero 31 °F son -0,6 °C. Al documento le falta el signo menos. No se usa ese +0,6; la temperatura publicada sale de la fuente 9.
 
 **Revisión contra el ERP (2026-10-02, no publicada):** en los embarques de cereza fresca, la temperatura de seteo está dentro del rango de la fuente 3, el peak de zarpes es diciembre, con noviembre y enero a los lados, el contenedor es reefer de 40 pies y la atmósfera controlada se usa en una parte de los embarques. La ventilación usada no tiene fuente pública, así que la guía no da un valor.
+
+## Arándanos en atmósfera controlada · `/exportar/arandanos-atmosfera-controlada`
+
+Fuentes consultadas el 3 de octubre de 2026. Las fuentes 5 a 8 son las mismas de la guía de cerezas (SAG, Aduanas, VGM, stacking).
+
+| # | Fuente | URL |
+|---|---|---|
+| 1 | Portalfrutícola, *Agronometrics en gráficos: clima adverso afecta producción de arándanos en Chile* (dic-2023), con datos del Comité de Arándanos de Frutas de Chile | https://www.portalfruticola.com/noticias/2023/12/12/agronometrics-en-graficos-clima-adverso-afecta-produccion-de-arandanos-en-chile/ |
+| 2 | UC Davis Postharvest Technology Center, *Blueberry: Recommendations for Maintaining Postharvest Quality* | https://postharvest.ucdavis.edu/node/5211 |
+| 3 | MundoMarítimo, *Ejecutiva de Maersk Line Chile detalla las principales técnicas para conservar calidad del arándano durante su envío* (mar-2018) | https://www.mundomaritimo.cl/noticias/ejecutiva-de-maersk-line-chile-detalla-las-principales-tecnicas-para-conservar-calidad-del-arandano-durante-su-envio |
+| 4 | WFLO / GCCA, *Commodity Storage Manual: Blueberries and Huckleberries* (rev. 2018) | https://www.gcca.org/system/files/WFLO-Commodity-Storage-Manual-2018Blueberries%5B1%5D.pdf |
+
+| Dato publicado | Fuente |
+|---|---|
+| Producción de noviembre a marzo; mayores volúmenes entre las semanas 51 y 3 | 1 |
+| Temperatura -0,5 a 0,5 °C (0 ± 0,5 °C); humedad 90–95 %; alta humedad reduce pérdida de peso y arrugamiento | 2 (temperatura coincide con 3) |
+| Atmósfera 15–20 % CO₂ y 5–10 % O₂; < 2 % O₂ o > 25 % CO₂ producen sabores extraños y pardeamiento; enfriar antes de modificar la atmósfera | 2 |
+| Vida práctica ~55 días con atmósfera controlada; el manejo entre poscosecha y carga define ~85 % de la vida en el transporte; monitoreo remoto (temperatura, gases, ubicación); contenedor AC regula O₂, CO₂ y N₂ | 3 |
+| En aire: 12–15 días primeras cosechas, 7–10 días cosechas tardías; cosecha a mano para fresco (la de máquina se deteriora rápido); pudrición gris aparece en la venta y se controla con frío, sanitización y CO₂ | 4 (conversión °F→°C revisada: 31–32 °F = -0,6 a 0 °C, correcta) |
+| Documentos que no coinciden generan observaciones | experiencia ASLI |
+
+**Revisión contra el ERP (2026-10-03, no publicada):** el arándano fresco viaja a -0,5 °C (dentro del rango), con ventilación cerrada en los embarques con atmósfera controlada y en reefer de 40 pies. Son pocos embarques, así que se usaron solo como referencia.

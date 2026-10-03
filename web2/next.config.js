@@ -95,6 +95,7 @@ const nextConfig = {
       "/transporte-terrestre",
       "/exportar",
       "/exportar/cerezas",
+      "/exportar/arandanos-atmosfera-controlada",
       "/asesoria-logistica-integral",
     ];
     return paths.map((source) => ({

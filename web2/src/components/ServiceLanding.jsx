@@ -144,18 +144,19 @@ export default function ServiceLanding({ landing: landingProp }) {
                   </div>
                 </div>
 
-                {landing.guia ? (
+                {(landing.guias || []).map((guia) => (
                   <a
-                    href={landing.guia.href}
+                    key={guia.href}
+                    href={guia.href}
                     lang="es"
                     className="block rounded-[22px] bg-asli-ink text-white p-6 mb-6 hover:-translate-y-0.5 transition-transform duration-300"
                   >
                     <p className="section-label !text-asli-accent !mb-2">{sl.guideLabel}</p>
-                    <p className="font-display text-xl font-bold leading-tight mb-2">{landing.guia.titulo}</p>
-                    <p className="text-white/70 text-sm leading-relaxed mb-3">{landing.guia.texto}</p>
+                    <p className="font-display text-xl font-bold leading-tight mb-2">{guia.titulo}</p>
+                    <p className="text-white/70 text-sm leading-relaxed mb-3">{guia.texto}</p>
                     <span className="text-sm font-bold text-asli-accent">{sl.guideCta} →</span>
                   </a>
-                ) : null}
+                ))}
 
                 {related.length > 0 ? (
                   <div className="card-soft p-6">

@@ -171,3 +171,8 @@ Pendiente fuera de código: `SITE.sameAs` (LinkedIn, Instagram, Google Business)
 - Schema Article + FAQPage + BreadcrumbList; solo en español (`contentLang="es"`), con aviso para visitantes en inglés o chino.
 - Fuentes y revisión contra el ERP en `docs/guias-fuentes.md`. Ningún dato del ERP se publica.
 - Enlazada desde la landing de fruta, el footer, `sitemap.xml` y `llms.txt`. El botón Cotizar de la guía abre `/contacto` con producto y tipo de carga ya llenos.
+
+## Fase 2 · Bloque B: guía de arándanos (2026-10-03)
+
+- Nueva guía `/exportar/arandanos-atmosfera-controlada`, con el mismo modelo que la de cerezas y acento azul violeta: panel reefer (-0,5 a 0,5 °C, 15–20 % CO₂, 5–10 % O₂), temporada con peak en las semanas 51 a 3, vida útil en aire frente a atmósfera controlada, 8 recaladas, errores, preguntas frecuentes y fuentes.
+- La landing de fruta enlaza las dos guías; en `/exportar` solo queda "Próximamente: fruta congelada".

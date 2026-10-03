@@ -28,6 +28,7 @@ No confundir con otras organizaciones llamadas "ASLI" (por ejemplo, All Systems 
 ## Guías de exportación
 
 - [Cómo exportar cerezas desde Chile](https://www.asli.cl/exportar/cerezas): temporada, enfriado, seteo del contenedor reefer, atmósfera, certificado fitosanitario SAG, DUS, VGM y stacking, con fuentes
+- [Cómo exportar arándanos en atmósfera controlada](https://www.asli.cl/exportar/arandanos-atmosfera-controlada): temperatura, CO₂ y O₂, vida útil, semanas de peak, documentos y stacking, con fuentes
 
 ## Herramientas gratuitas
 

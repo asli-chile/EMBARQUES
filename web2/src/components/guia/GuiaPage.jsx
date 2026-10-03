@@ -20,6 +20,7 @@ const ICONOS = {
   reloj: <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4.5l3 2" />,
   contenedor: <path d="M3 7h18v10H3zM7 7v10M11 7v10M15 7v10M19 7v10" />,
   atmosfera: <path d="M4 12h10a3 3 0 1 0-3-3M4 16h14a3 3 0 1 1-3 3M4 8h4" />,
+  mano: <path d="M5 19c9 0 14-5 14-14-9 0-14 5-14 14Zm0 0 6-6" />,
 }
 
 function Icono({ nombre }) {
@@ -214,11 +215,14 @@ export default function GuiaPage({ guia }) {
                               <span className={`${s.mono} ${s.etiqueta} shrink-0`}>{c.texto}</span>
                             </div>
                             <div className={s.vidaPista} aria-hidden="true">
-                              <span className={s.vidaBarra} style={{ width: `${(c.desde / 6) * 100}%` }} />
+                              <span className={s.vidaBarra} style={{ width: `${(c.desde / (f.escala || 6)) * 100}%` }} />
                               {c.hasta > c.desde ? (
                                 <span
                                   className={s.vidaRango}
-                                  style={{ left: `${(c.desde / 6) * 100}%`, width: `${((c.hasta - c.desde) / 6) * 100}%` }}
+                                  style={{
+                                    left: `${(c.desde / (f.escala || 6)) * 100}%`,
+                                    width: `${((c.hasta - c.desde) / (f.escala || 6)) * 100}%`,
+                                  }}
                                 />
                               ) : null}
                             </div>
