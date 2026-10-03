@@ -1,10 +1,11 @@
 import { track } from '@vercel/analytics'
 
 /**
- * ID de Google Analytics 4 (G-XXXXXXX). Vacío = GA4 apagado.
- * Se define como variable de entorno en Vercel; no hace falta tocar código.
+ * ID de Google Analytics 4 de la propiedad "asli.cl". No es secreto (queda
+ * visible en el HTML). La variable NEXT_PUBLIC_GA_ID de Vercel, si existe,
+ * tiene prioridad.
  */
-export const GA_ID = process.env.NEXT_PUBLIC_GA_ID || ''
+export const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-QNX2JF32VF'
 
 /**
  * Registra un contacto: el clic que importa para saber qué página trae clientes.

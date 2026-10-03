@@ -138,6 +138,14 @@ const Footer = () => {
                   {t.footer.integralAdvice}
                 </a>
               </li>
+              <li className="flex gap-5 pt-2">
+                <a href="https://www.linkedin.com/company/aslichile/" target="_blank" rel="noopener noreferrer me" className="hover:text-asli-primary transition-colors duration-320">
+                  LinkedIn
+                </a>
+                <a href="https://www.instagram.com/asli_chile/" target="_blank" rel="noopener noreferrer me" className="hover:text-asli-primary transition-colors duration-320">
+                  Instagram
+                </a>
+              </li>
             </ul>
           </div>
         </div>

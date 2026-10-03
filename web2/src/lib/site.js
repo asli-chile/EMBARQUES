@@ -66,7 +66,9 @@ export const SITE = {
    * que el sitio y las redes son la misma empresa. Vacío = no se publica.
    */
   sameAs: [
-    // Pendiente: URLs oficiales de LinkedIn e Instagram
+    'https://www.linkedin.com/company/aslichile/',
+    'https://www.instagram.com/asli_chile/',
+    // Pendiente: ficha de Google Business cuando esté creada
   ],
   /**
    * Fecha de contenido editorial (YYYY-MM-DD).
