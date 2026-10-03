@@ -369,3 +369,16 @@ export function buildGuideJsonLd({
 
   return { '@context': 'https://schema.org', '@graph': graph }
 }
+
+/** Nodo FAQPage suelto, para sumarlo al schema de una página existente. */
+export function buildFaqNode(path, faqs) {
+  return {
+    '@type': 'FAQPage',
+    '@id': `${absoluteUrl(path)}#faq`,
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+    })),
+  }
+}

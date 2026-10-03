@@ -15,12 +15,14 @@ function CarrierCard({ nav, index, actionLabel, externalHint, goTo }) {
         title={nav.label}
         className="group card-soft flex flex-col h-full p-5 sm:p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-asli-primary/40 hover:border-asli-primary/25 hover:ring-2 hover:ring-asli-primary/15"
       >
-        <div className="flex items-center justify-center h-20 sm:h-24 mb-5 rounded-[var(--radius-md)] bg-asli-light/80 border border-asli-dark/5 px-4">
+        {/* Fondo blanco también en modo oscuro: los logos de las navieras están
+            hechos para fondo claro y sobre gris oscuro se pierden. */}
+        <div className="flex items-center justify-center h-20 sm:h-24 mb-5 rounded-[var(--radius-md)] bg-white border border-asli-dark/5 dark:border-white/10 px-4">
           {nav.logo ? (
             <img
               src={nav.logo}
               alt=""
-              className="max-h-12 sm:max-h-14 max-w-full object-contain transition-transform duration-320 group-hover:scale-[1.04]"
+              className="w-auto h-auto max-h-11 sm:max-h-12 max-w-[150px] sm:max-w-[160px] object-contain transition-transform duration-320 group-hover:scale-[1.04]"
               loading="lazy"
               decoding="async"
             />

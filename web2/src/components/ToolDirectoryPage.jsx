@@ -6,6 +6,8 @@ import { useLocale } from '../hooks/useLocale'
 /**
  * Cáscara compartida para herramientas de directorio (Tracking / Stacking).
  * Hero cinematográfico corto + zona de contenido + CTA de ayuda.
+ * `after`: contenido extra bajo la herramienta (la guía de /stacking).
+ * `jsonLdExtra`: nodos de schema adicionales (por ejemplo, FAQPage).
  */
 export default function ToolDirectoryPage({
   seoTitle,
@@ -20,6 +22,8 @@ export default function ToolDirectoryPage({
   helpBody,
   contactCta,
   children,
+  after = null,
+  jsonLdExtra = [],
 }) {
   const { t } = useLocale()
   const jsonLd = buildPageJsonLd({
@@ -31,6 +35,7 @@ export default function ToolDirectoryPage({
       { name: label || seoTitle, path: seoPath },
     ],
   })
+  if (jsonLdExtra.length) jsonLd['@graph'].push(...jsonLdExtra)
 
   return (
     <>
@@ -60,6 +65,8 @@ export default function ToolDirectoryPage({
           <section className="grain-surface py-12 md:py-16 lg:py-20">
             <div className="container-asli">{children}</div>
           </section>
+
+          {after}
 
           <section className="bg-asli-secondary py-14 md:py-16 text-center text-white">
             <div className="container-asli max-w-2xl">

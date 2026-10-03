@@ -1,5 +1,8 @@
 import ToolDirectoryPage from '../src/components/ToolDirectoryPage'
 import Stacking from '../src/components/Stacking'
+import StackingGuia from '../src/components/guia/StackingGuia'
+import { buildFaqNode } from '../src/components/Seo'
+import { stackingGuia } from '../src/data/stacking'
 import { useLocale } from '../src/hooks/useLocale'
 
 const StackingPage = () => {
@@ -19,6 +22,8 @@ const StackingPage = () => {
       helpTitle={tp.helpTitle}
       helpBody={tp.helpBody}
       contactCta={tp.contactCta}
+      after={<StackingGuia />}
+      jsonLdExtra={[buildFaqNode('/stacking', stackingGuia.faqs)]}
     >
       <Stacking />
     </ToolDirectoryPage>

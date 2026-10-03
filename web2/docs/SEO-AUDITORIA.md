@@ -184,3 +184,11 @@ Pendiente fuera de código: `SITE.sameAs` (LinkedIn, Instagram, Google Business)
 - Corrección en la guía de cerezas: el seteo del reefer se ingresa después de cargar, con puertas cerradas, y luego se enciende la unidad (Hapag-Lloyd).
 - Redirecciones 308 de formas cortas: `/exportar/cereza`, `/exportar/arandano(s)`, `/exportar/congelado(s)` y `/exportar/iqf`.
 - Bloque B completo: tres guías publicadas en `/exportar`.
+
+## Fase 2 · Bloque C1: guía de stacking (2026-10-03)
+
+- `/stacking` pasa de directorio (122 palabras) a herramienta + guía (~1.400 palabras): "¿Qué es el stacking?", tres plazos (stacking, corte documental, VGM), "La semana del embarque" con el barco (6 hitos), qué muestra el portal de cada naviera, errores, FAQ y fuentes (MSC, Maersk, Hapag-Lloyd, CMA CGM, ONE, DP World San Antonio, SOLAS).
+- Título SEO en español: "Stacking de navieras en Chile: qué es, fechas y cortes"; schema suma FAQPage.
+- Secciones de guía compartidas en `src/components/guia/Secciones.jsx` (las 3 guías de fruta las usan).
+- Directorio de navieras (stacking y tracking): recuadro del logo blanco también en modo oscuro y logos recortados en `public/img/navieras/` (Hapag-Lloyd pasó de un PNG de 5.210 px a 5 KB).
+- C2 (páginas por naviera) queda para después de medir en Search Console.

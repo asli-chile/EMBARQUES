@@ -299,9 +299,9 @@ const es = {
     goTo: (name) => `Ir a ${name}`,
   },
   stackingPage: {
-    seoTitle: 'Stacking navieras Chile | Fechas de ingreso contenedores',
+    seoTitle: 'Stacking de navieras en Chile: qué es, fechas y cortes',
     seoDescription:
-      'Consulta stacking de navieras en Chile: fechas y horarios de ingreso de contenedores. Acceso directo a portales oficiales desde ASLI Curicó.',
+      'Qué es el stacking y cómo leerlo: ventana de recepción, corte documental y VGM, con acceso al stacking de MSC, Maersk, Hapag-Lloyd y más navieras.',
     label: 'Stacking',
     titleBefore: 'Stacking de navieras en',
     titleAccent: 'Chile',

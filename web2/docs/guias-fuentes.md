@@ -94,3 +94,21 @@ Fuentes consultadas el 3 de octubre de 2026.
 **No publicado por falta de fuente verificable:** ventilación cerrada para carga congelada. Aparecía en un resumen de búsqueda, pero no en el documento de Hapag-Lloyd.
 
 **Revisión contra el ERP (2026-10-03, no publicada):** los congelados viajan a -18, -20 y -22 °C, sin atmósfera, en reefer de 40 pies, con zarpes repartidos entre febrero y octubre.
+
+## Stacking · `/stacking` (guía bajo el directorio de navieras)
+
+Fuentes y portales revisados el 3 de octubre de 2026.
+
+| # | Fuente | URL |
+|---|---|---|
+| 1 | DP World San Antonio, preguntas frecuentes de exportación ("La recepción de carga se realiza de acuerdo con el período de stacking publicado para cada nave"; preaviso con datos que coincidan con los documentos) | https://www.dpworld.com/es/san-antonio |
+| 2 | MSC Chile, stacking por nave y viaje (stacking normal y corte anticipado, refrigerada y seca; terminales sin recepción domingos ni festivos) | https://deadline.mscchile.cl/Stacking_esp.html |
+| 3 | Maersk Chile, exportación (ventanas reefer/seca por servicio y puerto, corte documental, límite VGM; "pueden variar según la operación") | https://www.maersk.com/es-mx/local-information/latin-america/chile/export |
+| 4 | Hapag-Lloyd Chile, stacking (buscador por puerto, servicio y nave; cut-off con/sin pre-advice, DG y DUS) | https://stackingchile.hlag-cl.com/ |
+| 5 | CMA CGM Chile (secciones stacking, VGM, cortes documentales, presentación de aperturas) | https://www.cma-cgm-chile.cl/?page=18 |
+| 6 | MundoMarítimo, VGM / norma SOLAS | https://mundomaritimo.cl/noticias/partio-certificacion-de-masa-bruta-de-contenedores-en-san-vicente-terminal-internacional-svti |
+| 7 | ONE Latinoamérica, exportación: sección desplegable "Cierres Documentales y Stacking" con un documento por servicio (AX1, AX2, ATS, FLX), sin inicio de sesión (confirmado por el usuario con captura, 2026-10-03; la lectura automática redirige a un login) | https://la.one-line.com/es/exportacion |
+
+**Experiencia ASLI** (sin fuente publicada): descripciones de los portales de PIL (PDF sincronizado en asli.cl), COSCO y Wan Hai/Navepac. Los portales de COSCO y Navepac cargan con JavaScript y no se pudieron leer de forma automática.
+
+**ONE:** el enlace `la.one-line.com/es/exportacion` es correcto y público. La lectura automática lo desvía a un login, pero en un navegador normal muestra la sección "Cierres Documentales y Stacking".
